@@ -250,7 +250,21 @@
     color:var(--grey-3);
     opacity:0;
     cursor:pointer;
-    transition:opacity 0.5s ease;
+    transform-origin:center;
+    transition:opacity 0.5s ease, transform 0.5s cubic-bezier(.22,1,.36,1);
+  }
+
+  #wordmarkWrap.pedals-open .pedals-label{
+    transform: scale(1.9);
+  }
+
+  /* same fix as the slogan: the cursor is still hovering right after the
+     click, which would otherwise keep the hover-glitch's full-text
+     duplicate layers visible underneath the moving letters */
+  #wordmarkWrap.pedals-open .pedals-label::before,
+  #wordmarkWrap.pedals-open .pedals-label::after{
+    opacity:0 !important;
+    animation:none !important;
   }
 
   .pedals-label .letter{
@@ -483,12 +497,28 @@
   .pedal-slide.active{
     opacity:1;
   }
+  /* while hovering, the black flash handles the transition, so the
+     ordinary crossfade is switched off to avoid the two effects
+     overlapping */
+  .pedal-viewer.no-fade .pedal-slide{
+    transition:none;
+  }
   .pedal-slide img{
     width:100%;
     height:100%;
     object-fit:contain;
     -webkit-user-drag:none;
     user-select:none;
+  }
+
+  .pedal-flash{
+    position:absolute;
+    inset:0;
+    background:#000;
+    opacity:0;
+    pointer-events:none;
+    z-index:2;
+    transition:opacity 0.1s ease;
   }
 
   .preorder-btn{
@@ -537,6 +567,155 @@
     right:30%;
     transform:translate(50%, 50%);
     z-index:1;
+  }
+
+  /* ---------- modals (Pre-Order / Kontakt / Newsletter) ---------- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:var(--black);
+    z-index:2000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:2rem;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity 0.35s ease;
+  }
+  .modal-overlay.active{
+    opacity:1;
+    visibility:visible;
+  }
+  .modal-box{
+    position:relative;
+    width:100%;
+    max-width:720px;
+    border:1px solid var(--white);
+    padding:3rem 2.5rem;
+    background:var(--black);
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--white);
+  }
+  .modal-close{
+    position:absolute;
+    top:-1px;
+    right:-1px;
+    width:2.4rem;
+    height:2.4rem;
+    border:1px solid var(--white);
+    background:var(--black);
+    color:var(--white);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.1rem;
+    cursor:pointer;
+    transition:background 0.25s ease, color 0.25s ease;
+  }
+  .modal-close:hover{
+    background:var(--white);
+    color:var(--black);
+  }
+  .modal-text{
+    font-size:0.95rem;
+    line-height:1.7;
+    letter-spacing:0.02em;
+    padding-right:1.5rem;
+  }
+  .modal-columns{
+    display:flex;
+    flex-wrap:wrap;
+    gap:2.5rem;
+    align-items:center;
+  }
+  .modal-qr-link{
+    display:block;
+    width:150px;
+    flex-shrink:0;
+    border:1px solid var(--grey-2);
+    padding:0.6rem;
+    transition:border-color 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+  }
+  .modal-qr-link:hover{
+    border-color:var(--white);
+    transform:scale(1.04);
+  }
+  .modal-qr-link img{
+    display:block;
+    width:100%;
+    height:auto;
+  }
+  .modal-qr-caption{
+    margin-top:0.7rem;
+    font-size:0.68rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+    text-align:center;
+  }
+  .modal-right{
+    flex:1;
+    min-width:220px;
+  }
+  .modal-email-btn{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.8rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--white);
+    background:transparent;
+    border:1px solid var(--white);
+    padding:0.9rem 1.6rem;
+    cursor:pointer;
+    text-decoration:none;
+    transition:background 0.25s ease, color 0.25s ease;
+  }
+  .modal-email-btn:hover{
+    background:var(--white);
+    color:var(--black);
+  }
+  .newsletter-form{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.8rem;
+  }
+  .newsletter-form input[type="email"]{
+    flex:1;
+    min-width:180px;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    color:var(--white);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.85rem;
+    padding:0.85rem 1rem;
+  }
+  .newsletter-form input[type="email"]:focus{
+    outline:none;
+    border-color:var(--white);
+  }
+  .newsletter-form button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.8rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--white);
+    background:transparent;
+    border:1px solid var(--white);
+    padding:0.85rem 1.5rem;
+    cursor:pointer;
+    transition:background 0.25s ease, color 0.25s ease;
+  }
+  .newsletter-form button:hover{
+    background:var(--white);
+    color:var(--black);
+  }
+  .newsletter-note{
+    margin-top:0.9rem;
+    font-size:0.75rem;
+    color:var(--grey-3);
+    min-height:1.2em;
   }
 </style>
 </head>
@@ -590,9 +769,10 @@
 <section class="pedals" id="pedalsSection">
   <div class="pedal-viewer" id="pedalViewer">
     <!-- slides are injected by JS from the pedalImages list below -->
+    <div class="pedal-flash" id="pedalFlash"></div>
   </div>
 
-  <button class="preorder-btn">Pre-Order Now</button>
+  <button class="preorder-btn" id="preorderBtn">Pre-Order Now</button>
 </section>
 
 <section class="contact" id="contactSection">
@@ -600,6 +780,50 @@
   <button class="preorder-btn contact-btn-top" id="contactBtnTop">In Kontakt Treten</button>
   <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
 </section>
+
+<!-- Pre-Order modal -->
+<div class="modal-overlay" id="modalPreorder">
+  <div class="modal-box">
+    <button class="modal-close" id="modalPreorderClose" aria-label="Schließen">&times;</button>
+    <p class="modal-text">Momentan nehmen wir keine Vorbestellungen an, bitte begeben sie sich in Kontakt mit uns und halten Sie sich auf dem laufenden.</p>
+  </div>
+</div>
+
+<!-- Kontakt modal -->
+<div class="modal-overlay" id="modalContact">
+  <div class="modal-box">
+    <button class="modal-close" id="modalContactClose" aria-label="Schließen">&times;</button>
+    <div class="modal-columns">
+      <a class="modal-qr-link" href="https://www.instagram.com/daturapedals/" target="_blank" rel="noopener">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=eeeeea&bgcolor=050505&data=https://www.instagram.com/daturapedals/" alt="Instagram QR-Code">
+        <p class="modal-qr-caption">@daturapedals</p>
+      </a>
+      <div class="modal-right">
+        <a class="modal-email-btn" href="mailto:daturapedals@gmail.com?subject=Kontaktanfrage">Email Schreiben</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Newsletter modal -->
+<div class="modal-overlay" id="modalNewsletter">
+  <div class="modal-box">
+    <button class="modal-close" id="modalNewsletterClose" aria-label="Schließen">&times;</button>
+    <div class="modal-columns">
+      <a class="modal-qr-link" href="https://www.instagram.com/daturapedals/" target="_blank" rel="noopener">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=eeeeea&bgcolor=050505&data=https://www.instagram.com/daturapedals/" alt="Instagram QR-Code">
+        <p class="modal-qr-caption">@daturapedals</p>
+      </a>
+      <div class="modal-right">
+        <form class="newsletter-form" id="newsletterForm">
+          <input type="email" id="newsletterEmail" placeholder="deine@email.de" required>
+          <button type="submit">Versenden</button>
+        </form>
+        <p class="newsletter-note" id="newsletterNote"></p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 const stage = document.getElementById('stage');
@@ -680,34 +904,51 @@ if (wordmarkEl && !reduceMotion) {
 
 /* ---------- Datura hover: chaotic, non-repeating glitch ----------
    driven directly by JS (rather than a looping CSS animation) so it
-   never reads as a clean repeating pattern -- random jitter, random
-   skew/scale, and randomly dropped frames for an uneven, disorienting
-   "motion sickness" stutter, layered on top of the existing duplicate-
-   layer glitch (::before/::after), which keeps running via :hover */
+   never reads as a clean repeating pattern. Two things move at once:
+   1) constant jumping/jitter (position, skew, scale)
+   2) a separate, randomly-timed toggle between a "glitched" look
+      (heavier distortion filter) and a "clean" look (plain distort),
+      so the glitch itself pulses on and off rather than staying
+      at one constant intensity the whole time */
 (function(){
   const logoBoxLocal = document.querySelector('.logo-box');
   if (!wordmarkEl || !logoBoxLocal || reduceMotion) return;
   let chaosRaf = null;
+  let glitchModeOn = true;
+  let modeTimer = 0;
+  let modeThreshold = 200;
 
   function chaosTick(){
+    modeTimer += 16; // ~1 frame
+    if (modeTimer > modeThreshold){
+      glitchModeOn = !glitchModeOn;
+      modeTimer = 0;
+      modeThreshold = 140 + Math.random() * 260;
+    }
+
     if (Math.random() < 0.75){
-      const tx = (Math.random() - 0.5) * 16;
-      const ty = (Math.random() - 0.5) * 12;
-      const skx = (Math.random() - 0.5) * 12;
-      const sky = (Math.random() - 0.5) * 5;
-      const scale = 1 + (Math.random() - 0.5) * 0.09;
+      const jumpScale = glitchModeOn ? 1 : 0.6;
+      const tx = (Math.random() - 0.5) * 12 * jumpScale;
+      const ty = (Math.random() - 0.5) * 9 * jumpScale;
+      const skx = (Math.random() - 0.5) * 7 * jumpScale;
+      const sky = (Math.random() - 0.5) * 3 * jumpScale;
+      const scale = 1 + (Math.random() - 0.5) * 0.06;
       wordmarkEl.style.transform =
         'translate(' + tx + 'px,' + ty + 'px) skew(' + skx + 'deg,' + sky + 'deg) scale(' + scale + ')';
 
-      const contrast = 1 + Math.random() * 0.7;
-      const bright = 0.7 + Math.random() * 0.55;
-      wordmarkEl.style.filter =
-        'url(#distort-heavy) contrast(' + contrast + ') brightness(' + bright + ')';
+      if (glitchModeOn){
+        const contrast = 1 + Math.random() * 0.35;
+        const bright = 0.85 + Math.random() * 0.3;
+        wordmarkEl.style.filter =
+          'url(#distort-heavy) contrast(' + contrast + ') brightness(' + bright + ')';
+      } else {
+        wordmarkEl.style.filter = 'url(#distort)';
+      }
     }
     // occasional bigger spike for a jolt, on top of the regular jitter
-    if (Math.random() < 0.06){
-      const jx = (Math.random() - 0.5) * 34;
-      const jy = (Math.random() - 0.5) * 22;
+    if (glitchModeOn && Math.random() < 0.04){
+      const jx = (Math.random() - 0.5) * 22;
+      const jy = (Math.random() - 0.5) * 14;
       wordmarkEl.style.transform += ' translate(' + jx + 'px,' + jy + 'px)';
     }
     chaosRaf = requestAnimationFrame(chaosTick);
@@ -715,6 +956,8 @@ if (wordmarkEl && !reduceMotion) {
 
   function startChaos(){
     if (chaosRaf) return;
+    glitchModeOn = true;
+    modeTimer = 0;
     chaosTick();
   }
   function stopChaos(){
@@ -755,12 +998,61 @@ if (pedalViewer) {
 }
 
 let currentSlide = 0;
+const pedalFlashEl = document.getElementById('pedalFlash');
+let pedalHovering = false;
+let pedalTimeoutId = null;
+
+function advancePedalSlide(){
+  pedalSlides[currentSlide].classList.remove('active');
+  currentSlide = (currentSlide + 1) % pedalSlides.length;
+  pedalSlides[currentSlide].classList.add('active');
+}
+
+function doPedalTransition(){
+  if (pedalSlides.length <= 1) return;
+  if (pedalHovering && pedalFlashEl){
+    // energetic hover transition: quick flash to black, swap the
+    // slide underneath it (instantly -- no-fade class kills the
+    // crossfade so it doesn't overlap with the flash), then fade
+    // the flash back out
+    pedalFlashEl.style.opacity = '1';
+    setTimeout(function(){
+      advancePedalSlide();
+      pedalFlashEl.style.opacity = '0';
+    }, 90);
+  } else {
+    advancePedalSlide();
+  }
+}
+
+function schedulePedalRotation(){
+  if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
+  const delay = pedalHovering ? 500 : 3800;
+  pedalTimeoutId = setTimeout(function(){
+    doPedalTransition();
+    schedulePedalRotation();
+  }, delay);
+}
+
 if (pedalSlides.length > 1) {
-  setInterval(function(){
-    pedalSlides[currentSlide].classList.remove('active');
-    currentSlide = (currentSlide + 1) % pedalSlides.length;
-    pedalSlides[currentSlide].classList.add('active');
-  }, 3800);
+  if (pedalViewer){
+    pedalViewer.addEventListener('mouseenter', function(){
+      pedalHovering = true;
+      pedalViewer.classList.add('no-fade');
+      schedulePedalRotation();
+    });
+    pedalViewer.addEventListener('mouseleave', function(){
+      pedalHovering = false;
+      pedalViewer.classList.remove('no-fade');
+      schedulePedalRotation();
+    });
+    pedalViewer.addEventListener('click', function(){
+      if (!pedalHovering) return;
+      doPedalTransition();
+      schedulePedalRotation();
+    });
+  }
+  schedulePedalRotation();
 }
 
 const pedalsSection = document.getElementById('pedalsSection');
@@ -805,7 +1097,7 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
     wordmarkWrap.classList.add('open');
     // let the door swing open first, then move to the video section
     setTimeout(function(){
-      videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 650);
   };
 
@@ -857,12 +1149,15 @@ if (sloganMainEl && wordmarkWrap && contactSection) {
     wordmarkWrap.classList.add('slogan-open');
 
     const letters = sloganMainEl.querySelectorAll('.letter');
-    const spread = Math.min(window.innerWidth, window.innerHeight) * 0.4;
+    const spread = Math.min(window.innerWidth, window.innerHeight) * 0.3;
     letters.forEach(function(el){
       const angle = Math.random() * Math.PI * 2;
-      const dist = 120 + Math.random() * spread;
+      const dist = 90 + Math.random() * spread;
       const dx = Math.cos(angle) * dist;
-      const dy = Math.sin(angle) * dist;
+      let dy = Math.sin(angle) * dist;
+      // dampen downward scatter specifically so letters don't drift
+      // low enough to become visible in the section below
+      if (dy > 0) dy *= 0.5;
       const rot = (Math.random() - 0.5) * 720;
       el.style.setProperty('--sx', dx + 'px');
       el.style.setProperty('--sy', dy + 'px');
@@ -876,7 +1171,7 @@ if (sloganMainEl && wordmarkWrap && contactSection) {
 
     // same overall duration as the Datura door before it moves on
     setTimeout(function(){
-      contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 650);
   };
 
@@ -910,14 +1205,17 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
 
     const letters = Array.prototype.slice.call(pedalsLabelEl.querySelectorAll('.letter'));
     const n = letters.length;
-    const k = Math.min(n - 1, 1 + Math.floor(Math.random() * 2)); // 1-2 letters, cradle-style
+    const k = Math.min(n - 1, 1 + Math.floor(Math.random() * 5)); // 1-5 letters, cradle-style
     const leftGroup = letters.slice(0, k);
     const rightGroup = letters.slice(n - k);
     const middleGroup = letters.slice(k, n - k);
 
-    // phase 1: pull the left-side letters up and out, like drawing back
-    // the first balls of a Newton's cradle
-    leftGroup.forEach(function(el){ el.classList.add('pulled-left'); });
+    // let the enlarge read first, then play the cradle motion
+    setTimeout(function(){
+      // phase 1: pull the left-side letters up and out, like drawing back
+      // the first balls of a Newton's cradle
+      leftGroup.forEach(function(el){ el.classList.add('pulled-left'); });
+    }, 180);
 
     // phase 2: release -- they drop back down, the impact passes through
     // the untouched middle letters, and the same count flies out the
@@ -926,21 +1224,21 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
       leftGroup.forEach(function(el){ el.classList.remove('pulled-left'); });
       middleGroup.forEach(function(el){ el.classList.add('impact-shake'); });
       rightGroup.forEach(function(el){ el.classList.add('hit-right'); });
-    }, 220);
+    }, 400);
 
     setTimeout(function(){
       middleGroup.forEach(function(el){ el.classList.remove('impact-shake'); });
-    }, 300);
+    }, 480);
 
     // phase 3: the right-side letters swing back down to rest
     setTimeout(function(){
       rightGroup.forEach(function(el){ el.classList.remove('hit-right'); });
-    }, 420);
+    }, 600);
 
     // once the cradle has settled, move to the pre-order section
     setTimeout(function(){
-      pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 700);
+      pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 850);
   };
 
   pedalsLabelEl.addEventListener('click', openPedals);
@@ -1269,6 +1567,72 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
       });
     }, { threshold: 0.05 });
     flowObserver.observe(section);
+  }
+})();
+
+/* ---------- modals: Pre-Order / Kontakt / Newsletter ---------- */
+(function(){
+  const preorderBtn = document.getElementById('preorderBtn');
+  const contactBtnTopEl = document.getElementById('contactBtnTop');
+  const contactBtnBottomEl = document.getElementById('contactBtnBottom');
+
+  const modalPreorder = document.getElementById('modalPreorder');
+  const modalContact = document.getElementById('modalContact');
+  const modalNewsletter = document.getElementById('modalNewsletter');
+  const allModals = [modalPreorder, modalContact, modalNewsletter].filter(Boolean);
+
+  function openModal(modal){
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  }
+  function closeModal(modal){
+    if (!modal) return;
+    modal.classList.remove('active');
+    const anyOpen = allModals.some(function(m){ return m.classList.contains('active'); });
+    if (!anyOpen){
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+  }
+  function closeAllModals(){
+    allModals.forEach(closeModal);
+  }
+
+  if (preorderBtn) preorderBtn.addEventListener('click', function(){ openModal(modalPreorder); });
+  if (contactBtnTopEl) contactBtnTopEl.addEventListener('click', function(){ openModal(modalContact); });
+  if (contactBtnBottomEl) contactBtnBottomEl.addEventListener('click', function(){ openModal(modalNewsletter); });
+
+  const closePreorder = document.getElementById('modalPreorderClose');
+  const closeContact = document.getElementById('modalContactClose');
+  const closeNewsletter = document.getElementById('modalNewsletterClose');
+  if (closePreorder) closePreorder.addEventListener('click', function(){ closeModal(modalPreorder); });
+  if (closeContact) closeContact.addEventListener('click', function(){ closeModal(modalContact); });
+  if (closeNewsletter) closeNewsletter.addEventListener('click', function(){ closeModal(modalNewsletter); });
+
+  // clicking the black backdrop itself (not the box) also closes it
+  allModals.forEach(function(modal){
+    modal.addEventListener('click', function(e){
+      if (e.target === modal) closeModal(modal);
+    });
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeAllModals();
+  });
+
+  // newsletter form: no backend wired up here, so this just confirms
+  // locally -- connect it to your actual list provider (e.g. Buttondown)
+  // to really collect addresses
+  const newsletterForm = document.getElementById('newsletterForm');
+  const newsletterNote = document.getElementById('newsletterNote');
+  if (newsletterForm){
+    newsletterForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if (newsletterNote) newsletterNote.textContent = 'Danke! Wir halten dich auf dem Laufenden.';
+      newsletterForm.reset();
+    });
   }
 })();
 </script>
