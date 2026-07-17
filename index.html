@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Anton&family=Bungee&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#eeeeea;
+    --black:#050505;
+    --grey-1:#151515;
+    --grey-2:#3a3a3a;
+    --grey-3:#8a8a8a;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html{
+    scroll-behavior:smooth;
+  }
+
+  html, body{
+    width:100%;
+    background:var(--black);
+    color:var(--white);
+    overflow-x:hidden;
+    overflow-y:auto;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  .stage{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:var(--black);
+  }
+
+  /* film grain, always present, faint */
+  .grain{
+    position:absolute; inset:0;
+    pointer-events:none;
+    opacity:0.05;
+    z-index:5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grain-shift 0.4s steps(2) infinite;
+  }
+  @keyframes grain-shift{
+    0%{ transform:translate(0,0); }
+    100%{ transform:translate(-6%,4%); }
+  }
+
+  /* full-screen flash layer used for strobes / static bursts */
+  .flash{
+    position:absolute; inset:0;
+    z-index:10;
+    background:var(--white);
+    opacity:0;
+    pointer-events:none;
+  }
+
+  /* vignette, gives the "comfort" half of comfort-horror: a soft contained darkness */
+  .vignette{
+    position:absolute; inset:0;
+    z-index:6;
+    pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.85) 100%);
+  }
+
+  /* glyph glimpses shown mid-flicker, fragments of the wordmark */
+  .glimpse{
+    position:absolute;
+    z-index:8;
+    font-family:'Anton', sans-serif;
+    color:var(--white);
+    letter-spacing:0.05em;
+    opacity:0;
+    pointer-events:none;
+    white-space:nowrap;
+    filter: blur(0.3px);
+  }
+
+  .wordmark-wrap{
+    position:relative;
+    z-index:7;
+    text-align:center;
+    opacity:0;
+  }
+
+  .logo-box{
+    position:relative;
+    display:inline-block;
+    cursor:pointer;
+  }
+
+  .wordmark{
+    position:relative;
+    font-family:'Anton', sans-serif;
+    font-size:clamp(3.5rem, 13vw, 9rem);
+    letter-spacing:0.03em;
+    color:var(--white);
+    line-height:1;
+    filter: url(#distort);
+    user-select:none;
+    transition: opacity 0.35s ease;
+  }
+
+  /* the two door panels: each is its own text substring ("DAT" / "URA"),
+     positioned edge-to-edge so together they read as one intact word;
+     opening slides them apart and fades the real wordmark out */
+  .door{
+    position:absolute;
+    top:0;
+    font-family:'Anton', sans-serif;
+    font-size:clamp(3.5rem, 13vw, 9rem);
+    letter-spacing:0.03em;
+    line-height:1;
+    color:var(--white);
+    white-space:nowrap;
+    pointer-events:none;
+    opacity:0;
+    transition: opacity 0.4s ease, transform 0.7s cubic-bezier(.65,0,.35,1);
+  }
+  .door-left{ left:0; transform:translateX(0); }
+  .door-right{ left:0; transform:translateX(0); } /* left offset set precisely by JS once text width is known */
+
+  #wordmarkWrap.open .wordmark{
+    opacity:0;
+  }
+  #wordmarkWrap.open .door{
+    opacity:1;
+  }
+  #wordmarkWrap.open .door-left{
+    transform:translateX(-1.3em);
+  }
+  #wordmarkWrap.open .door-right{
+    transform:translateX(1.3em);
+  }
+
+  /* the rest of the hero recedes into darkness while the door opens.
+     !important is needed here because the fade-in reveal animation
+     (with fill-mode forwards) otherwise outranks normal rules for opacity. */
+  #wordmarkWrap.open .slogan-main,
+  #wordmarkWrap.open .divider,
+  #wordmarkWrap.open .slogan-sub,
+  #wordmarkWrap.open .pedals-label{
+    opacity:0.08 !important;
+  }
+
+  /* clicking "Unsere Szene, Unser Sound": Datura + the sub-slogan + the
+     divider disappear into the black background while the slogan itself
+     enlarges and its letters scatter (see .scatter above) */
+  #wordmarkWrap.slogan-open .wordmark,
+  #wordmarkWrap.slogan-open .divider,
+  #wordmarkWrap.slogan-open .slogan-sub,
+  #wordmarkWrap.slogan-open .pedals-label{
+    opacity:0 !important;
+  }
+
+  /* clicking PEDALS: everything except the label itself darkens while
+     the Newton's-cradle letter animation plays */
+  #wordmarkWrap.pedals-open .wordmark,
+  #wordmarkWrap.pedals-open .divider,
+  #wordmarkWrap.pedals-open .slogan-main,
+  #wordmarkWrap.pedals-open .slogan-sub{
+    opacity:0 !important;
+  }
+
+  .wordmark::before,
+  .wordmark::after{
+    content: attr(data-text);
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    overflow:hidden;
+    opacity:0;
+    pointer-events:none;
+  }
+  .wordmark::before{
+    color:var(--black);
+    mix-blend-mode:difference;
+  }
+  .wordmark::after{
+    color:var(--white);
+    mix-blend-mode:screen;
+  }
+
+  /* idle: a brief burst every few seconds, then still -- not a continuous stutter */
+  .wordmark.glitching-idle{
+    animation: glitch-shake-burst 0.28s steps(2,end) 2;
+  }
+  .wordmark.glitching-idle::before{
+    opacity:0.5;
+    animation: glitch-shake-burst 0.28s steps(2,end) 2 reverse;
+  }
+  .wordmark.glitching-idle::after{
+    opacity:0.35;
+    animation: glitch-shake-burst 0.28s steps(2,end) 2;
+  }
+
+  /* hover: same effect, much faster, greater magnitude, continuous while hovered */
+  .wordmark:hover{
+    animation: glitch-shake-hover 0.16s steps(2,end) infinite;
+  }
+  .wordmark:hover::before{
+    opacity:0.8;
+    animation: glitch-shake-hover 0.16s steps(2,end) infinite reverse;
+  }
+  .wordmark:hover::after{
+    opacity:0.6;
+    animation: glitch-shake-hover 0.16s steps(2,end) infinite;
+  }
+
+  @keyframes glitch-shake-burst{
+    0%{ transform:translate(0,0); }
+    50%{ transform:translate(-2px,1px); }
+    100%{ transform:translate(2px,-1px); }
+  }
+  @keyframes glitch-shake-hover{
+    0%{ transform:translate(0,0); }
+    50%{ transform:translate(-3px,1.5px); }
+    100%{ transform:translate(3px,-1.5px); }
+  }
+
+  .slogan-main{
+    position:relative;
+    margin-top:1.6rem;
+    font-size:clamp(0.85rem, 1.6vw, 1.15rem);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--white);
+    opacity:0;
+    cursor:pointer;
+    transform-origin:center;
+    transition:opacity 0.5s ease, transform 0.55s cubic-bezier(.22,1,.36,1);
+  }
+
+  .pedals-label{
+    position:relative;
+    margin-top:1.1rem;
+    font-family:'Bungee', sans-serif;
+    font-size:clamp(0.8rem, 1.5vw, 1.1rem);
+    letter-spacing:0.5em;
+    padding-left:0.5em; /* compensates for the trailing letter-spacing gap */
+    color:var(--grey-3);
+    opacity:0;
+    cursor:pointer;
+    transition:opacity 0.5s ease;
+  }
+
+  .pedals-label .letter{
+    display:inline-block;
+    transition: transform 0.22s cubic-bezier(.34,1.56,.64,1);
+  }
+  .pedals-label .letter.pulled-left{
+    transform: translate(-0.9em, -1.1em) rotate(-16deg);
+    transition: transform 0.22s ease-out;
+  }
+  .pedals-label .letter.hit-right{
+    transform: translate(0.9em, -1.1em) rotate(16deg);
+    transition: transform 0.2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .pedals-label .letter.impact-shake{
+    transition: transform 0.08s linear;
+    transform: translateX(2px);
+  }
+
+  .slogan-main .letter{
+    display:inline-block;
+    transition: transform 0.6s cubic-bezier(.22,1,.36,1), opacity 0.45s ease;
+  }
+
+  #wordmarkWrap.slogan-open .slogan-main{
+    transform: scale(2.3);
+  }
+  .slogan-main.scatter .letter{
+    transform: translate(var(--sx, 0px), var(--sy, 0px)) rotate(var(--srot, 0deg));
+    opacity:0.88;
+  }
+
+  .slogan-sub{
+    position:relative;
+    margin-top:0.6rem;
+    font-size:clamp(0.7rem, 1.1vw, 0.85rem);
+    letter-spacing:0.08em;
+    color:var(--grey-3);
+    font-weight:300;
+    opacity:0;
+    transition:opacity 0.5s ease;
+  }
+
+  /* slogans + PEDALS label: no idle motion at all, glitch appears only on hover */
+  .slogan-main::before,
+  .slogan-main::after,
+  .slogan-sub::before,
+  .slogan-sub::after,
+  .pedals-label::before,
+  .pedals-label::after{
+    content: attr(data-text);
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    overflow:hidden;
+    opacity:0;
+    pointer-events:none;
+  }
+  .slogan-main::before,
+  .slogan-sub::before,
+  .pedals-label::before{
+    color:var(--black);
+    mix-blend-mode:difference;
+  }
+  .slogan-main::after,
+  .slogan-sub::after,
+  .pedals-label::after{
+    color:var(--white);
+    mix-blend-mode:screen;
+  }
+
+  .slogan-main:hover,
+  .slogan-sub:hover,
+  .pedals-label:hover{
+    animation: glitch-shake-hover-small 0.16s steps(2,end) infinite;
+  }
+  .slogan-main:hover::before,
+  .slogan-sub:hover::before,
+  .pedals-label:hover::before{
+    opacity:0.75;
+    animation: glitch-shake-hover-small 0.16s steps(2,end) infinite reverse;
+  }
+  .slogan-main:hover::after,
+  .slogan-sub:hover::after,
+  .pedals-label:hover::after{
+    opacity:0.55;
+    animation: glitch-shake-hover-small 0.16s steps(2,end) infinite;
+  }
+
+  @keyframes glitch-shake-hover-small{
+    0%{ transform:translate(0,0); }
+    50%{ transform:translate(-1.5px,1px); }
+    100%{ transform:translate(1.5px,-1px); }
+  }
+
+  /* the click-to-scatter interaction leaves the cursor still hovering the
+     (now enlarged) slogan, which would otherwise keep the hover-glitch's
+     full-text duplicate layers visible on top of the scattering letters */
+  .slogan-main.scatter::before,
+  .slogan-main.scatter::after{
+    opacity:0 !important;
+    animation:none !important;
+  }
+
+  .divider{
+    width:1px;
+    height:0;
+    background:var(--grey-2);
+    margin:1.1rem auto 0;
+    opacity:0;
+    transition:opacity 0.5s ease;
+  }
+
+  /* subtle filter wobble layered underneath, always running once settled */
+  .settled .wordmark{
+    animation: idle-wobble 7s ease-in-out infinite;
+  }
+  .settled .wordmark.glitching-idle{
+    animation: glitch-shake-burst 0.28s steps(2,end) 2, idle-wobble 7s ease-in-out infinite;
+  }
+  .settled .wordmark:hover{
+    animation:none;
+  }
+  @keyframes idle-wobble{
+    0%, 100%{ filter:url(#distort); }
+    50%{ filter:url(#distort-soft); }
+  }
+
+  .settled .wordmark-wrap{
+    animation: fade-in 0.6s ease forwards;
+  }
+  .settled .pedals-label{
+    animation: fade-in 0.6s ease forwards;
+    animation-delay: 0.1s;
+  }
+  .settled .slogan-main{
+    animation: fade-in 0.6s ease forwards;
+    animation-delay: 0.2s;
+  }
+  .settled .divider{
+    animation: grow-in 0.4s ease forwards;
+    animation-delay: 0.15s;
+  }
+  .settled .slogan-sub{
+    animation: fade-in 0.6s ease forwards;
+    animation-delay: 0.4s;
+  }
+
+  @keyframes fade-in{
+    from{ opacity:0; transform:translateY(6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes grow-in{
+    from{ height:0; opacity:0; }
+    to{ height:34px; opacity:1; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .grain{ animation:none; }
+    .settled .wordmark{ animation:none; }
+    .wordmark:hover{ animation:none; }
+    .slogan-main:hover, .slogan-sub:hover{ animation:none; }
+  }
+  /* ---------- pedals section ---------- */
+  .pedals{
+    position:relative;
+    min-height:100vh;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3rem;
+    padding:5rem 1.5rem;
+    background:var(--black);
+    opacity:0;
+    transform:translateY(24px);
+    transition:opacity 0.9s ease, transform 0.9s ease;
+  }
+  .pedals.in-view{
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  /* ---------- video section ---------- */
+  .video-section{
+    position:relative;
+    min-height:100vh;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:5rem 1.5rem;
+    background:var(--black);
+    opacity:0;
+    transform:translateY(24px);
+    transition:opacity 0.9s ease, transform 0.9s ease;
+  }
+  .video-section.in-view{
+    opacity:1;
+    transform:translateY(0);
+  }
+  .video-frame{
+    width:100%;
+    max-width:960px;
+    aspect-ratio:16 / 9;
+  }
+  .video-frame iframe{
+    width:100%;
+    height:100%;
+    border:0;
+    display:block;
+  }
+
+  .pedal-viewer{
+    position:relative;
+    width:clamp(200px, 26vw, 340px);
+    aspect-ratio: 3 / 4;
+  }
+
+  .pedal-slide{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    transition:opacity 1.4s ease;
+  }
+  .pedal-slide.active{
+    opacity:1;
+  }
+  .pedal-slide img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    -webkit-user-drag:none;
+    user-select:none;
+  }
+
+  .preorder-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.8rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--white);
+    background:transparent;
+    border:1px solid var(--white);
+    padding:0.95rem 2.4rem;
+    cursor:pointer;
+    transition:background 0.25s ease, color 0.25s ease;
+  }
+  .preorder-btn:hover{
+    background:var(--white);
+    color:var(--black);
+  }
+
+  /* ---------- contact section: plain black, button top-left, button bottom-right ---------- */
+  .contact{
+    position:relative;
+    width:100%;
+    min-height:100vh;
+    background:var(--black);
+    overflow:hidden;
+  }
+  .contact-canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:0;
+  }
+  .contact-btn-top{
+    position:absolute;
+    top:24%;
+    left:30%;
+    transform:translate(-50%, -50%);
+    z-index:1;
+  }
+  .contact-btn-bottom{
+    position:absolute;
+    bottom:24%;
+    right:30%;
+    transform:translate(50%, 50%);
+    z-index:1;
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="distort" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="distort-soft" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="12" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="distort-heavy" x="-30%" y="-30%" width="160%" height="160%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.15" numOctaves="2" seed="3" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="stage" id="stage">
+  <div class="grain"></div>
+  <div class="vignette"></div>
+  <div class="flash" id="flash"></div>
+
+  <div class="wordmark-wrap" id="wordmarkWrap">
+    <div class="logo-box" role="button" tabindex="0" aria-label="Zu den Pedalen scrollen">
+      <h1 class="wordmark" data-text="DATURA">DATURA</h1>
+      <div class="door door-left" id="doorLeft" aria-hidden="true">DAT</div>
+      <div class="door door-right" id="doorRight" aria-hidden="true">URA</div>
+    </div>
+    <p class="pedals-label" id="pedalsLabel" data-text="PEDALS" role="button" tabindex="0" aria-label="Zur Pre-Order-Sektion scrollen">PEDALS</p>
+    <p class="slogan-main" id="sloganMain" data-text="Unsere Szene, Unser Sound" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">Unsere Szene, Unser Sound</p>
+    <div class="divider"></div>
+    <p class="slogan-sub" data-text="vom Anfänger bis zum Avantgardisten">vom Anfänger bis zum Avantgardisten</p>
+  </div>
+</div>
+
+<section class="video-section" id="videoSection">
+  <div class="video-frame">
+    <iframe
+      src="https://www.youtube.com/embed/L7dzsyUZFYU"
+      title="YouTube video"
+      loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen>
+    </iframe>
+  </div>
+</section>
+
+<section class="pedals" id="pedalsSection">
+  <div class="pedal-viewer" id="pedalViewer">
+    <!-- slides are injected by JS from the pedalImages list below -->
+  </div>
+
+  <button class="preorder-btn">Pre-Order Now</button>
+</section>
+
+<section class="contact" id="contactSection">
+  <canvas class="contact-canvas" id="contactCanvas"></canvas>
+  <button class="preorder-btn contact-btn-top" id="contactBtnTop">In Kontakt Treten</button>
+  <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
+</section>
+
+<script>
+const stage = document.getElementById('stage');
+const flash = document.getElementById('flash');
+const wordmarkWrap = document.getElementById('wordmarkWrap');
+
+function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function makeGlimpse(text, x, y, size, rotate, opacity, filterId){
+  const el = document.createElement('div');
+  el.className = 'glimpse';
+  el.textContent = text;
+  el.style.left = x;
+  el.style.top = y;
+  el.style.fontSize = size;
+  el.style.transform = `translate(-50%,-50%) rotate(${rotate}deg)`;
+  el.style.filter = `url(#${filterId})`;
+  stage.appendChild(el);
+  requestAnimationFrame(() => { el.style.transition = 'opacity 60ms linear'; el.style.opacity = opacity; });
+  return el;
+}
+
+async function flashPulse(duration, peakOpacity){
+  flash.style.transition = `opacity ${duration}ms ease-out`;
+  flash.style.opacity = peakOpacity;
+  await wait(duration * 0.25);
+  flash.style.transition = `opacity ${duration * 0.75}ms ease-in`;
+  flash.style.opacity = 0;
+  await wait(duration * 0.75);
+}
+
+async function glyphBurst(text, peak, hold){
+  const g = makeGlimpse(
+    text,
+    (40 + Math.random()*20) + 'vw',
+    (35 + Math.random()*30) + 'vh',
+    (2.5 + Math.random()*3) + 'rem',
+    (Math.random()*6 - 3),
+    peak,
+    'distort-heavy'
+  );
+  await wait(hold);
+  g.style.opacity = 0;
+  await wait(50);
+  g.remove();
+}
+
+async function runIntro(){
+  await wait(60);
+
+  // two quick sub-flashes with letter fragments -- gone almost before they register
+  await flashPulse(45, 0.75);
+  await glyphBurst('DAR', 0.5, 35);
+  await flashPulse(35, 0.5);
+  await glyphBurst('UDA', 0.4, 35);
+
+  // one sharp peak, then straight to settle -- no lingering
+  await flashPulse(85, 1);
+
+  flash.style.transition = 'opacity 350ms ease';
+  flash.style.opacity = 0;
+
+  stage.classList.add('settled');
+}
+
+runIntro();
+
+/* ---------- idle wordmark glitch: short burst every ~4.2s, not a continuous stutter ---------- */
+const wordmarkEl = document.querySelector('.wordmark');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+if (wordmarkEl && !reduceMotion) {
+  setInterval(function(){
+    wordmarkEl.classList.add('glitching-idle');
+    setTimeout(function(){ wordmarkEl.classList.remove('glitching-idle'); }, 320);
+  }, 4200);
+}
+
+/* ---------- Datura hover: chaotic, non-repeating glitch ----------
+   driven directly by JS (rather than a looping CSS animation) so it
+   never reads as a clean repeating pattern -- random jitter, random
+   skew/scale, and randomly dropped frames for an uneven, disorienting
+   "motion sickness" stutter, layered on top of the existing duplicate-
+   layer glitch (::before/::after), which keeps running via :hover */
+(function(){
+  const logoBoxLocal = document.querySelector('.logo-box');
+  if (!wordmarkEl || !logoBoxLocal || reduceMotion) return;
+  let chaosRaf = null;
+
+  function chaosTick(){
+    if (Math.random() < 0.75){
+      const tx = (Math.random() - 0.5) * 16;
+      const ty = (Math.random() - 0.5) * 12;
+      const skx = (Math.random() - 0.5) * 12;
+      const sky = (Math.random() - 0.5) * 5;
+      const scale = 1 + (Math.random() - 0.5) * 0.09;
+      wordmarkEl.style.transform =
+        'translate(' + tx + 'px,' + ty + 'px) skew(' + skx + 'deg,' + sky + 'deg) scale(' + scale + ')';
+
+      const contrast = 1 + Math.random() * 0.7;
+      const bright = 0.7 + Math.random() * 0.55;
+      wordmarkEl.style.filter =
+        'url(#distort-heavy) contrast(' + contrast + ') brightness(' + bright + ')';
+    }
+    // occasional bigger spike for a jolt, on top of the regular jitter
+    if (Math.random() < 0.06){
+      const jx = (Math.random() - 0.5) * 34;
+      const jy = (Math.random() - 0.5) * 22;
+      wordmarkEl.style.transform += ' translate(' + jx + 'px,' + jy + 'px)';
+    }
+    chaosRaf = requestAnimationFrame(chaosTick);
+  }
+
+  function startChaos(){
+    if (chaosRaf) return;
+    chaosTick();
+  }
+  function stopChaos(){
+    if (chaosRaf){ cancelAnimationFrame(chaosRaf); chaosRaf = null; }
+    wordmarkEl.style.transform = '';
+    wordmarkEl.style.filter = '';
+  }
+
+  logoBoxLocal.addEventListener('mouseenter', startChaos);
+  logoBoxLocal.addEventListener('mouseleave', stopChaos);
+})();
+
+/* ---------- pedals section: rotates through real photos in ./images/ ---------- */
+/* Put your transparent PNGs in a folder named "images" next to this HTML file,
+   named exactly as listed below (or edit this list to match your filenames). */
+const pedalImages = [
+  'images/pedal-1.png',
+  'images/pedal-2.png',
+  'images/pedal-3.png',
+  'images/pedal-4.png'
+];
+
+const pedalViewer = document.getElementById('pedalViewer');
+let pedalSlides = [];
+
+if (pedalViewer) {
+  pedalSlides = pedalImages.map(function(src, i){
+    const slide = document.createElement('div');
+    slide.className = 'pedal-slide' + (i === 0 ? ' active' : '');
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = 'Datura Pedal';
+    img.loading = i === 0 ? 'eager' : 'lazy';
+    slide.appendChild(img);
+    pedalViewer.appendChild(slide);
+    return slide;
+  });
+}
+
+let currentSlide = 0;
+if (pedalSlides.length > 1) {
+  setInterval(function(){
+    pedalSlides[currentSlide].classList.remove('active');
+    currentSlide = (currentSlide + 1) % pedalSlides.length;
+    pedalSlides[currentSlide].classList.add('active');
+  }, 3800);
+}
+
+const pedalsSection = document.getElementById('pedalsSection');
+const contactSection = document.getElementById('contactSection');
+const videoSection = document.getElementById('videoSection');
+
+[pedalsSection, videoSection].forEach(function(sec){
+  if (!sec) return;
+  const observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (entry.isIntersecting) {
+        sec.classList.add('in-view');
+        observer.unobserve(sec);
+      }
+    });
+  }, { threshold: 0.25 });
+  observer.observe(sec);
+});
+
+/* ---------- Datura: clickable, opens like a double door toward the video section ---------- */
+const logoBoxEl = document.querySelector('.logo-box');
+const stageEl = document.getElementById('stage');
+const doorLeftEl = document.getElementById('doorLeft');
+const doorRightEl = document.getElementById('doorRight');
+
+// position "URA" exactly where "DAT" ends, so together they read as one
+// intact word -- measured in real pixels since the font isn't monospace,
+// re-measured on resize and once the webfont finishes loading
+function updateDoorSplit(){
+  if (!doorLeftEl || !doorRightEl) return;
+  doorRightEl.style.left = doorLeftEl.getBoundingClientRect().width + 'px';
+}
+updateDoorSplit();
+window.addEventListener('resize', updateDoorSplit);
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(updateDoorSplit);
+}
+
+if (logoBoxEl && wordmarkWrap && videoSection) {
+  const openDoor = function(){
+    updateDoorSplit();
+    wordmarkWrap.classList.add('open');
+    // let the door swing open first, then move to the video section
+    setTimeout(function(){
+      videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 650);
+  };
+
+  logoBoxEl.addEventListener('click', openDoor);
+  logoBoxEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openDoor();
+    }
+  });
+
+  const heroObserver = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+        wordmarkWrap.classList.remove('open');
+        wordmarkWrap.classList.remove('slogan-open');
+        wordmarkWrap.classList.remove('pedals-open');
+        if (sloganMainEl) sloganMainEl.classList.remove('scatter');
+        if (pedalsLabelEl){
+          pedalsLabelEl.querySelectorAll('.letter').forEach(function(el){
+            el.classList.remove('pulled-left', 'hit-right', 'impact-shake');
+          });
+        }
+      }
+    });
+  }, { threshold: [0, 0.6, 1] });
+  heroObserver.observe(stageEl);
+}
+
+/* ---------- "Unsere Szene, Unser Sound": click to enlarge + scatter its
+   letters, then move down to the contact/particles section ---------- */
+const sloganMainEl = document.getElementById('sloganMain');
+
+if (sloganMainEl && wordmarkWrap && contactSection) {
+  // split into individual letter spans once, up front -- data-text keeps
+  // driving the existing hover-glitch pseudo-elements unaffected
+  (function wrapLetters(){
+    const text = sloganMainEl.getAttribute('data-text') || sloganMainEl.textContent;
+    sloganMainEl.textContent = '';
+    Array.prototype.forEach.call(text, function(ch){
+      const span = document.createElement('span');
+      span.className = 'letter';
+      span.textContent = ch === ' ' ? '\u00A0' : ch;
+      sloganMainEl.appendChild(span);
+    });
+  })();
+
+  const openSlogan = function(){
+    wordmarkWrap.classList.add('slogan-open');
+
+    const letters = sloganMainEl.querySelectorAll('.letter');
+    const spread = Math.min(window.innerWidth, window.innerHeight) * 0.4;
+    letters.forEach(function(el){
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 120 + Math.random() * spread;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      const rot = (Math.random() - 0.5) * 720;
+      el.style.setProperty('--sx', dx + 'px');
+      el.style.setProperty('--sy', dy + 'px');
+      el.style.setProperty('--srot', rot + 'deg');
+    });
+
+    // let the enlarge kick in first, then the letters fly apart
+    setTimeout(function(){
+      sloganMainEl.classList.add('scatter');
+    }, 150);
+
+    // same overall duration as the Datura door before it moves on
+    setTimeout(function(){
+      contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 650);
+  };
+
+  sloganMainEl.addEventListener('click', openSlogan);
+  sloganMainEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openSlogan();
+    }
+  });
+}
+
+/* ---------- PEDALS: click plays a Newton's-cradle letter animation,
+   then moves down to the pre-order section ---------- */
+const pedalsLabelEl = document.getElementById('pedalsLabel');
+
+if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
+  (function wrapPedalsLetters(){
+    const text = pedalsLabelEl.getAttribute('data-text') || pedalsLabelEl.textContent;
+    pedalsLabelEl.textContent = '';
+    Array.prototype.forEach.call(text, function(ch){
+      const span = document.createElement('span');
+      span.className = 'letter';
+      span.textContent = ch === ' ' ? '\u00A0' : ch;
+      pedalsLabelEl.appendChild(span);
+    });
+  })();
+
+  const openPedals = function(){
+    wordmarkWrap.classList.add('pedals-open');
+
+    const letters = Array.prototype.slice.call(pedalsLabelEl.querySelectorAll('.letter'));
+    const n = letters.length;
+    const k = Math.min(n - 1, 1 + Math.floor(Math.random() * 2)); // 1-2 letters, cradle-style
+    const leftGroup = letters.slice(0, k);
+    const rightGroup = letters.slice(n - k);
+    const middleGroup = letters.slice(k, n - k);
+
+    // phase 1: pull the left-side letters up and out, like drawing back
+    // the first balls of a Newton's cradle
+    leftGroup.forEach(function(el){ el.classList.add('pulled-left'); });
+
+    // phase 2: release -- they drop back down, the impact passes through
+    // the untouched middle letters, and the same count flies out the
+    // right side
+    setTimeout(function(){
+      leftGroup.forEach(function(el){ el.classList.remove('pulled-left'); });
+      middleGroup.forEach(function(el){ el.classList.add('impact-shake'); });
+      rightGroup.forEach(function(el){ el.classList.add('hit-right'); });
+    }, 220);
+
+    setTimeout(function(){
+      middleGroup.forEach(function(el){ el.classList.remove('impact-shake'); });
+    }, 300);
+
+    // phase 3: the right-side letters swing back down to rest
+    setTimeout(function(){
+      rightGroup.forEach(function(el){ el.classList.remove('hit-right'); });
+    }, 420);
+
+    // once the cradle has settled, move to the pre-order section
+    setTimeout(function(){
+      pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 700);
+  };
+
+  pedalsLabelEl.addEventListener('click', openPedals);
+  pedalsLabelEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openPedals();
+    }
+  });
+}
+
+/* ---------- contact section: organic particle flow field ---------- */
+(function(){
+  const canvas = document.getElementById('contactCanvas');
+  const section = document.getElementById('contactSection');
+  const btnTop = document.getElementById('contactBtnTop');
+  const btnBottom = document.getElementById('contactBtnBottom');
+  if (!canvas || !section || !btnTop || !btnBottom) return;
+
+  const ctx = canvas.getContext('2d');
+  const PARTICLE_COUNT = 70;
+  const reduceMotionFlow = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let width = 0, height = 0, dpr = 1;
+  let running = false;
+  let rafId = null;
+  let time = 0;
+
+  // 'top' | 'bottom' | null -- which button is currently hovered
+  let hoverState = null;
+
+  function sectionRelativeRect(btn){
+    const sectionRect = section.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    return {
+      left: btnRect.left - sectionRect.left,
+      right: btnRect.right - sectionRect.left,
+      top: btnRect.top - sectionRect.top,
+      bottom: btnRect.bottom - sectionRect.top
+    };
+  }
+
+  // exclusion zone around each button (padded so dots keep a visible gap)
+  // plus the point "just under" the button that hover-flow aims for,
+  // plus a center + safe radius for the orbit-on-hover behavior
+  function obstacleFor(btn){
+    const r = sectionRelativeRect(btn);
+    const pad = 16;
+    const halfW = (r.right - r.left) / 2;
+    const halfH = (r.bottom - r.top) / 2;
+    return {
+      left: r.left - pad,
+      right: r.right + pad,
+      top: r.top - pad,
+      bottom: r.bottom + pad,
+      arriveX: (r.left + r.right) / 2,
+      arriveY: r.bottom + pad + 10,
+      centerX: (r.left + r.right) / 2,
+      centerY: (r.top + r.bottom) / 2,
+      safeRadius: Math.hypot(halfW, halfH) + pad + 14
+    };
+  }
+
+  function resize(){
+    const rect = section.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = rect.width;
+    height = rect.height;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  function insideRect(x, y, rect){
+    return x > rect.left && x < rect.right && y > rect.top && y < rect.bottom;
+  }
+
+  // random spawn point anywhere in the section, never inside a button's obstacle zone
+  function randomFreePoint(){
+    const topObs = obstacleFor(btnTop);
+    const bottomObs = obstacleFor(btnBottom);
+    let x, y, tries = 0;
+    do {
+      x = 20 + Math.random() * (width - 40);
+      y = 20 + Math.random() * (height - 40);
+      tries++;
+    } while ((insideRect(x, y, topObs) || insideRect(x, y, bottomObs)) && tries < 20);
+    return { x: x, y: y };
+  }
+
+  function makeParticle(){
+    const p0 = randomFreePoint();
+    return {
+      x: p0.x,
+      y: p0.y,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      size: 1 + Math.random() * 1.6,
+      // per-particle wander identity -- keeps every dot desynced from the rest
+      noiseSeedA: Math.random() * 1000,
+      noiseSeedB: Math.random() * 1000,
+      noiseFreq: 0.35 + Math.random() * 0.5,
+      noiseAmp: 0.55 + Math.random() * 0.55,
+      maxSpeed: 0.5 + Math.random() * 0.6,
+      // per-particle orbit identity -- reused for both button-hover orbit
+      // and the close-to-cursor orbit
+      orbitAngle: Math.random() * Math.PI * 2,
+      orbitDir: Math.random() < 0.5 ? 1 : -1,
+      orbitSpeed: 0.008 + Math.random() * 0.018,
+      orbitRadiusOffset: Math.random() * 70
+    };
+  }
+
+  let particles = [];
+
+  function initParticles(){
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++){
+      particles.push(makeParticle());
+    }
+  }
+
+  // two independent decaying boosts: one for hover-enter, one for hover-leave,
+  // so their duration and strength can be tuned separately
+  let hoverBoost = 0;
+  let leaveBoost = 0;
+  const HOVER_BOOST_DECAY = 0.982;  // ~4x the duration of the original boost
+  const LEAVE_BOOST_DECAY = 0.953;  // ~1.5x the duration of the original boost
+
+  function burstOutward(btn){
+    const obs = obstacleFor(btn);
+    particles.forEach(function(p){
+      const dx = p.x - obs.centerX;
+      const dy = p.y - obs.centerY;
+      const dist = Math.hypot(dx, dy) || 0.001;
+      const impulse = (3 + Math.random() * 2.5) * 6; // 6x faster explosion
+      p.vx += (dx / dist) * impulse;
+      p.vy += (dy / dist) * impulse;
+    });
+    leaveBoost = 15.6; // raised so the cap doesn't instantly clamp the impulse
+  }
+
+  btnTop.addEventListener('mouseenter', function(){ hoverState = 'top'; hoverBoost = 1.7; });
+  btnTop.addEventListener('mouseleave', function(){ burstOutward(btnTop); hoverState = null; });
+  btnBottom.addEventListener('mouseenter', function(){ hoverState = 'bottom'; hoverBoost = 1.7; });
+  btnBottom.addEventListener('mouseleave', function(){ burstOutward(btnBottom); hoverState = null; });
+
+  // mouse position, section-local -- used for the close-vicinity orbit
+  let mouseX = null, mouseY = null, mouseActive = false;
+  const MOUSE_CAPTURE_RADIUS = 90;
+
+  section.addEventListener('mousemove', function(e){
+    const rect = section.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    mouseActive = true;
+  });
+  section.addEventListener('mouseleave', function(){ mouseActive = false; });
+
+  const WALL_MARGIN = 14;
+  const MAX_SUBSTEP = 4; // px per collision-check substep, prevents tunneling through buttons
+
+  // moves a particle in small steps, checking wall + obstacle collisions
+  // at every substep so fast-moving particles (boosted/bursting) can't
+  // tunnel through a button in a single frame -- they ricochet instead
+  function advanceParticle(p, obstacles){
+    const dist = Math.hypot(p.vx, p.vy);
+    const steps = Math.max(1, Math.ceil(dist / MAX_SUBSTEP));
+    const stepVx = p.vx / steps;
+    const stepVy = p.vy / steps;
+
+    for (let s = 0; s < steps; s++){
+      const prevX = p.x, prevY = p.y;
+      let nx = p.x + stepVx;
+      let ny = p.y + stepVy;
+
+      if (nx < WALL_MARGIN){ nx = WALL_MARGIN; p.vx = Math.abs(p.vx); }
+      if (nx > width - WALL_MARGIN){ nx = width - WALL_MARGIN; p.vx = -Math.abs(p.vx); }
+      if (ny < WALL_MARGIN){ ny = WALL_MARGIN; p.vy = Math.abs(p.vy); }
+      if (ny > height - WALL_MARGIN){ ny = height - WALL_MARGIN; p.vy = -Math.abs(p.vy); }
+
+      for (let k = 0; k < obstacles.length; k++){
+        const obs = obstacles[k];
+        if (!insideRect(nx, ny, obs)) continue;
+
+        const hitLeft = prevX <= obs.left && nx > obs.left;
+        const hitRight = prevX >= obs.right && nx < obs.right;
+        const hitTop = prevY <= obs.top && ny > obs.top;
+        const hitBottom = prevY >= obs.bottom && ny < obs.bottom;
+
+        if (hitLeft){ p.vx = -Math.abs(p.vx); nx = obs.left - 1; }
+        else if (hitRight){ p.vx = Math.abs(p.vx); nx = obs.right + 1; }
+
+        if (hitTop){ p.vy = -Math.abs(p.vy); ny = obs.top - 1; }
+        else if (hitBottom){ p.vy = Math.abs(p.vy); ny = obs.bottom + 1; }
+
+        if (!hitLeft && !hitRight && !hitTop && !hitBottom){
+          // ended up inside without a clean edge crossing (e.g. resize) --
+          // push out toward whichever edge is closest
+          const dLeft = nx - obs.left, dRight = obs.right - nx;
+          const dTop = ny - obs.top, dBottom = obs.bottom - ny;
+          const minDist = Math.min(dLeft, dRight, dTop, dBottom);
+          if (minDist === dLeft){ nx = obs.left - 1; p.vx = -Math.abs(p.vx); }
+          else if (minDist === dRight){ nx = obs.right + 1; p.vx = Math.abs(p.vx); }
+          else if (minDist === dTop){ ny = obs.top - 1; p.vy = -Math.abs(p.vy); }
+          else { ny = obs.bottom + 1; p.vy = Math.abs(p.vy); }
+        }
+      }
+
+      p.x = nx;
+      p.y = ny;
+    }
+  }
+
+  function step(){
+    time += 1;
+
+    // light trailing fade -- kept short so it doesn't read as a gradient
+    ctx.fillStyle = 'rgba(5,5,5,0.34)';
+    ctx.fillRect(0, 0, width, height);
+
+    const topObs = obstacleFor(btnTop);
+    const bottomObs = obstacleFor(btnBottom);
+    const hoverObs = hoverState === 'top' ? topObs : (hoverState === 'bottom' ? bottomObs : null);
+
+    // each boost decays independently back to 0
+    hoverBoost *= HOVER_BOOST_DECAY;
+    if (hoverBoost < 0.01) hoverBoost = 0;
+    leaveBoost *= LEAVE_BOOST_DECAY;
+    if (leaveBoost < 0.01) leaveBoost = 0;
+
+    ctx.fillStyle = 'rgba(238,238,234,0.85)';
+
+    for (let i = 0; i < particles.length; i++){
+      const p = particles[i];
+      let mouseOrbiting = false;
+
+      if (hoverObs){
+        // orbit mode: circle around the hovered button, never crossing it.
+        // each particle keeps its own radius + speed + direction, so the
+        // group reads as a loose swirling cloud rather than a single ring
+        p.orbitAngle += p.orbitDir * p.orbitSpeed;
+        const radius = hoverObs.safeRadius + p.orbitRadiusOffset;
+        const targetX = hoverObs.centerX + Math.cos(p.orbitAngle) * radius;
+        const targetY = hoverObs.centerY + Math.sin(p.orbitAngle) * radius;
+
+        const dx = targetX - p.x;
+        const dy = targetY - p.y;
+        p.vx += dx * 0.012;
+        p.vy += dy * 0.012;
+      } else if (mouseActive && Math.hypot(p.x - mouseX, p.y - mouseY) < MOUSE_CAPTURE_RADIUS){
+        // close-vicinity mode: only particles near the cursor circle it,
+        // everything else keeps wandering as normal
+        mouseOrbiting = true;
+        p.orbitAngle += p.orbitDir * p.orbitSpeed * 1.4;
+        const dist0 = Math.hypot(p.x - mouseX, p.y - mouseY);
+        const radius = Math.min(Math.max(dist0, 22), MOUSE_CAPTURE_RADIUS);
+        const targetX = mouseX + Math.cos(p.orbitAngle) * radius;
+        const targetY = mouseY + Math.sin(p.orbitAngle) * radius;
+
+        const dx = targetX - p.x;
+        const dy = targetY - p.y;
+        p.vx += dx * 0.02;
+        p.vy += dy * 0.02;
+      } else {
+        // each particle wanders on its own independent noise-driven heading --
+        // nothing here is shared/synced across particles, so no group "wave"
+        const angle = p.noiseSeedA
+          + time * 0.012 * p.noiseFreq
+          + Math.sin(time * 0.006 * p.noiseFreq + p.noiseSeedB) * 1.6;
+        const ax = Math.cos(angle) * p.noiseAmp;
+        const ay = Math.sin(angle) * p.noiseAmp;
+
+        p.vx += ax * 0.06;
+        p.vy += ay * 0.06;
+      }
+
+      // damping + per-particle speed cap keeps motion desynced and steady;
+      // the boosts briefly raise the cap so hover-enter/leave feels like a kick
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      const speed = Math.hypot(p.vx, p.vy);
+      let baseCap = p.maxSpeed;
+      if (hoverObs) baseCap = p.maxSpeed * 1.8;
+      else if (mouseOrbiting) baseCap = p.maxSpeed * 1.5;
+      const cap = baseCap * (1 + hoverBoost + leaveBoost);
+      if (speed > cap){
+        p.vx = (p.vx / speed) * cap;
+        p.vy = (p.vy / speed) * cap;
+      }
+
+      advanceParticle(p, [topObs, bottomObs]);
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (running) rafId = requestAnimationFrame(step);
+  }
+
+  function start(){
+    if (running) return;
+    running = true;
+    rafId = requestAnimationFrame(step);
+  }
+  function stop(){
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+  }
+
+  resize();
+  initParticles();
+
+  window.addEventListener('resize', function(){
+    resize();
+    initParticles();
+  });
+
+  if (!reduceMotionFlow) {
+    const flowObserver = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) start(); else stop();
+      });
+    }, { threshold: 0.05 });
+    flowObserver.observe(section);
+  }
+})();
+</script>
+
+</body>
+</html>
