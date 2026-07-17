@@ -20,6 +20,7 @@
 
   html{
     scroll-behavior:smooth;
+    scroll-snap-type: y mandatory;
   }
 
   html, body{
@@ -27,8 +28,10 @@
     background:var(--black);
     color:var(--white);
     overflow-x:hidden;
-    overflow-y:auto;
     font-family:'IBM Plex Mono', monospace;
+  }
+  html{
+    overflow-y:auto;
   }
 
   .stage{
@@ -39,6 +42,8 @@
     align-items:center;
     justify-content:center;
     background:var(--black);
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
   }
 
   /* film grain, always present, faint */
@@ -171,6 +176,48 @@
     opacity:0 !important;
   }
 
+  /* clicking "vom Anfänger bis zum Avantgardisten": everything in the
+     hero disappears (including the sub-slogan's own text) while the
+     letter-blowup overlay cycles through the phrase one letter at a time */
+  #wordmarkWrap.subslogan-open .wordmark,
+  #wordmarkWrap.subslogan-open .divider,
+  #wordmarkWrap.subslogan-open .slogan-main,
+  #wordmarkWrap.subslogan-open .slogan-sub,
+  #wordmarkWrap.subslogan-open .pedals-label{
+    opacity:0 !important;
+  }
+
+  .letter-blowup{
+    position:fixed;
+    inset:0;
+    z-index:60;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.15s ease;
+    font-family:'Anton', sans-serif;
+    font-size:clamp(4rem, 22vw, 15rem);
+    color:var(--white);
+  }
+  .letter-blowup.visible{
+    opacity:1;
+  }
+  .letter-blowup .glyph{
+    display:inline-block;
+    transform:scale(0.4);
+    opacity:0;
+  }
+  .letter-blowup .glyph.pulse{
+    animation: letter-pulse 0.22s cubic-bezier(.2,1.4,.4,1) forwards;
+  }
+  @keyframes letter-pulse{
+    0%{ transform:scale(0.35); opacity:0; }
+    55%{ transform:scale(1.08); opacity:1; }
+    100%{ transform:scale(1); opacity:1; }
+  }
+
   .wordmark::before,
   .wordmark::after{
     content: attr(data-text);
@@ -269,18 +316,18 @@
 
   .pedals-label .letter{
     display:inline-block;
-    transition: transform 0.22s cubic-bezier(.34,1.56,.64,1);
+    transition: transform 0.32s cubic-bezier(.33,1,.68,1);
   }
   .pedals-label .letter.pulled-left{
     transform: translate(-0.9em, -1.1em) rotate(-16deg);
-    transition: transform 0.22s ease-out;
+    transition: transform 0.3s cubic-bezier(.33,1,.68,1);
   }
   .pedals-label .letter.hit-right{
     transform: translate(0.9em, -1.1em) rotate(16deg);
-    transition: transform 0.2s cubic-bezier(.34,1.56,.64,1);
+    transition: transform 0.32s cubic-bezier(.22,1,.36,1);
   }
   .pedals-label .letter.impact-shake{
-    transition: transform 0.08s linear;
+    transition: transform 0.1s ease-out;
     transform: translateX(2px);
   }
 
@@ -305,6 +352,7 @@
     color:var(--grey-3);
     font-weight:300;
     opacity:0;
+    cursor:pointer;
     transition:opacity 0.5s ease;
   }
 
@@ -443,6 +491,8 @@
     opacity:0;
     transform:translateY(24px);
     transition:opacity 0.9s ease, transform 0.9s ease;
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
   }
   .pedals.in-view{
     opacity:1;
@@ -462,6 +512,8 @@
     opacity:0;
     transform:translateY(24px);
     transition:opacity 0.9s ease, transform 0.9s ease;
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
   }
   .video-section.in-view{
     opacity:1;
@@ -545,6 +597,111 @@
     min-height:100vh;
     background:var(--black);
     overflow:hidden;
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
+  }
+
+  /* ---------- artist/program spotlight section ---------- */
+  .spotlight{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;
+    grid-template-areas:
+      "program artistimg"
+      "play bio";
+    min-height:100vh;
+    width:100%;
+    background:var(--black);
+    padding:4rem 3rem;
+    gap:2rem;
+    scroll-snap-align:center;
+    scroll-snap-stop:always;
+  }
+
+  .spotlight-program{
+    grid-area:program;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:flex-start;
+    max-width:380px;
+  }
+  .spotlight-artist-image{
+    grid-area:artistimg;
+    display:flex;
+    align-items:flex-start;
+    justify-content:flex-end;
+  }
+  .spotlight-artist-image img{
+    max-width:280px;
+    width:100%;
+    height:auto;
+    display:block;
+  }
+  .spotlight-play{
+    grid-area:play;
+    display:flex;
+    align-items:flex-end;
+    justify-content:flex-start;
+  }
+  .spotlight-play-img{
+    width:140px;
+    height:140px;
+    object-fit:contain;
+    cursor:pointer;
+    transition:transform 0.25s ease, opacity 0.25s ease;
+  }
+  .spotlight-play-img:hover{
+    transform:scale(1.06);
+    opacity:0.85;
+  }
+  .spotlight-bio{
+    grid-area:bio;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:flex-end;
+    text-align:right;
+    max-width:380px;
+    margin-left:auto;
+  }
+
+  .spotlight-select{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:1rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--white);
+    background:var(--black);
+    border:1px solid var(--white);
+    padding:0.6rem 0.9rem;
+    cursor:pointer;
+  }
+  .spotlight-select:focus{
+    outline:none;
+  }
+  .spotlight-desc{
+    margin-top:1rem;
+    font-size:0.85rem;
+    line-height:1.6;
+    color:var(--grey-3);
+  }
+
+  @media (max-width:640px){
+    .spotlight{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "artistimg"
+        "program"
+        "play"
+        "bio";
+    }
+    .spotlight-artist-image, .spotlight-bio{
+      align-items:flex-start;
+      justify-content:flex-start;
+      text-align:left;
+      margin-left:0;
+    }
   }
   .contact-canvas{
     position:absolute;
@@ -658,6 +815,10 @@
     flex:1;
     min-width:220px;
   }
+  .modal-right.compact{
+    flex:0 0 auto;
+    min-width:0;
+  }
   .modal-email-btn{
     display:inline-block;
     font-family:'IBM Plex Mono', monospace;
@@ -750,9 +911,11 @@
     <p class="pedals-label" id="pedalsLabel" data-text="PEDALS" role="button" tabindex="0" aria-label="Zur Pre-Order-Sektion scrollen">PEDALS</p>
     <p class="slogan-main" id="sloganMain" data-text="Unsere Szene, Unser Sound" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">Unsere Szene, Unser Sound</p>
     <div class="divider"></div>
-    <p class="slogan-sub" data-text="vom Anfänger bis zum Avantgardisten">vom Anfänger bis zum Avantgardisten</p>
+    <p class="slogan-sub" id="sloganSub" data-text="vom Anfänger bis zum Avantgardisten" role="button" tabindex="0" aria-label="Zur Programm-Sektion scrollen">vom Anfänger bis zum Avantgardisten</p>
   </div>
 </div>
+
+<div class="letter-blowup" id="letterBlowup" aria-hidden="true"></div>
 
 <section class="video-section" id="videoSection">
   <div class="video-frame">
@@ -781,11 +944,41 @@
   <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
 </section>
 
+<section class="spotlight" id="spotlightSection">
+  <div class="spotlight-program">
+    <select class="spotlight-select" id="programSelect">
+      <option value="Noise">Noise</option>
+      <option value="Drums">Drums</option>
+      <option value="Panic Attack">Panic Attack</option>
+      <option value="Filter">Filter</option>
+    </select>
+    <p class="spotlight-desc" id="programDesc">[Beschreibung zu Noise – bitte ergänzen]</p>
+  </div>
+
+  <div class="spotlight-artist-image">
+    <img id="artistImage" src="images/artist-polykrisis.png" alt="Polykrisis">
+  </div>
+
+  <div class="spotlight-play">
+    <img class="spotlight-play-img" id="spotlightPlayImg" src="images/play-button.png" alt="Sound abspielen" role="button" tabindex="0" aria-label="Sound abspielen">
+  </div>
+
+  <div class="spotlight-bio">
+    <select class="spotlight-select" id="artistSelect">
+      <option value="Polykrisis">Polykrisis</option>
+      <option value="MVROWI">MVROWI</option>
+      <option value="Der Verlorene Faden">Der Verlorene Faden</option>
+      <option value="Grodock">Grodock</option>
+    </select>
+    <p class="spotlight-desc" id="artistBio">[Bio zu Polykrisis – bitte ergänzen]</p>
+  </div>
+</section>
+
 <!-- Pre-Order modal -->
 <div class="modal-overlay" id="modalPreorder">
   <div class="modal-box">
     <button class="modal-close" id="modalPreorderClose" aria-label="Schließen">&times;</button>
-    <p class="modal-text">Momentan nehmen wir keine Vorbestellungen an, bitte begeben sie sich in Kontakt mit uns und halten Sie sich auf dem laufenden.</p>
+    <p class="modal-text">Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.</p>
   </div>
 </div>
 
@@ -795,10 +988,10 @@
     <button class="modal-close" id="modalContactClose" aria-label="Schließen">&times;</button>
     <div class="modal-columns">
       <a class="modal-qr-link" href="https://www.instagram.com/daturapedals/" target="_blank" rel="noopener">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=eeeeea&bgcolor=050505&data=https://www.instagram.com/daturapedals/" alt="Instagram QR-Code">
+        <img src="images/IGQR.png" alt="Instagram QR-Code">
         <p class="modal-qr-caption">@daturapedals</p>
       </a>
-      <div class="modal-right">
+      <div class="modal-right compact">
         <a class="modal-email-btn" href="mailto:daturapedals@gmail.com?subject=Kontaktanfrage">Email Schreiben</a>
       </div>
     </div>
@@ -811,7 +1004,7 @@
     <button class="modal-close" id="modalNewsletterClose" aria-label="Schließen">&times;</button>
     <div class="modal-columns">
       <a class="modal-qr-link" href="https://www.instagram.com/daturapedals/" target="_blank" rel="noopener">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=eeeeea&bgcolor=050505&data=https://www.instagram.com/daturapedals/" alt="Instagram QR-Code">
+        <img src="images/IGQR.png" alt="Instagram QR-Code">
         <p class="modal-qr-caption">@daturapedals</p>
       </a>
       <div class="modal-right">
@@ -829,6 +1022,7 @@
 const stage = document.getElementById('stage');
 const flash = document.getElementById('flash');
 const wordmarkWrap = document.getElementById('wordmarkWrap');
+let subsloganGeneration = 0; // bumped to cancel an in-flight letter-blowup sequence
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -1000,6 +1194,7 @@ if (pedalViewer) {
 let currentSlide = 0;
 const pedalFlashEl = document.getElementById('pedalFlash');
 let pedalHovering = false;
+let pedalHeld = false;
 let pedalTimeoutId = null;
 
 function advancePedalSlide(){
@@ -1027,7 +1222,8 @@ function doPedalTransition(){
 
 function schedulePedalRotation(){
   if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
-  const delay = pedalHovering ? 500 : 3800;
+  if (pedalHeld) return; // paused while the mouse button is held down
+  const delay = pedalHovering ? 500 : 2450;
   pedalTimeoutId = setTimeout(function(){
     doPedalTransition();
     schedulePedalRotation();
@@ -1041,14 +1237,24 @@ if (pedalSlides.length > 1) {
       pedalViewer.classList.add('no-fade');
       schedulePedalRotation();
     });
+    // press and hold: freeze on the current image
+    pedalViewer.addEventListener('mousedown', function(){
+      pedalHeld = true;
+      if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
+    });
+    // release: force an immediate advance to the next image, then
+    // resume the faster hover-paced rotation from there
+    function releasePedalHold(){
+      if (!pedalHeld) return;
+      pedalHeld = false;
+      doPedalTransition();
+      schedulePedalRotation();
+    }
+    pedalViewer.addEventListener('mouseup', releasePedalHold);
     pedalViewer.addEventListener('mouseleave', function(){
+      releasePedalHold();
       pedalHovering = false;
       pedalViewer.classList.remove('no-fade');
-      schedulePedalRotation();
-    });
-    pedalViewer.addEventListener('click', function(){
-      if (!pedalHovering) return;
-      doPedalTransition();
       schedulePedalRotation();
     });
   }
@@ -1115,12 +1321,16 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
         wordmarkWrap.classList.remove('open');
         wordmarkWrap.classList.remove('slogan-open');
         wordmarkWrap.classList.remove('pedals-open');
+        wordmarkWrap.classList.remove('subslogan-open');
         if (sloganMainEl) sloganMainEl.classList.remove('scatter');
         if (pedalsLabelEl){
           pedalsLabelEl.querySelectorAll('.letter').forEach(function(el){
             el.classList.remove('pulled-left', 'hit-right', 'impact-shake');
           });
         }
+        subsloganGeneration++; // cancels any in-flight letter-blowup sequence
+        const blowupEl = document.getElementById('letterBlowup');
+        if (blowupEl) blowupEl.classList.remove('visible');
       }
     });
   }, { threshold: [0, 0.6, 1] });
@@ -1200,12 +1410,25 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
     });
   })();
 
+  // weighted so a single letter is less likely than a small handful,
+  // but 4-5 letters stay rare -- matches how a real cradle usually looks
+  function weightedLetterCount(maxCount){
+    const r = Math.random();
+    let n;
+    if (r < 0.20) n = 1;
+    else if (r < 0.60) n = 2;
+    else if (r < 0.85) n = 3;
+    else if (r < 0.95) n = 4;
+    else n = 5;
+    return Math.min(n, maxCount);
+  }
+
   const openPedals = function(){
     wordmarkWrap.classList.add('pedals-open');
 
     const letters = Array.prototype.slice.call(pedalsLabelEl.querySelectorAll('.letter'));
     const n = letters.length;
-    const k = Math.min(n - 1, 1 + Math.floor(Math.random() * 5)); // 1-5 letters, cradle-style
+    const k = weightedLetterCount(n - 1);
     const leftGroup = letters.slice(0, k);
     const rightGroup = letters.slice(n - k);
     const middleGroup = letters.slice(k, n - k);
@@ -1215,7 +1438,7 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
       // phase 1: pull the left-side letters up and out, like drawing back
       // the first balls of a Newton's cradle
       leftGroup.forEach(function(el){ el.classList.add('pulled-left'); });
-    }, 180);
+    }, 220);
 
     // phase 2: release -- they drop back down, the impact passes through
     // the untouched middle letters, and the same count flies out the
@@ -1224,21 +1447,21 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
       leftGroup.forEach(function(el){ el.classList.remove('pulled-left'); });
       middleGroup.forEach(function(el){ el.classList.add('impact-shake'); });
       rightGroup.forEach(function(el){ el.classList.add('hit-right'); });
-    }, 400);
+    }, 520);
 
     setTimeout(function(){
       middleGroup.forEach(function(el){ el.classList.remove('impact-shake'); });
-    }, 480);
+    }, 640);
 
     // phase 3: the right-side letters swing back down to rest
     setTimeout(function(){
       rightGroup.forEach(function(el){ el.classList.remove('hit-right'); });
-    }, 600);
+    }, 840);
 
     // once the cradle has settled, move to the pre-order section
     setTimeout(function(){
       pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 850);
+    }, 1000);
   };
 
   pedalsLabelEl.addEventListener('click', openPedals);
@@ -1246,6 +1469,58 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       openPedals();
+    }
+  });
+}
+
+/* ---------- "vom Anfänger bis zum Avantgardisten": click cycles through
+   each letter, briefly huge on screen, one after another, then moves
+   down to the program/artist spotlight section ---------- */
+const sloganSubEl = document.getElementById('sloganSub');
+const spotlightSection = document.getElementById('spotlightSection');
+const letterBlowupEl = document.getElementById('letterBlowup');
+
+if (sloganSubEl && wordmarkWrap && spotlightSection && letterBlowupEl) {
+  const openSubslogan = function(){
+    wordmarkWrap.classList.add('subslogan-open');
+    subsloganGeneration++;
+    const myGeneration = subsloganGeneration;
+
+    const text = sloganSubEl.getAttribute('data-text') || sloganSubEl.textContent;
+    const glyphs = Array.prototype.filter.call(text, function(ch){ return ch !== ' '; });
+
+    letterBlowupEl.classList.add('visible');
+    letterBlowupEl.innerHTML = '<span class="glyph"></span>';
+    const glyphEl = letterBlowupEl.querySelector('.glyph');
+
+    let i = 0;
+    const perLetterMs = 65;
+
+    function showNext(){
+      if (myGeneration !== subsloganGeneration) return; // cancelled (scrolled back up)
+      if (i >= glyphs.length){
+        letterBlowupEl.classList.remove('visible');
+        setTimeout(function(){
+          if (myGeneration !== subsloganGeneration) return;
+          spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 200);
+        return;
+      }
+      glyphEl.textContent = glyphs[i];
+      glyphEl.classList.remove('pulse');
+      void glyphEl.offsetWidth; // restart the animation for this letter
+      glyphEl.classList.add('pulse');
+      i++;
+      setTimeout(showNext, perLetterMs);
+    }
+    showNext();
+  };
+
+  sloganSubEl.addEventListener('click', openSubslogan);
+  sloganSubEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openSubslogan();
     }
   });
 }
@@ -1568,6 +1843,92 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
     }, { threshold: 0.05 });
     flowObserver.observe(section);
   }
+})();
+
+/* ---------- artist/program spotlight ---------- */
+(function(){
+  const programSelect = document.getElementById('programSelect');
+  const artistSelect = document.getElementById('artistSelect');
+  const artistImage = document.getElementById('artistImage');
+  const artistBio = document.getElementById('artistBio');
+  const programDesc = document.getElementById('programDesc');
+  const playImg = document.getElementById('spotlightPlayImg');
+  if (!programSelect || !artistSelect || !artistImage || !artistBio || !programDesc || !playImg) return;
+
+  // each program is paired 1:1 with an artist -- picking either one
+  // updates everything else to match.
+  // NOTE: image/audio paths are placeholders -- drop matching files into
+  // an "images" and "audio" folder next to this HTML file, and replace
+  // the bracketed bio/description text with the real copy.
+  const spotlightData = [
+    {
+      artist: 'Polykrisis',
+      program: 'Noise',
+      artistImage: 'images/artist-polykrisis.png',
+      bio: '[Bio zu Polykrisis – bitte ergänzen]',
+      programDesc: '[Beschreibung zu Noise – bitte ergänzen]',
+      wav: 'audio/noise.wav'
+    },
+    {
+      artist: 'MVROWI',
+      program: 'Drums',
+      artistImage: 'images/artist-mvrowi.png',
+      bio: '[Bio zu MVROWI – bitte ergänzen]',
+      programDesc: '[Beschreibung zu Drums – bitte ergänzen]',
+      wav: 'audio/drums.wav'
+    },
+    {
+      artist: 'Der Verlorene Faden',
+      program: 'Panic Attack',
+      artistImage: 'images/artist-derverlorenefaden.png',
+      bio: '[Bio zu Der Verlorene Faden – bitte ergänzen]',
+      programDesc: '[Beschreibung zu Panic Attack – bitte ergänzen]',
+      wav: 'audio/panic-attack.wav'
+    },
+    {
+      artist: 'Grodock',
+      program: 'Filter',
+      artistImage: 'images/artist-grodock.png',
+      bio: '[Bio zu Grodock – bitte ergänzen]',
+      programDesc: '[Beschreibung zu Filter – bitte ergänzen]',
+      wav: 'audio/filter.wav'
+    }
+  ];
+
+  let currentWav = spotlightData[0].wav;
+
+  function applyEntry(entry){
+    artistImage.src = entry.artistImage;
+    artistImage.alt = entry.artist;
+    artistBio.textContent = entry.bio;
+    programDesc.textContent = entry.programDesc;
+    programSelect.value = entry.program;
+    artistSelect.value = entry.artist;
+    currentWav = entry.wav;
+  }
+
+  applyEntry(spotlightData[0]);
+
+  programSelect.addEventListener('change', function(){
+    const entry = spotlightData.find(function(d){ return d.program === programSelect.value; });
+    if (entry) applyEntry(entry);
+  });
+  artistSelect.addEventListener('change', function(){
+    const entry = spotlightData.find(function(d){ return d.artist === artistSelect.value; });
+    if (entry) applyEntry(entry);
+  });
+
+  function playCurrentWav(){
+    const audio = new Audio(currentWav);
+    audio.play().catch(function(){ /* ignored -- e.g. file missing or autoplay blocked */ });
+  }
+  playImg.addEventListener('click', playCurrentWav);
+  playImg.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      playCurrentWav();
+    }
+  });
 })();
 
 /* ---------- modals: Pre-Order / Kontakt / Newsletter ---------- */
