@@ -556,6 +556,11 @@
     transform:translateY(-50%);
   }
 
+  .summe-text.dissolving .ray{
+    opacity:0;
+    transition:opacity 0.2s ease;
+  }
+
   .summe-label{
     position:relative;
     z-index:1;
@@ -563,7 +568,6 @@
   }
   .summe-dissolve-canvas{
     position:absolute;
-    inset:0;
     pointer-events:none;
     opacity:0;
   }
@@ -610,7 +614,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:3rem 1.5rem;
+    padding:1rem 1.5rem;
     background:var(--black);
   }
   .video-frame{
@@ -823,9 +827,10 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
+    justify-content:flex-start;
     text-align:center;
-    padding:2.5rem;
+    height:300px;
+    padding:1.5rem 2rem 2rem;
     border-right:1px solid var(--white);
     border-bottom:1px solid var(--white);
   }
@@ -834,11 +839,13 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    height:300px;
     padding:2.5rem;
     border-bottom:1px solid var(--white);
   }
   .spotlight-artist-image img{
-    max-width:180px;
+    max-width:200px;
+    max-height:220px;
     width:100%;
     height:auto;
     display:block;
@@ -848,12 +855,13 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    height:300px;
     padding:2.5rem;
     border-right:1px solid var(--white);
   }
   .spotlight-play-img{
-    width:100px;
-    height:100px;
+    width:110px;
+    height:110px;
     object-fit:contain;
     cursor:pointer;
     transition:transform 0.25s ease, opacity 0.25s ease;
@@ -867,12 +875,14 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
+    justify-content:flex-start;
     text-align:center;
-    padding:2.5rem;
+    height:300px;
+    padding:1.5rem 2rem 2rem;
   }
 
   .spotlight-select{
+    width:100%;
     font-family:'IBM Plex Mono', monospace;
     font-size:1rem;
     letter-spacing:0.1em;
@@ -880,8 +890,9 @@
     color:var(--white);
     background:var(--black);
     border:1px solid var(--white);
-    padding:0.6rem 0.9rem;
+    padding:0.7rem 0.9rem;
     cursor:pointer;
+    flex-shrink:0;
   }
   .spotlight-select:focus{
     outline:none;
@@ -891,6 +902,9 @@
     font-size:0.85rem;
     line-height:1.6;
     color:var(--grey-3);
+    overflow-y:auto;
+    flex:1;
+    width:100%;
   }
   .spotlight-fallback{
     font-size:0.8rem;
@@ -1119,8 +1133,7 @@
     <p class="slogan-main" id="sloganMain" data-text="Unsere Szene, Unser Sound" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">Unsere Szene, Unser Sound</p>
     <div class="divider"></div>
     <p class="slogan-sub" id="sloganSub" data-text="vom Anfänger bis zum Avantgardisten">
-      <span class="sub-part" id="subPartAnfang" data-text="vom Anfänger" data-blowup="Anfänger" role="button" tabindex="0" aria-label="Anfänger-Animation abspielen">vom Anfänger</span>
-      <span class="sub-part" id="subPartAvant" data-text="bis zum Avantgardisten" data-blowup="Avantguardist" role="button" tabindex="0" aria-label="Avantguardist-Animation abspielen"> bis zum Avantgardisten</span>
+      <span class="sub-part" id="subPartAnfang" data-text="vom Anfänger " data-blowup="Anfänger" role="button" tabindex="0" aria-label="Anfänger-Animation abspielen">vom Anfänger </span><span class="sub-part" id="subPartAvant" data-text="bis zum Avantgardisten" data-blowup="Avantguardist" role="button" tabindex="0" aria-label="Avantguardist-Animation abspielen">bis zum Avantgardisten</span>
     </p>
     <p class="summe-text" id="summeText" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">
       <span class="ray ray-top" aria-hidden="true"></span>
@@ -1169,11 +1182,11 @@
     </div>
 
     <div class="spotlight-artist-image">
-      <img id="artistImage" src="images/polykrisis.png" alt="Polykrisis">
+      <img id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
     </div>
 
     <div class="spotlight-play">
-      <img class="spotlight-play-img" id="spotlightPlayImg" src="images/play-button.png" alt="Sound abspielen" role="button" tabindex="0" aria-label="Sound abspielen">
+      <img class="spotlight-play-img" id="spotlightPlayImg" src="images/logo.png" alt="Sound abspielen" role="button" tabindex="0" aria-label="Sound abspielen">
     </div>
 
     <div class="spotlight-bio">
@@ -1440,6 +1453,7 @@ if (pedalViewer) {
     img.src = src;
     img.alt = 'Datura Pedal';
     img.loading = i === 0 ? 'eager' : 'lazy';
+    img.draggable = false;
     slide.appendChild(img);
     pedalViewer.appendChild(slide);
     return slide;
@@ -1493,7 +1507,8 @@ if (pedalSlides.length > 1) {
       schedulePedalRotation();
     });
     // press and hold: freeze on the current image
-    pedalViewer.addEventListener('mousedown', function(){
+    pedalViewer.addEventListener('mousedown', function(e){
+      e.preventDefault();
       pedalHeld = true;
       if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
     });
@@ -1777,7 +1792,7 @@ if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
             whySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
           pageAnimationUnlock();
-        }, 350);
+        }, 100);
         return;
       }
       glyphEl.textContent = glyphs[i];
@@ -1818,10 +1833,16 @@ function dissolveTextIntoNoise(labelEl, canvasEl, durationMs, onDone){
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.max(1, Math.round(rect.width));
   const h = Math.max(1, Math.round(rect.height));
-  canvasEl.width = w * dpr;
-  canvasEl.height = h * dpr;
+
+  // position the canvas to exactly match the label's own box (relative
+  // to its offsetParent, .summe-text) instead of stretching across the
+  // whole container -- this is what was causing the top-left offset
+  canvasEl.style.left = labelEl.offsetLeft + 'px';
+  canvasEl.style.top = labelEl.offsetTop + 'px';
   canvasEl.style.width = w + 'px';
   canvasEl.style.height = h + 'px';
+  canvasEl.width = w * dpr;
+  canvasEl.height = h * dpr;
 
   const ctx = canvasEl.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1843,8 +1864,9 @@ function dissolveTextIntoNoise(labelEl, canvasEl, durationMs, onDone){
         particles.push({
           x: x / dpr,
           y: y / dpr,
-          vx: (Math.random() - 0.5) * 1.6,
-          vy: (Math.random() - 0.5) * 1.6 - 0.3,
+          vx: (Math.random() - 0.5) * 3.2,
+          vy: (Math.random() - 0.5) * 3.2 - 0.5,
+          size: 1.4 + Math.random() * 1.8,
           alpha: 1
         });
       }
@@ -1859,11 +1881,12 @@ function dissolveTextIntoNoise(labelEl, canvasEl, durationMs, onDone){
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#eeeeea';
     particles.forEach(function(p){
-      p.x += p.vx * (0.4 + t * 1.6);
-      p.y += p.vy * (0.4 + t * 1.6);
+      p.x += p.vx * (0.4 + t * 2.2);
+      p.y += p.vy * (0.4 + t * 2.2);
       p.alpha = 1 - t;
+      const grownSize = p.size * (1 + t * 1.4);
       ctx.globalAlpha = Math.max(0, p.alpha);
-      ctx.fillRect(p.x, p.y, 1.4, 1.4);
+      ctx.fillRect(p.x, p.y, grownSize, grownSize);
     });
     ctx.globalAlpha = 1;
     if (t < 1){
@@ -1884,9 +1907,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
     setTimeout(function(){
       dissolveTextIntoNoise(summeLabelEl, summeCanvasEl, 550, function(){
-        syncPageIndex(contactSection);
-        contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        pageAnimationUnlock();
+        setTimeout(function(){
+          syncPageIndex(contactSection);
+          contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          pageAnimationUnlock();
+        }, 300);
       });
     }, 80);
   };
@@ -2236,10 +2261,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   // each program is paired 1:1 with an artist -- picking either one
   // updates everything else to match. Files expected on disk:
-  //   images/<slug>.png        (artist photo)
+  //   artists/<slug>.png       (artist photo)
   //   bios/<slug>.txt          (artist bio)
   //   descriptions/<slug>.txt  (program description)
-  //   audio/<slug>.wav         (sound to play)
+  //   examples/<slug>.wav      (sound to play, named after the program)
+  //   images/logo.png          (single play-button image, same for all)
   const spotlightData = [
     { artist: 'Polykrisis', program: 'Noise' },
     { artist: 'MVROWI', program: 'Drums' },
@@ -2269,7 +2295,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
     programSelect.value = entry.program;
     artistSelect.value = entry.artist;
-    currentWav = 'audio/' + entry.programSlug + '.wav';
+    currentWav = 'examples/' + entry.programSlug + '.wav';
 
     // artist photo
     artistImage.alt = entry.artist;
@@ -2286,7 +2312,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       msg.textContent = 'Bild nicht gefunden';
       artistImage.insertAdjacentElement('afterend', msg);
     };
-    artistImage.src = 'images/' + entry.artistSlug + '.png';
+    artistImage.src = 'artists/' + entry.artistSlug + '.png';
 
     // artist bio
     artistBio.textContent = 'Lädt…';

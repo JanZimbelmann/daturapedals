@@ -1,0 +1,1 @@
+Builds his own Synthesizers in Supercollider and Raspberry PIs
