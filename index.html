@@ -20,7 +20,6 @@
 
   html{
     scroll-behavior:smooth;
-    scroll-snap-type: y mandatory;
   }
 
   html, body{
@@ -42,8 +41,6 @@
     align-items:center;
     justify-content:center;
     background:var(--black);
-    scroll-snap-align:center;
-    scroll-snap-stop:always;
   }
 
   /* film grain, always present, faint */
@@ -153,6 +150,7 @@
   #wordmarkWrap.open .slogan-main,
   #wordmarkWrap.open .divider,
   #wordmarkWrap.open .slogan-sub,
+  #wordmarkWrap.open .summe-text,
   #wordmarkWrap.open .pedals-label{
     opacity:0.08 !important;
   }
@@ -163,6 +161,7 @@
   #wordmarkWrap.slogan-open .wordmark,
   #wordmarkWrap.slogan-open .divider,
   #wordmarkWrap.slogan-open .slogan-sub,
+  #wordmarkWrap.slogan-open .summe-text,
   #wordmarkWrap.slogan-open .pedals-label{
     opacity:0 !important;
   }
@@ -172,18 +171,30 @@
   #wordmarkWrap.pedals-open .wordmark,
   #wordmarkWrap.pedals-open .divider,
   #wordmarkWrap.pedals-open .slogan-main,
-  #wordmarkWrap.pedals-open .slogan-sub{
+  #wordmarkWrap.pedals-open .slogan-sub,
+  #wordmarkWrap.pedals-open .summe-text{
     opacity:0 !important;
   }
 
-  /* clicking "vom Anfänger bis zum Avantgardisten": everything in the
-     hero disappears (including the sub-slogan's own text) while the
-     letter-blowup overlay cycles through the phrase one letter at a time */
+  /* clicking either half of "vom Anfänger bis zum Avantgardisten": the
+     rest of the hero (including the clicked phrase's own text) disappears
+     while the letter-blowup overlay cycles through a shortened word */
   #wordmarkWrap.subslogan-open .wordmark,
   #wordmarkWrap.subslogan-open .divider,
   #wordmarkWrap.subslogan-open .slogan-main,
   #wordmarkWrap.subslogan-open .slogan-sub,
+  #wordmarkWrap.subslogan-open .summe-text,
   #wordmarkWrap.subslogan-open .pedals-label{
+    opacity:0 !important;
+  }
+
+  /* clicking "Mehr als die Summe seiner Teile": the rest of the hero
+     disappears while this text itself stays visible */
+  #wordmarkWrap.summe-open .wordmark,
+  #wordmarkWrap.summe-open .divider,
+  #wordmarkWrap.summe-open .slogan-main,
+  #wordmarkWrap.summe-open .slogan-sub,
+  #wordmarkWrap.summe-open .pedals-label{
     opacity:0 !important;
   }
 
@@ -345,22 +356,63 @@
   }
 
   .slogan-sub{
-    position:relative;
     margin-top:0.6rem;
     font-size:clamp(0.7rem, 1.1vw, 0.85rem);
     letter-spacing:0.08em;
     color:var(--grey-3);
     font-weight:300;
     opacity:0;
-    cursor:pointer;
     transition:opacity 0.5s ease;
+  }
+  .sub-part{
+    position:relative;
+    display:inline-block;
+    cursor:pointer;
+  }
+
+  /* the whole phrase shakes together on hover (JS toggles this class on
+     the container itself), with a single ghost-duplicate layer covering
+     the full phrase -- matches how the effect looked before the phrase
+     was split into two clickable halves. Each half no longer gets its
+     own separate shake/duplicate, since layering two independently
+     shaking, blend-mode duplicate layers on top of each other was
+     causing them to cancel out into a solid black patch. */
+  .slogan-sub{
+    position:relative;
+  }
+  .slogan-sub::before,
+  .slogan-sub::after{
+    content: attr(data-text);
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    overflow:hidden;
+    opacity:0;
+    pointer-events:none;
+  }
+  .slogan-sub::before{
+    color:var(--black);
+    mix-blend-mode:difference;
+  }
+  .slogan-sub::after{
+    color:var(--white);
+    mix-blend-mode:screen;
+  }
+  .slogan-sub.phrase-hover{
+    animation: glitch-shake-hover-small 0.16s steps(2,end) infinite;
+  }
+  .slogan-sub.phrase-hover::before{
+    opacity:0.75;
+    animation: glitch-shake-hover-small 0.16s steps(2,end) infinite reverse;
+  }
+  .slogan-sub.phrase-hover::after{
+    opacity:0.55;
+    animation: glitch-shake-hover-small 0.16s steps(2,end) infinite;
   }
 
   /* slogans + PEDALS label: no idle motion at all, glitch appears only on hover */
   .slogan-main::before,
   .slogan-main::after,
-  .slogan-sub::before,
-  .slogan-sub::after,
   .pedals-label::before,
   .pedals-label::after{
     content: attr(data-text);
@@ -372,31 +424,26 @@
     pointer-events:none;
   }
   .slogan-main::before,
-  .slogan-sub::before,
   .pedals-label::before{
     color:var(--black);
     mix-blend-mode:difference;
   }
   .slogan-main::after,
-  .slogan-sub::after,
   .pedals-label::after{
     color:var(--white);
     mix-blend-mode:screen;
   }
 
   .slogan-main:hover,
-  .slogan-sub:hover,
   .pedals-label:hover{
     animation: glitch-shake-hover-small 0.16s steps(2,end) infinite;
   }
   .slogan-main:hover::before,
-  .slogan-sub:hover::before,
   .pedals-label:hover::before{
     opacity:0.75;
     animation: glitch-shake-hover-small 0.16s steps(2,end) infinite reverse;
   }
   .slogan-main:hover::after,
-  .slogan-sub:hover::after,
   .pedals-label:hover::after{
     opacity:0.55;
     animation: glitch-shake-hover-small 0.16s steps(2,end) infinite;
@@ -460,6 +507,84 @@
     animation: fade-in 0.6s ease forwards;
     animation-delay: 0.4s;
   }
+  .settled .summe-text{
+    animation: fade-in 0.6s ease forwards;
+    animation-delay: 0.55s;
+  }
+
+  /* "Mehr als die Summe seiner Teile" -- four short lines radiating
+     outward from each edge of the text (not a box around it) */
+  .summe-text{
+    position:relative;
+    display:inline-block;
+    margin-top:1.6rem;
+    padding:0.5rem 0.5rem;
+    font-size:clamp(0.75rem, 1.05vw, 0.88rem);
+    letter-spacing:0.06em;
+    color:var(--grey-3);
+    opacity:0;
+    cursor:pointer;
+    transition:opacity 0.5s ease, color 0.25s ease;
+  }
+  .summe-text:hover{
+    color:var(--white);
+  }
+  .summe-text:hover .ray{
+    background:var(--white);
+  }
+  .ray{
+    position:absolute;
+    background:var(--grey-2);
+    pointer-events:none;
+    transition:background 0.25s ease;
+  }
+  .ray-top{
+    top:-16px; left:50%;
+    width:1px; height:16px;
+    transform:translateX(-50%);
+  }
+  .ray-bottom{
+    bottom:-16px; left:50%;
+    width:1px; height:16px;
+    transform:translateX(-50%);
+  }
+  .ray-left{
+    left:-16px; top:50%;
+    height:1px; width:16px;
+    transform:translateY(-50%);
+  }
+  .ray-right{
+    right:-16px; top:50%;
+    height:1px; width:16px;
+    transform:translateY(-50%);
+  }
+
+  .summe-label{
+    position:relative;
+    z-index:1;
+    transition:opacity 0.4s ease;
+  }
+  .summe-noise{
+    position:absolute;
+    inset:-6px;
+    pointer-events:none;
+    opacity:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    filter:brightness(1.6);
+    transition:opacity 0.35s ease;
+  }
+  .summe-noise.flicker{
+    animation:grain-shift 0.35s steps(2) infinite;
+  }
+  .summe-text.dissolving .summe-label{
+    opacity:0;
+  }
+  .summe-text.dissolving .summe-noise{
+    opacity:1;
+  }
+  .summe-text.dissolved .summe-noise{
+    opacity:0;
+  }
 
   @keyframes fade-in{
     from{ opacity:0; transform:translateY(6px); }
@@ -491,8 +616,6 @@
     opacity:0;
     transform:translateY(24px);
     transition:opacity 0.9s ease, transform 0.9s ease;
-    scroll-snap-align:center;
-    scroll-snap-stop:always;
   }
   .pedals.in-view{
     opacity:1;
@@ -512,8 +635,6 @@
     opacity:0;
     transform:translateY(24px);
     transition:opacity 0.9s ease, transform 0.9s ease;
-    scroll-snap-align:center;
-    scroll-snap-stop:always;
   }
   .video-section.in-view{
     opacity:1;
@@ -597,43 +718,54 @@
     min-height:100vh;
     background:var(--black);
     overflow:hidden;
-    scroll-snap-align:center;
-    scroll-snap-stop:always;
   }
 
   /* ---------- artist/program spotlight section ---------- */
   .spotlight{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    width:100%;
+    background:var(--black);
+    padding:3rem 1.5rem;
+  }
+
+  .spotlight-box{
     display:grid;
     grid-template-columns:1fr 1fr;
     grid-template-rows:1fr 1fr;
     grid-template-areas:
       "program artistimg"
       "play bio";
-    min-height:100vh;
     width:100%;
+    max-width:820px;
     background:var(--black);
-    padding:4rem 3rem;
-    gap:2rem;
-    scroll-snap-align:center;
-    scroll-snap-stop:always;
+    color:var(--white);
+    border:1px solid var(--white);
   }
 
   .spotlight-program{
     grid-area:program;
     display:flex;
     flex-direction:column;
-    align-items:flex-start;
-    justify-content:flex-start;
-    max-width:380px;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:2.5rem;
+    border-right:1px solid var(--white);
+    border-bottom:1px solid var(--white);
   }
   .spotlight-artist-image{
     grid-area:artistimg;
     display:flex;
-    align-items:flex-start;
-    justify-content:flex-end;
+    align-items:center;
+    justify-content:center;
+    padding:2.5rem;
+    border-bottom:1px solid var(--white);
   }
   .spotlight-artist-image img{
-    max-width:280px;
+    max-width:180px;
     width:100%;
     height:auto;
     display:block;
@@ -641,29 +773,30 @@
   .spotlight-play{
     grid-area:play;
     display:flex;
-    align-items:flex-end;
-    justify-content:flex-start;
+    align-items:center;
+    justify-content:center;
+    padding:2.5rem;
+    border-right:1px solid var(--white);
   }
   .spotlight-play-img{
-    width:140px;
-    height:140px;
+    width:100px;
+    height:100px;
     object-fit:contain;
     cursor:pointer;
     transition:transform 0.25s ease, opacity 0.25s ease;
   }
   .spotlight-play-img:hover{
     transform:scale(1.06);
-    opacity:0.85;
+    opacity:0.8;
   }
   .spotlight-bio{
     grid-area:bio;
     display:flex;
     flex-direction:column;
-    align-items:flex-end;
-    justify-content:flex-end;
-    text-align:right;
-    max-width:380px;
-    margin-left:auto;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:2.5rem;
   }
 
   .spotlight-select{
@@ -688,7 +821,7 @@
   }
 
   @media (max-width:640px){
-    .spotlight{
+    .spotlight-box{
       grid-template-columns:1fr;
       grid-template-areas:
         "artistimg"
@@ -696,12 +829,8 @@
         "play"
         "bio";
     }
-    .spotlight-artist-image, .spotlight-bio{
-      align-items:flex-start;
-      justify-content:flex-start;
-      text-align:left;
-      margin-left:0;
-    }
+    .spotlight-program{ border-right:none; }
+    .spotlight-play{ border-right:none; border-bottom:1px solid var(--white); }
   }
   .contact-canvas{
     position:absolute;
@@ -911,7 +1040,18 @@
     <p class="pedals-label" id="pedalsLabel" data-text="PEDALS" role="button" tabindex="0" aria-label="Zur Pre-Order-Sektion scrollen">PEDALS</p>
     <p class="slogan-main" id="sloganMain" data-text="Unsere Szene, Unser Sound" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">Unsere Szene, Unser Sound</p>
     <div class="divider"></div>
-    <p class="slogan-sub" id="sloganSub" data-text="vom Anfänger bis zum Avantgardisten" role="button" tabindex="0" aria-label="Zur Programm-Sektion scrollen">vom Anfänger bis zum Avantgardisten</p>
+    <p class="slogan-sub" id="sloganSub" data-text="vom Anfänger bis zum Avantgardisten">
+      <span class="sub-part" id="subPartAnfang" data-text="vom Anfänger" data-blowup="Anfänger" role="button" tabindex="0" aria-label="Anfänger-Animation abspielen">vom Anfänger</span>
+      <span class="sub-part" id="subPartAvant" data-text="bis zum Avantgardisten" data-blowup="Avantguardist" role="button" tabindex="0" aria-label="Avantguardist-Animation abspielen"> bis zum Avantgardisten</span>
+    </p>
+    <p class="summe-text" id="summeText" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">
+      <span class="ray ray-top" aria-hidden="true"></span>
+      <span class="ray ray-right" aria-hidden="true"></span>
+      <span class="ray ray-bottom" aria-hidden="true"></span>
+      <span class="ray ray-left" aria-hidden="true"></span>
+      <span class="summe-label">Mehr als die Summe seiner Teile</span>
+      <span class="summe-noise" id="summeNoise" aria-hidden="true"></span>
+    </p>
   </div>
 </div>
 
@@ -938,40 +1078,42 @@
   <button class="preorder-btn" id="preorderBtn">Pre-Order Now</button>
 </section>
 
+<section class="spotlight" id="spotlightSection">
+  <div class="spotlight-box">
+    <div class="spotlight-program">
+      <select class="spotlight-select" id="programSelect">
+        <option value="Noise">Noise</option>
+        <option value="Drums">Drums</option>
+        <option value="Panic Attack">Panic Attack</option>
+        <option value="Filter">Filter</option>
+      </select>
+      <p class="spotlight-desc" id="programDesc">[Beschreibung zu Noise – bitte ergänzen]</p>
+    </div>
+
+    <div class="spotlight-artist-image">
+      <img id="artistImage" src="images/artist-polykrisis.png" alt="Polykrisis">
+    </div>
+
+    <div class="spotlight-play">
+      <img class="spotlight-play-img" id="spotlightPlayImg" src="images/play-button.png" alt="Sound abspielen" role="button" tabindex="0" aria-label="Sound abspielen">
+    </div>
+
+    <div class="spotlight-bio">
+      <select class="spotlight-select" id="artistSelect">
+        <option value="Polykrisis">Polykrisis</option>
+        <option value="MVROWI">MVROWI</option>
+        <option value="Der Verlorene Faden">Der Verlorene Faden</option>
+        <option value="Grodock">Grodock</option>
+      </select>
+      <p class="spotlight-desc" id="artistBio">[Bio zu Polykrisis – bitte ergänzen]</p>
+    </div>
+  </div>
+</section>
+
 <section class="contact" id="contactSection">
   <canvas class="contact-canvas" id="contactCanvas"></canvas>
   <button class="preorder-btn contact-btn-top" id="contactBtnTop">In Kontakt Treten</button>
   <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
-</section>
-
-<section class="spotlight" id="spotlightSection">
-  <div class="spotlight-program">
-    <select class="spotlight-select" id="programSelect">
-      <option value="Noise">Noise</option>
-      <option value="Drums">Drums</option>
-      <option value="Panic Attack">Panic Attack</option>
-      <option value="Filter">Filter</option>
-    </select>
-    <p class="spotlight-desc" id="programDesc">[Beschreibung zu Noise – bitte ergänzen]</p>
-  </div>
-
-  <div class="spotlight-artist-image">
-    <img id="artistImage" src="images/artist-polykrisis.png" alt="Polykrisis">
-  </div>
-
-  <div class="spotlight-play">
-    <img class="spotlight-play-img" id="spotlightPlayImg" src="images/play-button.png" alt="Sound abspielen" role="button" tabindex="0" aria-label="Sound abspielen">
-  </div>
-
-  <div class="spotlight-bio">
-    <select class="spotlight-select" id="artistSelect">
-      <option value="Polykrisis">Polykrisis</option>
-      <option value="MVROWI">MVROWI</option>
-      <option value="Der Verlorene Faden">Der Verlorene Faden</option>
-      <option value="Grodock">Grodock</option>
-    </select>
-    <p class="spotlight-desc" id="artistBio">[Bio zu Polykrisis – bitte ergänzen]</p>
-  </div>
 </section>
 
 <!-- Pre-Order modal -->
@@ -1023,6 +1165,14 @@ const stage = document.getElementById('stage');
 const flash = document.getElementById('flash');
 const wordmarkWrap = document.getElementById('wordmarkWrap');
 let subsloganGeneration = 0; // bumped to cancel an in-flight letter-blowup sequence
+
+// section paging state -- populated once all section elements exist below
+let pageSections = [];
+let currentPageIndex = 0;
+function syncPageIndex(el){
+  const idx = pageSections.indexOf(el);
+  if (idx !== -1) currentPageIndex = idx;
+}
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -1264,6 +1414,7 @@ if (pedalSlides.length > 1) {
 const pedalsSection = document.getElementById('pedalsSection');
 const contactSection = document.getElementById('contactSection');
 const videoSection = document.getElementById('videoSection');
+const spotlightSection = document.getElementById('spotlightSection');
 
 [pedalsSection, videoSection].forEach(function(sec){
   if (!sec) return;
@@ -1303,6 +1454,7 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
     wordmarkWrap.classList.add('open');
     // let the door swing open first, then move to the video section
     setTimeout(function(){
+      syncPageIndex(videoSection);
       videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 650);
   };
@@ -1322,6 +1474,11 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
         wordmarkWrap.classList.remove('slogan-open');
         wordmarkWrap.classList.remove('pedals-open');
         wordmarkWrap.classList.remove('subslogan-open');
+        wordmarkWrap.classList.remove('summe-open');
+        const summeEl = document.getElementById('summeText');
+        const summeNoise = document.getElementById('summeNoise');
+        if (summeEl) summeEl.classList.remove('dissolving', 'dissolved');
+        if (summeNoise) summeNoise.classList.remove('flicker');
         if (sloganMainEl) sloganMainEl.classList.remove('scatter');
         if (pedalsLabelEl){
           pedalsLabelEl.querySelectorAll('.letter').forEach(function(el){
@@ -1341,7 +1498,7 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
    letters, then move down to the contact/particles section ---------- */
 const sloganMainEl = document.getElementById('sloganMain');
 
-if (sloganMainEl && wordmarkWrap && contactSection) {
+if (sloganMainEl && wordmarkWrap && spotlightSection) {
   // split into individual letter spans once, up front -- data-text keeps
   // driving the existing hover-glitch pseudo-elements unaffected
   (function wrapLetters(){
@@ -1381,7 +1538,8 @@ if (sloganMainEl && wordmarkWrap && contactSection) {
 
     // same overall duration as the Datura door before it moves on
     setTimeout(function(){
-      contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      syncPageIndex(spotlightSection);
+      spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 650);
   };
 
@@ -1460,6 +1618,7 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
 
     // once the cradle has settled, move to the pre-order section
     setTimeout(function(){
+      syncPageIndex(pedalsSection);
       pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 1000);
   };
@@ -1473,37 +1632,51 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
   });
 }
 
-/* ---------- "vom Anfänger bis zum Avantgardisten": click cycles through
-   each letter, briefly huge on screen, one after another, then moves
-   down to the program/artist spotlight section ---------- */
+/* ---------- "vom Anfänger bis zum Avantgardisten": clicking either half
+   cycles through a shortened word, briefly huge on screen, one letter
+   at a time -- no destination section for this one ---------- */
 const sloganSubEl = document.getElementById('sloganSub');
-const spotlightSection = document.getElementById('spotlightSection');
 const letterBlowupEl = document.getElementById('letterBlowup');
 
-if (sloganSubEl && wordmarkWrap && spotlightSection && letterBlowupEl) {
-  const openSubslogan = function(){
+if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
+  const subParts = sloganSubEl.querySelectorAll('.sub-part');
+
+  // whole-phrase hover shake: attached directly to the container, which
+  // correctly fires for the whole bounding box (including its child
+  // spans) without needing :has() or per-word duplicate layers
+  sloganSubEl.addEventListener('mouseenter', function(){
+    sloganSubEl.classList.add('phrase-hover');
+  });
+  sloganSubEl.addEventListener('mouseleave', function(){
+    sloganSubEl.classList.remove('phrase-hover');
+  });
+
+  const playBlowup = function(word){
     wordmarkWrap.classList.add('subslogan-open');
     subsloganGeneration++;
     const myGeneration = subsloganGeneration;
 
-    const text = sloganSubEl.getAttribute('data-text') || sloganSubEl.textContent;
-    const glyphs = Array.prototype.filter.call(text, function(ch){ return ch !== ' '; });
+    const glyphs = Array.prototype.filter.call(word, function(ch){ return ch !== ' '; });
 
     letterBlowupEl.classList.add('visible');
     letterBlowupEl.innerHTML = '<span class="glyph"></span>';
     const glyphEl = letterBlowupEl.querySelector('.glyph');
 
     let i = 0;
-    const perLetterMs = 65;
+    const perLetterMs = 39; // 40% faster than the original 65ms
 
     function showNext(){
-      if (myGeneration !== subsloganGeneration) return; // cancelled (scrolled back up)
+      if (myGeneration !== subsloganGeneration) return; // cancelled (scrolled away)
       if (i >= glyphs.length){
         letterBlowupEl.classList.remove('visible');
         setTimeout(function(){
           if (myGeneration !== subsloganGeneration) return;
-          spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 200);
+          wordmarkWrap.classList.remove('subslogan-open');
+          if (whySection){
+            syncPageIndex(whySection);
+            whySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 350);
         return;
       }
       glyphEl.textContent = glyphs[i];
@@ -1516,11 +1689,45 @@ if (sloganSubEl && wordmarkWrap && spotlightSection && letterBlowupEl) {
     showNext();
   };
 
-  sloganSubEl.addEventListener('click', openSubslogan);
-  sloganSubEl.addEventListener('keydown', function(e){
+  subParts.forEach(function(part){
+    const word = part.getAttribute('data-blowup') || part.textContent.trim();
+    part.addEventListener('click', function(){ playBlowup(word); });
+    part.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        playBlowup(word);
+      }
+    });
+  });
+}
+
+/* ---------- "Mehr als die Summe seiner Teile": scrolls to the
+   particle/contact section ---------- */
+const summeTextEl = document.getElementById('summeText');
+const summeNoiseEl = document.getElementById('summeNoise');
+if (summeTextEl && wordmarkWrap && contactSection) {
+  const openSumme = function(){
+    wordmarkWrap.classList.add('summe-open'); // rest of the hero fades to black
+    summeTextEl.classList.add('dissolving'); // label fades out, noise fades in
+    if (summeNoiseEl) summeNoiseEl.classList.add('flicker');
+
+    // let the noise flicker briefly, then fade the noise away too
+    // before moving to the next section
+    setTimeout(function(){
+      summeTextEl.classList.add('dissolved');
+      if (summeNoiseEl) summeNoiseEl.classList.remove('flicker');
+    }, 450);
+
+    setTimeout(function(){
+      syncPageIndex(contactSection);
+      contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 750);
+  };
+  summeTextEl.addEventListener('click', openSumme);
+  summeTextEl.addEventListener('keydown', function(e){
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      openSubslogan();
+      openSumme();
     }
   });
 }
@@ -1995,6 +2202,104 @@ if (sloganSubEl && wordmarkWrap && spotlightSection && letterBlowupEl) {
       newsletterForm.reset();
     });
   }
+})();
+
+/* ---------- section paging: each section is treated as its own "room".
+   scrolling past a threshold in either direction jumps the viewport
+   fully to the next/previous section, rather than free-scrolling or
+   relying on CSS scroll-snap (which doesn't reliably trigger a hard
+   jump on its own). ---------- */
+(function(){
+  pageSections = [stage, videoSection, pedalsSection, spotlightSection, contactSection].filter(Boolean);
+  if (pageSections.length < 2) return;
+
+  function nearestSectionIndex(){
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    const viewportCenter = window.scrollY + window.innerHeight / 2;
+    pageSections.forEach(function(sec, idx){
+      const rect = sec.getBoundingClientRect();
+      const sectionCenter = window.scrollY + rect.top + rect.height / 2;
+      const dist = Math.abs(sectionCenter - viewportCenter);
+      if (dist < bestDist){ bestDist = dist; bestIdx = idx; }
+    });
+    return bestIdx;
+  }
+  currentPageIndex = nearestSectionIndex();
+
+  function jumpToIndex(idx){
+    idx = Math.max(0, Math.min(pageSections.length - 1, idx));
+    currentPageIndex = idx;
+    pageSections[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  let isJumping = false;
+  let wheelAccum = 0;
+  const WHEEL_THRESHOLD = 55; // how far you need to scroll past the edge before it jumps
+  let wheelResetTimer = null;
+
+  window.addEventListener('wheel', function(e){
+    // if any modal is open, let the page (and its own scroll handling) be
+    if (document.querySelector('.modal-overlay.active')) return;
+    if (isJumping) { e.preventDefault(); return; }
+
+    wheelAccum += e.deltaY;
+
+    clearTimeout(wheelResetTimer);
+    wheelResetTimer = setTimeout(function(){ wheelAccum = 0; }, 220);
+
+    if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
+
+    const direction = wheelAccum > 0 ? 1 : -1;
+    wheelAccum = 0;
+
+    const targetIdx = currentPageIndex + direction;
+    if (targetIdx < 0 || targetIdx > pageSections.length - 1) return; // no section that way
+
+    e.preventDefault();
+    isJumping = true;
+    jumpToIndex(targetIdx);
+    setTimeout(function(){ isJumping = false; }, 550);
+  }, { passive:false });
+
+  // basic touch-swipe support for the same "jump to next/previous room" feel
+  let touchStartY = null;
+  window.addEventListener('touchstart', function(e){
+    if (document.querySelector('.modal-overlay.active')) return;
+    touchStartY = e.touches[0].clientY;
+  }, { passive:true });
+
+  window.addEventListener('touchend', function(e){
+    if (document.querySelector('.modal-overlay.active') || touchStartY === null || isJumping) return;
+    const touchEndY = e.changedTouches[0].clientY;
+    const delta = touchStartY - touchEndY;
+    touchStartY = null;
+    if (Math.abs(delta) < 60) return; // swipe too short to count
+
+    const direction = delta > 0 ? 1 : -1;
+    const targetIdx = currentPageIndex + direction;
+    if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
+
+    isJumping = true;
+    jumpToIndex(targetIdx);
+    setTimeout(function(){ isJumping = false; }, 550);
+  }, { passive:true });
+
+  // keep currentPageIndex correct if the person clicks a link that jumps
+  // to a specific section directly (syncPageIndex is called from those
+  // handlers elsewhere), and also resync after manual keyboard scrolling
+  window.addEventListener('keydown', function(e){
+    if (document.querySelector('.modal-overlay.active')) return;
+    if (e.key !== 'PageDown' && e.key !== 'PageUp') return;
+    if (isJumping) { e.preventDefault(); return; }
+    const direction = e.key === 'PageDown' ? 1 : -1;
+    const targetIdx = currentPageIndex + direction;
+    if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
+    e.preventDefault();
+    isJumping = true;
+    jumpToIndex(targetIdx);
+    setTimeout(function(){ isJumping = false; }, 550);
+  });
 })();
 </script>
 
