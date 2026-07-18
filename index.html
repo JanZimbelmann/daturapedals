@@ -2484,7 +2484,16 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   window.addEventListener('wheel', function(e){
     // if any modal is open, let the page (and its own scroll handling) be
     if (document.querySelector('.modal-overlay.active')) return;
-    if (isJumping || pageAnimationActive) { e.preventDefault(); return; }
+
+    // block ALL native scrolling while paging is active -- only the
+    // accumulated delta below decides *when* to jump, not whether the
+    // browser is allowed to scroll natively in the meantime. Letting
+    // small increments through was causing a brief real scroll before
+    // the threshold was reached, which showed up as a sliver of void
+    // space above/below the current section.
+    e.preventDefault();
+
+    if (isJumping || pageAnimationActive) return;
 
     wheelAccum += e.deltaY;
 
@@ -2499,7 +2508,6 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const targetIdx = currentPageIndex + direction;
     if (targetIdx < 0 || targetIdx > pageSections.length - 1) return; // no section that way
 
-    e.preventDefault();
     isJumping = true;
     jumpToIndex(targetIdx);
     setTimeout(function(){ isJumping = false; }, 550);
