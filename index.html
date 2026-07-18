@@ -611,11 +611,13 @@
   .video-section{
     position:relative;
     width:100%;
+    height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
     padding:1rem 1.5rem;
     background:var(--black);
+    box-sizing:border-box;
   }
   .video-frame{
     width:100%;
@@ -826,28 +828,40 @@
     grid-area:program;
     display:flex;
     flex-direction:column;
-    align-items:center;
+    align-items:stretch;
     justify-content:flex-start;
-    text-align:center;
     height:300px;
-    padding:1.5rem 2rem 2rem;
+    padding:0;
     border-right:1px solid var(--white);
     border-bottom:1px solid var(--white);
   }
   .spotlight-artist-image{
     grid-area:artistimg;
+    position:relative;
+    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
     height:300px;
-    padding:2.5rem;
+    padding:0;
     border-bottom:1px solid var(--white);
   }
+  .spotlight-artist-bg{
+    position:absolute;
+    inset:0;
+    background-size:cover;
+    background-position:center;
+    filter:blur(24px) brightness(0.55);
+    transform:scale(1.35);
+    z-index:0;
+  }
   .spotlight-artist-image img{
-    max-width:200px;
-    max-height:220px;
-    width:100%;
-    height:auto;
+    position:relative;
+    z-index:1;
+    height:100%;
+    width:auto;
+    max-width:100%;
+    object-fit:contain;
     display:block;
   }
   .spotlight-play{
@@ -874,15 +888,15 @@
     grid-area:bio;
     display:flex;
     flex-direction:column;
-    align-items:center;
+    align-items:stretch;
     justify-content:flex-start;
-    text-align:center;
     height:300px;
-    padding:1.5rem 2rem 2rem;
+    padding:0;
   }
 
   .spotlight-select{
     width:100%;
+    box-sizing:border-box;
     font-family:'IBM Plex Mono', monospace;
     font-size:1rem;
     letter-spacing:0.1em;
@@ -898,9 +912,12 @@
     outline:none;
   }
   .spotlight-desc{
-    margin-top:1rem;
+    margin:0;
+    padding:1rem 1.5rem 1.5rem;
+    box-sizing:border-box;
     font-size:0.85rem;
     line-height:1.6;
+    text-align:left;
     color:var(--grey-3);
     overflow-y:auto;
     flex:1;
@@ -1182,6 +1199,7 @@
     </div>
 
     <div class="spotlight-artist-image">
+      <div class="spotlight-artist-bg" id="artistBg" aria-hidden="true"></div>
       <img id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
     </div>
 
@@ -2249,6 +2267,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const programSelect = document.getElementById('programSelect');
   const artistSelect = document.getElementById('artistSelect');
   const artistImage = document.getElementById('artistImage');
+  const artistBg = document.getElementById('artistBg');
   const artistBio = document.getElementById('artistBio');
   const programDesc = document.getElementById('programDesc');
   const playImg = document.getElementById('spotlightPlayImg');
@@ -2307,12 +2326,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     artistImage.onerror = function(){
       if (myToken !== requestToken) return;
       artistImage.style.display = 'none';
+      if (artistBg) artistBg.style.backgroundImage = 'none';
       const msg = document.createElement('p');
       msg.className = 'spotlight-fallback';
       msg.textContent = 'Bild nicht gefunden';
       artistImage.insertAdjacentElement('afterend', msg);
     };
-    artistImage.src = 'artists/' + entry.artistSlug + '.png';
+    const artistImgUrl = 'artists/' + entry.artistSlug + '.png';
+    artistImage.src = artistImgUrl;
+    if (artistBg) artistBg.style.backgroundImage = "url('" + artistImgUrl + "')";
 
     // artist bio
     artistBio.textContent = 'Lädt…';
@@ -2537,7 +2559,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // the .txt extension) every time a new post is dropped into /blog.
   // Expected filename format: YYYYMMDD_Title-Of-The-Post
   const blogFiles = [
-    '20260718_title'
+    '20260718_Birth_of_a_Blog'
   ];
 
   function parseFilename(filename){
