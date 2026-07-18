@@ -210,7 +210,7 @@
     transition:opacity 0.15s ease;
     font-family:'Anton', sans-serif;
     font-size:clamp(4rem, 22vw, 15rem);
-    color:var(--white);
+    color:var(--grey-3);
   }
   .letter-blowup.visible{
     opacity:1;
@@ -529,9 +529,6 @@
   .summe-text:hover{
     color:var(--white);
   }
-  .summe-text:hover .ray{
-    background:var(--white);
-  }
   .ray{
     position:absolute;
     background:var(--grey-2);
@@ -562,28 +559,19 @@
   .summe-label{
     position:relative;
     z-index:1;
-    transition:opacity 0.4s ease;
+    transition:opacity 0.25s ease;
   }
-  .summe-noise{
+  .summe-dissolve-canvas{
     position:absolute;
-    inset:-6px;
+    inset:0;
     pointer-events:none;
     opacity:0;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    filter:brightness(1.6);
-    transition:opacity 0.35s ease;
-  }
-  .summe-noise.flicker{
-    animation:grain-shift 0.35s steps(2) infinite;
   }
   .summe-text.dissolving .summe-label{
     opacity:0;
   }
-  .summe-text.dissolving .summe-noise{
+  .summe-text.dissolving .summe-dissolve-canvas{
     opacity:1;
-  }
-  .summe-text.dissolved .summe-noise{
-    opacity:0;
   }
 
   @keyframes fade-in{
@@ -613,32 +601,17 @@
     gap:3rem;
     padding:5rem 1.5rem;
     background:var(--black);
-    opacity:0;
-    transform:translateY(24px);
-    transition:opacity 0.9s ease, transform 0.9s ease;
-  }
-  .pedals.in-view{
-    opacity:1;
-    transform:translateY(0);
   }
 
   /* ---------- video section ---------- */
   .video-section{
     position:relative;
-    min-height:100vh;
     width:100%;
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:5rem 1.5rem;
+    padding:3rem 1.5rem;
     background:var(--black);
-    opacity:0;
-    transform:translateY(24px);
-    transition:opacity 0.9s ease, transform 0.9s ease;
-  }
-  .video-section.in-view{
-    opacity:1;
-    transform:translateY(0);
   }
   .video-frame{
     width:100%;
@@ -709,6 +682,106 @@
   .preorder-btn:hover{
     background:var(--white);
     color:var(--black);
+  }
+
+  /* ---------- "Warum das Ganze?" + Blog section ---------- */
+  .why{
+    display:flex;
+    flex-wrap:wrap;
+    min-height:100vh;
+    width:100%;
+    background:var(--black);
+  }
+  .why-left, .why-right{
+    flex:1 1 50%;
+    min-width:280px;
+    padding:4rem 3rem;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  .why-left{
+    border-right:1px solid var(--grey-2);
+  }
+  .why-title{
+    font-family:'Anton', sans-serif;
+    font-size:clamp(1.6rem, 3vw, 2.4rem);
+    letter-spacing:0.02em;
+    color:var(--white);
+    margin-bottom:1.2rem;
+  }
+  .why-text{
+    font-size:0.95rem;
+    line-height:1.8;
+    color:var(--grey-3);
+    max-width:480px;
+  }
+
+  .blog-label{
+    font-family:'Bungee', sans-serif;
+    font-size:0.85rem;
+    letter-spacing:0.3em;
+    color:var(--grey-3);
+    margin-bottom:1.5rem;
+  }
+  .blog-viewer{
+    display:flex;
+    align-items:stretch;
+    gap:1.2rem;
+    max-width:480px;
+  }
+  .blog-entry{
+    flex:1;
+    min-width:0;
+  }
+  .blog-date{
+    font-size:0.72rem;
+    letter-spacing:0.1em;
+    color:var(--grey-2);
+    margin-bottom:0.4rem;
+  }
+  .blog-title{
+    font-family:'Anton', sans-serif;
+    font-size:1.15rem;
+    color:var(--white);
+    margin-bottom:0.8rem;
+  }
+  .blog-content{
+    font-size:0.85rem;
+    line-height:1.7;
+    color:var(--grey-3);
+    white-space:pre-line;
+  }
+  .blog-nav{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:0.6rem;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    color:var(--white);
+    width:2.2rem;
+    cursor:pointer;
+    font-size:1rem;
+    transition:border-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+  }
+  .blog-nav:hover{
+    border-color:var(--white);
+  }
+  .blog-nav:disabled{
+    opacity:0.3;
+    cursor:default;
+  }
+  .blog-nav:disabled:hover{
+    border-color:var(--grey-2);
+  }
+
+  @media (max-width:640px){
+    .why-left{
+      border-right:none;
+      border-bottom:1px solid var(--grey-2);
+    }
   }
 
   /* ---------- contact section: plain black, button top-left, button bottom-right ---------- */
@@ -818,6 +891,11 @@
     font-size:0.85rem;
     line-height:1.6;
     color:var(--grey-3);
+  }
+  .spotlight-fallback{
+    font-size:0.8rem;
+    color:var(--grey-2);
+    font-style:italic;
   }
 
   @media (max-width:640px){
@@ -1050,7 +1128,7 @@
       <span class="ray ray-bottom" aria-hidden="true"></span>
       <span class="ray ray-left" aria-hidden="true"></span>
       <span class="summe-label">Mehr als die Summe seiner Teile</span>
-      <span class="summe-noise" id="summeNoise" aria-hidden="true"></span>
+      <canvas class="summe-dissolve-canvas" id="summeCanvas" aria-hidden="true"></canvas>
     </p>
   </div>
 </div>
@@ -1091,7 +1169,7 @@
     </div>
 
     <div class="spotlight-artist-image">
-      <img id="artistImage" src="images/artist-polykrisis.png" alt="Polykrisis">
+      <img id="artistImage" src="images/polykrisis.png" alt="Polykrisis">
     </div>
 
     <div class="spotlight-play">
@@ -1106,6 +1184,25 @@
         <option value="Grodock">Grodock</option>
       </select>
       <p class="spotlight-desc" id="artistBio">[Bio zu Polykrisis – bitte ergänzen]</p>
+    </div>
+  </div>
+</section>
+
+<section class="why" id="whySection">
+  <div class="why-left">
+    <h2 class="why-title">Warum das Ganze?</h2>
+    <p class="why-text">vom Anfänger bis zum Avantgardisten, aber wie? Wir bauen Synthesizer mit euch und zugänglich für alle.</p>
+  </div>
+  <div class="why-right">
+    <p class="blog-label">Blog</p>
+    <div class="blog-viewer">
+      <button class="blog-nav blog-nav-up" id="blogNavUp" aria-label="Neuerer Eintrag">&uarr;</button>
+      <div class="blog-entry" id="blogEntry">
+        <p class="blog-date" id="blogDate"></p>
+        <p class="blog-title" id="blogTitle"></p>
+        <p class="blog-content" id="blogContent">Lädt…</p>
+      </div>
+      <button class="blog-nav blog-nav-down" id="blogNavDown" aria-label="Älterer Eintrag">&darr;</button>
     </div>
   </div>
 </section>
@@ -1173,6 +1270,14 @@ function syncPageIndex(el){
   const idx = pageSections.indexOf(el);
   if (idx !== -1) currentPageIndex = idx;
 }
+
+// global animation lock: while any click-triggered interaction (door
+// opening, letter scatter/blowup, cradle, dissolve) is mid-flight,
+// wheel/touch/keyboard paging is blocked so it can't be interrupted
+// partway through. Released once that interaction reaches its destination.
+let pageAnimationActive = false;
+function pageAnimationLock(){ pageAnimationActive = true; }
+function pageAnimationUnlock(){ pageAnimationActive = false; }
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -1415,19 +1520,7 @@ const pedalsSection = document.getElementById('pedalsSection');
 const contactSection = document.getElementById('contactSection');
 const videoSection = document.getElementById('videoSection');
 const spotlightSection = document.getElementById('spotlightSection');
-
-[pedalsSection, videoSection].forEach(function(sec){
-  if (!sec) return;
-  const observer = new IntersectionObserver(function(entries){
-    entries.forEach(function(entry){
-      if (entry.isIntersecting) {
-        sec.classList.add('in-view');
-        observer.unobserve(sec);
-      }
-    });
-  }, { threshold: 0.25 });
-  observer.observe(sec);
-});
+const whySection = document.getElementById('whySection');
 
 /* ---------- Datura: clickable, opens like a double door toward the video section ---------- */
 const logoBoxEl = document.querySelector('.logo-box');
@@ -1452,10 +1545,12 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
   const openDoor = function(){
     updateDoorSplit();
     wordmarkWrap.classList.add('open');
+    pageAnimationLock();
     // let the door swing open first, then move to the video section
     setTimeout(function(){
       syncPageIndex(videoSection);
       videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pageAnimationUnlock();
     }, 650);
   };
 
@@ -1514,6 +1609,7 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
 
   const openSlogan = function(){
     wordmarkWrap.classList.add('slogan-open');
+    pageAnimationLock();
 
     const letters = sloganMainEl.querySelectorAll('.letter');
     const spread = Math.min(window.innerWidth, window.innerHeight) * 0.3;
@@ -1540,6 +1636,7 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
     setTimeout(function(){
       syncPageIndex(spotlightSection);
       spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pageAnimationUnlock();
     }, 650);
   };
 
@@ -1583,6 +1680,7 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
 
   const openPedals = function(){
     wordmarkWrap.classList.add('pedals-open');
+    pageAnimationLock();
 
     const letters = Array.prototype.slice.call(pedalsLabelEl.querySelectorAll('.letter'));
     const n = letters.length;
@@ -1620,6 +1718,7 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
     setTimeout(function(){
       syncPageIndex(pedalsSection);
       pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pageAnimationUnlock();
     }, 1000);
   };
 
@@ -1653,6 +1752,7 @@ if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
 
   const playBlowup = function(word){
     wordmarkWrap.classList.add('subslogan-open');
+    pageAnimationLock();
     subsloganGeneration++;
     const myGeneration = subsloganGeneration;
 
@@ -1676,6 +1776,7 @@ if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
             syncPageIndex(whySection);
             whySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
+          pageAnimationUnlock();
         }, 350);
         return;
       }
@@ -1704,24 +1805,90 @@ if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
 /* ---------- "Mehr als die Summe seiner Teile": scrolls to the
    particle/contact section ---------- */
 const summeTextEl = document.getElementById('summeText');
-const summeNoiseEl = document.getElementById('summeNoise');
+const summeLabelEl = summeTextEl ? summeTextEl.querySelector('.summe-label') : null;
+const summeCanvasEl = document.getElementById('summeCanvas');
+
+// draws the label's actual text onto the canvas, then animates those
+// pixels scattering outward and fading -- the font itself dissolving
+// into grain, rather than a separate noise texture or a duplicate layer
+function dissolveTextIntoNoise(labelEl, canvasEl, durationMs, onDone){
+  if (!labelEl || !canvasEl){ if (onDone) onDone(); return; }
+
+  const rect = labelEl.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(1, Math.round(rect.width));
+  const h = Math.max(1, Math.round(rect.height));
+  canvasEl.width = w * dpr;
+  canvasEl.height = h * dpr;
+  canvasEl.style.width = w + 'px';
+  canvasEl.style.height = h + 'px';
+
+  const ctx = canvasEl.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const style = window.getComputedStyle(labelEl);
+  ctx.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#eeeeea';
+  ctx.fillText(labelEl.textContent, 0, h / 2);
+
+  const imageData = ctx.getImageData(0, 0, w * dpr, h * dpr);
+  const particles = [];
+  const step = 2; // sample every 2 device pixels, keeps the particle count reasonable
+  for (let y = 0; y < h * dpr; y += step){
+    for (let x = 0; x < w * dpr; x += step){
+      const idx = (y * (w * dpr) + x) * 4;
+      if (imageData.data[idx + 3] > 120){
+        particles.push({
+          x: x / dpr,
+          y: y / dpr,
+          vx: (Math.random() - 0.5) * 1.6,
+          vy: (Math.random() - 0.5) * 1.6 - 0.3,
+          alpha: 1
+        });
+      }
+    }
+  }
+
+  ctx.clearRect(0, 0, w, h);
+
+  const startTime = performance.now();
+  function frame(now){
+    const t = Math.min(1, (now - startTime) / durationMs);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#eeeeea';
+    particles.forEach(function(p){
+      p.x += p.vx * (0.4 + t * 1.6);
+      p.y += p.vy * (0.4 + t * 1.6);
+      p.alpha = 1 - t;
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.fillRect(p.x, p.y, 1.4, 1.4);
+    });
+    ctx.globalAlpha = 1;
+    if (t < 1){
+      requestAnimationFrame(frame);
+    } else {
+      ctx.clearRect(0, 0, w, h);
+      if (onDone) onDone();
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
 if (summeTextEl && wordmarkWrap && contactSection) {
   const openSumme = function(){
     wordmarkWrap.classList.add('summe-open'); // rest of the hero fades to black
-    summeTextEl.classList.add('dissolving'); // label fades out, noise fades in
-    if (summeNoiseEl) summeNoiseEl.classList.add('flicker');
-
-    // let the noise flicker briefly, then fade the noise away too
-    // before moving to the next section
-    setTimeout(function(){
-      summeTextEl.classList.add('dissolved');
-      if (summeNoiseEl) summeNoiseEl.classList.remove('flicker');
-    }, 450);
+    summeTextEl.classList.add('dissolving'); // label fades, canvas dissolve takes over
+    pageAnimationLock(); // block scrolling until this finishes
 
     setTimeout(function(){
-      syncPageIndex(contactSection);
-      contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 750);
+      dissolveTextIntoNoise(summeLabelEl, summeCanvasEl, 550, function(){
+        syncPageIndex(contactSection);
+        contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        pageAnimationUnlock();
+      });
+    }, 80);
   };
   summeTextEl.addEventListener('click', openSumme);
   summeTextEl.addEventListener('keydown', function(e){
@@ -2062,56 +2229,84 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const playImg = document.getElementById('spotlightPlayImg');
   if (!programSelect || !artistSelect || !artistImage || !artistBio || !programDesc || !playImg) return;
 
-  // each program is paired 1:1 with an artist -- picking either one
-  // updates everything else to match.
-  // NOTE: image/audio paths are placeholders -- drop matching files into
-  // an "images" and "audio" folder next to this HTML file, and replace
-  // the bracketed bio/description text with the real copy.
-  const spotlightData = [
-    {
-      artist: 'Polykrisis',
-      program: 'Noise',
-      artistImage: 'images/artist-polykrisis.png',
-      bio: '[Bio zu Polykrisis – bitte ergänzen]',
-      programDesc: '[Beschreibung zu Noise – bitte ergänzen]',
-      wav: 'audio/noise.wav'
-    },
-    {
-      artist: 'MVROWI',
-      program: 'Drums',
-      artistImage: 'images/artist-mvrowi.png',
-      bio: '[Bio zu MVROWI – bitte ergänzen]',
-      programDesc: '[Beschreibung zu Drums – bitte ergänzen]',
-      wav: 'audio/drums.wav'
-    },
-    {
-      artist: 'Der Verlorene Faden',
-      program: 'Panic Attack',
-      artistImage: 'images/artist-derverlorenefaden.png',
-      bio: '[Bio zu Der Verlorene Faden – bitte ergänzen]',
-      programDesc: '[Beschreibung zu Panic Attack – bitte ergänzen]',
-      wav: 'audio/panic-attack.wav'
-    },
-    {
-      artist: 'Grodock',
-      program: 'Filter',
-      artistImage: 'images/artist-grodock.png',
-      bio: '[Bio zu Grodock – bitte ergänzen]',
-      programDesc: '[Beschreibung zu Filter – bitte ergänzen]',
-      wav: 'audio/filter.wav'
-    }
-  ];
+  // slug = lowercase, no spaces -- e.g. "Der Verlorene Faden" -> "derverlorenefaden"
+  function slugify(name){
+    return name.toLowerCase().replace(/\s+/g, '');
+  }
 
-  let currentWav = spotlightData[0].wav;
+  // each program is paired 1:1 with an artist -- picking either one
+  // updates everything else to match. Files expected on disk:
+  //   images/<slug>.png        (artist photo)
+  //   bios/<slug>.txt          (artist bio)
+  //   descriptions/<slug>.txt  (program description)
+  //   audio/<slug>.wav         (sound to play)
+  const spotlightData = [
+    { artist: 'Polykrisis', program: 'Noise' },
+    { artist: 'MVROWI', program: 'Drums' },
+    { artist: 'Der Verlorene Faden', program: 'Panic Attack' },
+    { artist: 'Grodock', program: 'Filter' }
+  ].map(function(d){
+    return {
+      artist: d.artist,
+      program: d.program,
+      artistSlug: slugify(d.artist),
+      programSlug: slugify(d.program)
+    };
+  });
+
+  let currentWav = 'audio/' + spotlightData[0].programSlug + '.wav';
+  let requestToken = 0; // guards against a slow fetch overwriting a newer selection
+
+  function fetchText(url){
+    return fetch(url).then(function(res){
+      if (!res.ok) throw new Error('not found');
+      return res.text();
+    });
+  }
 
   function applyEntry(entry){
-    artistImage.src = entry.artistImage;
-    artistImage.alt = entry.artist;
-    artistBio.textContent = entry.bio;
-    programDesc.textContent = entry.programDesc;
+    const myToken = ++requestToken;
+
     programSelect.value = entry.program;
     artistSelect.value = entry.artist;
-    currentWav = entry.wav;
+    currentWav = 'audio/' + entry.programSlug + '.wav';
+
+    // artist photo
+    artistImage.alt = entry.artist;
+    artistImage.style.display = '';
+    const imgNotFound = artistImage.nextElementSibling && artistImage.nextElementSibling.classList.contains('spotlight-fallback')
+      ? artistImage.nextElementSibling
+      : null;
+    if (imgNotFound) imgNotFound.remove();
+    artistImage.onerror = function(){
+      if (myToken !== requestToken) return;
+      artistImage.style.display = 'none';
+      const msg = document.createElement('p');
+      msg.className = 'spotlight-fallback';
+      msg.textContent = 'Bild nicht gefunden';
+      artistImage.insertAdjacentElement('afterend', msg);
+    };
+    artistImage.src = 'images/' + entry.artistSlug + '.png';
+
+    // artist bio
+    artistBio.textContent = 'Lädt…';
+    fetchText('bios/' + entry.artistSlug + '.txt').then(function(text){
+      if (myToken !== requestToken) return;
+      artistBio.textContent = text.trim();
+    }).catch(function(){
+      if (myToken !== requestToken) return;
+      artistBio.textContent = 'Bio nicht gefunden';
+    });
+
+    // program description
+    programDesc.textContent = 'Lädt…';
+    fetchText('descriptions/' + entry.programSlug + '.txt').then(function(text){
+      if (myToken !== requestToken) return;
+      programDesc.textContent = text.trim();
+    }).catch(function(){
+      if (myToken !== requestToken) return;
+      programDesc.textContent = 'Beschreibung nicht gefunden';
+    });
   }
 
   applyEntry(spotlightData[0]);
@@ -2210,7 +2405,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
    relying on CSS scroll-snap (which doesn't reliably trigger a hard
    jump on its own). ---------- */
 (function(){
-  pageSections = [stage, videoSection, pedalsSection, spotlightSection, contactSection].filter(Boolean);
+  pageSections = [stage, videoSection, pedalsSection, spotlightSection, whySection, contactSection].filter(Boolean);
   if (pageSections.length < 2) return;
 
   function nearestSectionIndex(){
@@ -2241,7 +2436,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   window.addEventListener('wheel', function(e){
     // if any modal is open, let the page (and its own scroll handling) be
     if (document.querySelector('.modal-overlay.active')) return;
-    if (isJumping) { e.preventDefault(); return; }
+    if (isJumping || pageAnimationActive) { e.preventDefault(); return; }
 
     wheelAccum += e.deltaY;
 
@@ -2270,7 +2465,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }, { passive:true });
 
   window.addEventListener('touchend', function(e){
-    if (document.querySelector('.modal-overlay.active') || touchStartY === null || isJumping) return;
+    if (document.querySelector('.modal-overlay.active') || touchStartY === null || isJumping || pageAnimationActive) return;
     const touchEndY = e.changedTouches[0].clientY;
     const delta = touchStartY - touchEndY;
     touchStartY = null;
@@ -2291,7 +2486,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   window.addEventListener('keydown', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
     if (e.key !== 'PageDown' && e.key !== 'PageUp') return;
-    if (isJumping) { e.preventDefault(); return; }
+    if (isJumping || pageAnimationActive) { e.preventDefault(); return; }
     const direction = e.key === 'PageDown' ? 1 : -1;
     const targetIdx = currentPageIndex + direction;
     if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
@@ -2300,6 +2495,93 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     jumpToIndex(targetIdx);
     setTimeout(function(){ isJumping = false; }, 550);
   });
+})();
+
+/* ---------- Blog viewer ---------- */
+(function(){
+  const blogDateEl = document.getElementById('blogDate');
+  const blogTitleEl = document.getElementById('blogTitle');
+  const blogContentEl = document.getElementById('blogContent');
+  const navUp = document.getElementById('blogNavUp');
+  const navDown = document.getElementById('blogNavDown');
+  if (!blogDateEl || !blogTitleEl || !blogContentEl || !navUp || !navDown) return;
+
+  // NOTE: browsers can't list a folder's contents on their own, so this
+  // list has to be kept in sync by hand -- add the filename here (without
+  // the .txt extension) every time a new post is dropped into /blog.
+  // Expected filename format: YYYYMMDD_Title-Of-The-Post
+  const blogFiles = [
+    '20260718_title'
+  ];
+
+  function parseFilename(filename){
+    const underscoreIdx = filename.indexOf('_');
+    const datePart = underscoreIdx === -1 ? filename : filename.slice(0, underscoreIdx);
+    const titlePart = underscoreIdx === -1 ? '' : filename.slice(underscoreIdx + 1);
+
+    const y = datePart.slice(0, 4);
+    const m = datePart.slice(4, 6);
+    const d = datePart.slice(6, 8);
+    const dateDisplay = (y && m && d) ? (y + '.' + m + '.' + d) : datePart;
+    const sortKey = y + m + d;
+    const title = titlePart.replace(/[-_]+/g, ' ').trim() || '(ohne Titel)';
+
+    return { filename: filename, dateDisplay: dateDisplay, sortKey: sortKey, title: title };
+  }
+
+  let entries = blogFiles.map(parseFilename);
+  entries.sort(function(a, b){ return b.sortKey.localeCompare(a.sortKey); }); // newest first
+
+  let currentIndex = 0;
+  let loadedContent = {}; // cache so re-visiting an entry doesn't re-fetch
+
+  function updateNavState(){
+    navUp.disabled = currentIndex <= 0;
+    navDown.disabled = currentIndex >= entries.length - 1;
+  }
+
+  function renderEntry(){
+    if (!entries.length){
+      blogDateEl.textContent = '';
+      blogTitleEl.textContent = '';
+      blogContentEl.textContent = 'Noch keine Einträge.';
+      updateNavState();
+      return;
+    }
+    const entry = entries[currentIndex];
+    blogDateEl.textContent = entry.dateDisplay;
+    blogTitleEl.textContent = entry.title;
+    updateNavState();
+
+    if (loadedContent[entry.filename] !== undefined){
+      blogContentEl.textContent = loadedContent[entry.filename];
+      return;
+    }
+
+    blogContentEl.textContent = 'Lädt…';
+    fetch('blog/' + entry.filename + '.txt')
+      .then(function(res){
+        if (!res.ok) throw new Error('not found');
+        return res.text();
+      })
+      .then(function(text){
+        loadedContent[entry.filename] = text.trim();
+        if (entries[currentIndex] === entry) blogContentEl.textContent = loadedContent[entry.filename];
+      })
+      .catch(function(){
+        loadedContent[entry.filename] = 'Beitrag nicht gefunden';
+        if (entries[currentIndex] === entry) blogContentEl.textContent = loadedContent[entry.filename];
+      });
+  }
+
+  navUp.addEventListener('click', function(){
+    if (currentIndex > 0){ currentIndex--; renderEntry(); }
+  });
+  navDown.addEventListener('click', function(){
+    if (currentIndex < entries.length - 1){ currentIndex++; renderEntry(); }
+  });
+
+  renderEntry();
 })();
 </script>
 
