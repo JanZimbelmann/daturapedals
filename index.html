@@ -13,7 +13,7 @@
     --black:#050505;
     --grey-1:#151515;
     --grey-2:#3a3a3a;
-    --grey-3:#8a8a8xa;
+    --grey-3:#8a8a8a;
   }
 
   *{ margin:0; padding:0; box-sizing:border-box; }
@@ -772,7 +772,7 @@
     color:var(--black);
   }
 
-  /* ---------- "Warum das Ganze??" + Blog section ---------- */
+  /* ---------- "Warum das Ganze?" + Blog section ---------- */
   .why{
     display:flex;
     flex-wrap:wrap;
@@ -838,7 +838,7 @@
   .blog-carousel{
     display:grid;
     grid-template-rows:1fr auto 1fr;
-    height:260px;
+    height:300px;
     width:100%;
   }
   .blog-region-above{
@@ -868,7 +868,7 @@
     justify-content:center;
     text-align:center;
     width:100%;
-    height:52px;
+    height:58px;
     flex-shrink:0;
     cursor:pointer;
     transition:opacity 0.3s ease, color 0.3s ease;
@@ -891,35 +891,51 @@
     font-size:0.65rem;
     letter-spacing:0.1em;
   }
-  .blog-neighbor-item .blog-item-title,
+  .blog-neighbor-item .blog-item-title{
+    font-family:'Anton', sans-serif;
+    font-size:0.72rem;
+    letter-spacing:0.01em;
+  }
   .blog-highlight-titleblock .blog-item-title{
     font-family:'Anton', sans-serif;
-    font-size:0.85rem;
     letter-spacing:0.01em;
   }
 
-  /* distance-based dimming -- the wheel's "background" effect */
+  /* distance-based dimming -- unselected entries read as smaller and
+     further back, the wheel's "background" effect */
   .blog-highlight-titleblock{
     color:var(--white);
   }
+  .blog-highlight-titleblock .blog-item-date{
+    font-size:0.72rem;
+  }
   .blog-highlight-titleblock .blog-item-title{
-    font-size:1.05rem;
+    font-size:1.55rem;
   }
   .blog-neighbor-item.dist-1{
     color:var(--grey-3);
-    opacity:0.6;
+    opacity:0.45;
   }
   .blog-neighbor-item.dist-2{
     color:var(--grey-2);
-    opacity:0.3;
+    opacity:0.2;
+  }
+
+  /* small connector between the title and its content -- makes clear
+     the text underneath visually belongs to the title above it */
+  .blog-connector{
+    width:1px;
+    height:14px;
+    background:var(--grey-2);
+    margin:0.6rem auto 0;
   }
 
   /* the highlighted entry's own content, directly under its title --
      lives in .blog-region-below, right above any dimmed neighbors there */
   .blog-item-content{
-    margin-top:0.6rem;
-    font-size:0.85rem;
-    line-height:1.7;
+    margin-top:0.3rem;
+    font-size:0.92rem;
+    line-height:1.75;
     color:var(--grey-3);
     white-space:pre-line;
     text-align:center;
@@ -1131,6 +1147,13 @@
     transform:translate(50%, 50%);
     z-index:1;
   }
+  .contact-btn-impressum{
+    position:absolute;
+    bottom:14%;
+    left:18%;
+    transform:translate(-50%, 50%);
+    z-index:1;
+  }
 
   /* ---------- modals (Pre-Order / Kontakt / Newsletter) ---------- */
   .modal-overlay{
@@ -1185,6 +1208,39 @@
     line-height:1.7;
     letter-spacing:0.02em;
     padding-right:1.5rem;
+  }
+
+  .modal-box-impressum{
+    max-height:80vh;
+    overflow-y:auto;
+  }
+  .impressum-heading{
+    font-family:'Anton', sans-serif;
+    font-size:1.5rem;
+    letter-spacing:0.02em;
+    margin:0 0 1.5rem;
+    padding-right:1.5rem;
+  }
+  .impressum-section-title{
+    font-size:0.7rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+    margin:1.3rem 0 0.4rem;
+  }
+  .impressum-text{
+    font-size:0.88rem;
+    line-height:1.65;
+    margin:0;
+    padding-right:1.5rem;
+  }
+  .impressum-note{
+    margin-top:2rem;
+    padding-top:1rem;
+    border-top:1px solid var(--grey-2);
+    font-size:0.75rem;
+    font-style:italic;
+    color:var(--grey-2);
   }
   .modal-columns{
     display:flex;
@@ -1429,6 +1485,7 @@
   <canvas class="contact-canvas" id="contactCanvas"></canvas>
   <button class="preorder-btn contact-btn-top" id="contactBtnTop">In Kontakt Treten</button>
   <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
+  <button class="preorder-btn contact-btn-impressum" id="contactBtnImpressum">Impressum</button>
 </section>
 
 <!-- Pre-Order modal -->
@@ -1436,6 +1493,42 @@
   <div class="modal-box">
     <button class="modal-close" id="modalPreorderClose" aria-label="Schließen">&times;</button>
     <p class="modal-text">Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.</p>
+  </div>
+</div>
+
+<!-- Impressum modal -->
+<div class="modal-overlay" id="modalImpressum">
+  <div class="modal-box modal-box-impressum">
+    <button class="modal-close" id="modalImpressumClose" aria-label="Schließen">&times;</button>
+    <h3 class="impressum-heading">Impressum</h3>
+
+    <p class="impressum-section-title">Angaben gemäß § 5 TMG</p>
+    <p class="impressum-text">
+      Datura Pedals GbR<br>
+      Musterstraße 12<br>
+      04109 Leipzig<br>
+      Deutschland
+    </p>
+
+    <p class="impressum-section-title">Vertreten durch</p>
+    <p class="impressum-text">Max Mustermann, Erika Musterfrau</p>
+
+    <p class="impressum-section-title">Kontakt</p>
+    <p class="impressum-text">
+      Telefon: +49 (0) 341 123456<br>
+      E-Mail: daturapedals@gmail.com
+    </p>
+
+    <p class="impressum-section-title">Umsatzsteuer-ID</p>
+    <p class="impressum-text">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000</p>
+
+    <p class="impressum-section-title">Redaktionell verantwortlich</p>
+    <p class="impressum-text">Max Mustermann, Musterstraße 12, 04109 Leipzig</p>
+
+    <p class="impressum-section-title">EU-Streitschlichtung</p>
+    <p class="impressum-text">Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
+
+    <p class="impressum-note">Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.</p>
   </div>
 </div>
 
@@ -2559,7 +2652,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     };
   });
 
-  let currentWav = 'audio/' + spotlightData[0].programSlug + '.wav';
+  let currentWav = 'examples/' + spotlightData[0].programSlug + '.wav';
   let requestToken = 0; // guards against a slow fetch overwriting a newer selection
 
   function fetchText(url){
@@ -2646,11 +2739,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const preorderBtn = document.getElementById('preorderBtn');
   const contactBtnTopEl = document.getElementById('contactBtnTop');
   const contactBtnBottomEl = document.getElementById('contactBtnBottom');
+  const contactBtnImpressumEl = document.getElementById('contactBtnImpressum');
 
   const modalPreorder = document.getElementById('modalPreorder');
   const modalContact = document.getElementById('modalContact');
   const modalNewsletter = document.getElementById('modalNewsletter');
-  const allModals = [modalPreorder, modalContact, modalNewsletter].filter(Boolean);
+  const modalImpressum = document.getElementById('modalImpressum');
+  const allModals = [modalPreorder, modalContact, modalNewsletter, modalImpressum].filter(Boolean);
 
   function openModal(modal){
     if (!modal) return;
@@ -2674,13 +2769,16 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   if (preorderBtn) preorderBtn.addEventListener('click', function(){ openModal(modalPreorder); });
   if (contactBtnTopEl) contactBtnTopEl.addEventListener('click', function(){ openModal(modalContact); });
   if (contactBtnBottomEl) contactBtnBottomEl.addEventListener('click', function(){ openModal(modalNewsletter); });
+  if (contactBtnImpressumEl) contactBtnImpressumEl.addEventListener('click', function(){ openModal(modalImpressum); });
 
   const closePreorder = document.getElementById('modalPreorderClose');
   const closeContact = document.getElementById('modalContactClose');
   const closeNewsletter = document.getElementById('modalNewsletterClose');
+  const closeImpressum = document.getElementById('modalImpressumClose');
   if (closePreorder) closePreorder.addEventListener('click', function(){ closeModal(modalPreorder); });
   if (closeContact) closeContact.addEventListener('click', function(){ closeModal(modalContact); });
   if (closeNewsletter) closeNewsletter.addEventListener('click', function(){ closeModal(modalNewsletter); });
+  if (closeImpressum) closeImpressum.addEventListener('click', function(){ closeModal(modalImpressum); });
 
   // clicking the black backdrop itself (not the box) also closes it
   allModals.forEach(function(modal){
@@ -2923,8 +3021,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       regionAbove.appendChild(makeNeighborItem(entries[idx], idx, idx - currentIndex));
     }
 
-    // content directly under the title, then neighbors below (older
-    // entries), nearest first
+    // small connector line, then content directly under the title, then
+    // neighbors below (older entries), nearest first
+    const connector = document.createElement('div');
+    connector.className = 'blog-connector';
+    regionBelow.appendChild(connector);
+
     const contentEl = document.createElement('p');
     contentEl.className = 'blog-item-content';
     regionBelow.appendChild(contentEl);
