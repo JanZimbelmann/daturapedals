@@ -995,12 +995,7 @@
   }
 
   .spotlight-box{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    grid-template-rows:1fr 1fr;
-    grid-template-areas:
-      "program artistimg"
-      "play bio";
+    position:relative;
     width:100%;
     max-width:820px;
     background:var(--black);
@@ -1008,104 +1003,162 @@
     border:1px solid var(--white);
   }
 
-  .spotlight-program{
-    grid-area:program;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
-    height:300px;
-    padding:0;
-    border-right:1px solid var(--white);
-    border-bottom:1px solid var(--white);
-  }
-  .spotlight-artist-image{
-    grid-area:artistimg;
-    position:relative;
+  /* horizontal bar of program names -- the selected one is always
+     recentered in the bar and enlarged; every slot is a fixed width so
+     switching never reflows the layout regardless of name length */
+  .program-bar-wrap{
+    padding:0.7rem 0;
+    border-bottom:1px solid var(--grey-2);
     overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    height:300px;
-    padding:0;
-    border-bottom:1px solid var(--white);
   }
-  .spotlight-artist-bg{
-    position:absolute;
-    inset:0;
-    background-size:cover;
-    background-position:center;
-    filter:blur(24px) brightness(0.55);
-    transform:scale(1.35);
-    z-index:0;
-  }
-  .spotlight-artist-image img{
+  .program-bar{
     position:relative;
-    z-index:1;
-    height:100%;
-    width:auto;
-    max-width:100%;
-    object-fit:contain;
-    display:block;
+    height:32px;
+    width:100%;
   }
-  .spotlight-play{
-    grid-area:play;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    height:300px;
-    padding:2.5rem;
-    border-right:1px solid var(--white);
-  }
-  .spotlight-play-img{
-    width:110px;
-    height:110px;
-    object-fit:contain;
+  .program-bar-item{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:130px;
+    margin-left:-65px;
+    text-align:center;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
     cursor:pointer;
-    transition:transform 0.25s ease, opacity 0.25s ease;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+    transition:transform 0.4s cubic-bezier(.22,1,.36,1), color 0.3s ease, opacity 0.3s ease;
   }
-  .spotlight-play-img:hover{
-    transform:scale(1.06);
-    opacity:0.8;
+  .program-bar-item:hover{
+    color:var(--white);
   }
-  .spotlight-bio{
-    grid-area:bio;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
-    height:300px;
-    padding:0;
+  .program-bar-item.selected{
+    font-family:'Anton', sans-serif;
+    font-size:0.95rem;
+    letter-spacing:0.02em;
+    text-transform:none;
+    color:var(--white);
+    cursor:default;
   }
 
-  .spotlight-select{
-    width:100%;
-    box-sizing:border-box;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:1rem;
-    letter-spacing:0.1em;
-    text-transform:uppercase;
-    color:var(--white);
+  /* circular play button, sitting at the exact center of the whole box */
+  .spotlight-center-play{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    z-index:5;
+    width:58px;
+    height:58px;
+    border-radius:50%;
     background:var(--black);
     border:1px solid var(--white);
-    padding:0.7rem 0.9rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     cursor:pointer;
-    flex-shrink:0;
+    padding:0;
+    transition:transform 0.25s ease, background 0.25s ease;
   }
-  .spotlight-select:focus{
-    outline:none;
+  .spotlight-center-play img{
+    width:22px;
+    height:22px;
+    object-fit:contain;
   }
-  .spotlight-desc{
-    margin:0;
-    padding:1rem 1.5rem 1.5rem;
-    box-sizing:border-box;
-    font-size:0.85rem;
-    line-height:1.6;
-    text-align:left;
+  .spotlight-center-play:hover{
+    transform:translate(-50%, -50%) scale(1.08);
+    background:var(--white);
+  }
+  .spotlight-center-play:hover img{
+    filter:invert(1);
+  }
+
+  .spotlight-top-row{
+    display:flex;
+    border-bottom:1px solid var(--grey-2);
+  }
+  .spotlight-desc-block,
+  .spotlight-diagram-block{
+    flex:1 1 50%;
+    min-width:0;
+    padding:1.75rem;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .spotlight-diagram-block{
+    align-items:center;
+    justify-content:center;
+  }
+
+  .spotlight-bottom-row{
+    display:flex;
+  }
+  .spotlight-circle-block{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:1.75rem;
+  }
+  .artist-circle-img{
+    width:130px;
+    height:130px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1px solid var(--white);
+    display:block;
+  }
+  .artist-caption{
+    margin-top:0.9rem;
+    display:flex;
+    align-items:baseline;
+    gap:0.5rem;
+    font-size:0.7rem;
+    letter-spacing:0.04em;
+  }
+  .artist-name-current{
+    font-family:'Anton', sans-serif;
+    font-size:0.95rem;
+    color:var(--white);
+  }
+  .artist-name-next{
     color:var(--grey-3);
-    overflow-y:auto;
+    cursor:pointer;
+    transition:color 0.25s ease;
+  }
+  .artist-name-next:hover{
+    color:var(--white);
+  }
+  .artist-name-prev{
+    color:var(--grey-2);
+    cursor:default;
+  }
+  .spotlight-bio-block{
     flex:1;
-    width:100%;
+    min-width:0;
+    padding:1.75rem 1.75rem 1.75rem 0.5rem;
+  }
+
+  .spotlight-title{
+    font-family:'Bungee', sans-serif;
+    font-size:0.68rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+    margin:0 0 0.8rem;
+  }
+  .spotlight-desc-text{
+    font-size:0.85rem;
+    line-height:1.65;
+    color:var(--grey-3);
+    text-align:left;
+    margin:0;
   }
   .spotlight-fallback{
     font-size:0.8rem;
@@ -1113,17 +1166,30 @@
     font-style:italic;
   }
 
+  /* pedal diagram: outline-only illustration, matching the site's thin
+     white-line aesthetic */
+  .pedal-diagram{
+    width:100%;
+    max-width:220px;
+    height:auto;
+  }
+  .pedal-diagram .pedal-switch rect,
+  .pedal-diagram .pedal-poti circle,
+  .pedal-diagram .pedal-poti line,
+  .pedal-diagram .pedal-button circle{
+    fill:none;
+    stroke:var(--white);
+    stroke-width:1.6;
+  }
+
   @media (max-width:640px){
-    .spotlight-box{
-      grid-template-columns:1fr;
-      grid-template-areas:
-        "artistimg"
-        "program"
-        "play"
-        "bio";
+    .spotlight-top-row,
+    .spotlight-bottom-row{
+      flex-direction:column;
     }
-    .spotlight-program{ border-right:none; }
-    .spotlight-play{ border-right:none; border-bottom:1px solid var(--white); }
+    .spotlight-bio-block{
+      padding-left:1.75rem;
+    }
   }
   .contact-canvas{
     position:absolute;
@@ -1427,34 +1493,83 @@
 
 <section class="spotlight" id="spotlightSection">
   <div class="spotlight-box">
-    <div class="spotlight-program">
-      <select class="spotlight-select" id="programSelect">
-        <option value="Noise">Noise</option>
-        <option value="Drums">Drums</option>
-        <option value="Panic Attack">Panic Attack</option>
-        <option value="Filter">Filter</option>
-      </select>
-      <p class="spotlight-desc" id="programDesc">[Beschreibung zu Noise – bitte ergänzen]</p>
+
+    <div class="program-bar-wrap">
+      <div class="program-bar" id="programBar"></div>
     </div>
 
-    <div class="spotlight-artist-image">
-      <div class="spotlight-artist-bg" id="artistBg" aria-hidden="true"></div>
-      <img id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+    <button class="spotlight-center-play" id="spotlightPlayBtn" aria-label="Sound abspielen">
+      <img src="images/logo.png" alt="">
+    </button>
+
+    <div class="spotlight-top-row">
+      <div class="spotlight-desc-block">
+        <p class="spotlight-title">Synthesizer Pedal:</p>
+        <p class="spotlight-desc-text" id="programDesc">Lädt…</p>
+      </div>
+      <div class="spotlight-diagram-block">
+        <svg class="pedal-diagram" viewBox="0 0 220 190" xmlns="http://www.w3.org/2000/svg">
+          <!-- row 1: 3 switches, each centered exactly between two adjacent potis -->
+          <g class="pedal-switch">
+            <rect x="44.5" y="27" width="44" height="16" rx="8"/>
+            <circle cx="52.5" cy="35" r="6" fill="var(--white)" stroke="none"/>
+          </g>
+          <g class="pedal-switch">
+            <rect x="97.5" y="27" width="44" height="16" rx="8"/>
+            <circle cx="133.5" cy="35" r="6" fill="var(--white)" stroke="none"/>
+          </g>
+          <g class="pedal-switch">
+            <rect x="150.5" y="27" width="44" height="16" rx="8"/>
+            <circle cx="158.5" cy="35" r="6" fill="var(--white)" stroke="none"/>
+          </g>
+
+          <!-- row 2: 4 potis -->
+          <g class="pedal-poti">
+            <circle cx="40" cy="95" r="13"/>
+            <line x1="40" y1="95" x2="28" y2="72"/>
+          </g>
+          <g class="pedal-poti">
+            <circle cx="93" cy="95" r="13"/>
+            <line x1="93" y1="95" x2="83" y2="73"/>
+          </g>
+          <g class="pedal-poti">
+            <circle cx="146" cy="95" r="13"/>
+            <line x1="146" y1="95" x2="156" y2="73"/>
+          </g>
+          <g class="pedal-poti">
+            <circle cx="199" cy="95" r="13"/>
+            <line x1="199" y1="95" x2="211" y2="72"/>
+          </g>
+
+          <!-- row 3: 2 buttons, left one centered between the left pair of
+               potis, right one centered between the right pair -->
+          <g class="pedal-button">
+            <circle cx="66.5" cy="155" r="18"/>
+            <circle cx="66.5" cy="155" r="8"/>
+          </g>
+          <g class="pedal-button">
+            <circle cx="172.5" cy="155" r="18"/>
+            <circle cx="172.5" cy="155" r="8"/>
+          </g>
+        </svg>
+      </div>
     </div>
 
-    <div class="spotlight-play">
-      <img class="spotlight-play-img" id="spotlightPlayImg" src="images/logo.png" alt="Sound abspielen" role="button" tabindex="0" aria-label="Sound abspielen">
+    <div class="spotlight-bottom-row">
+      <div class="spotlight-circle-block">
+        <img class="artist-circle-img" id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+        <div class="artist-caption">
+          <span class="artist-name-current" id="artistNameCurrent"></span>
+          <span class="artist-name-next" id="artistNameNext" role="button" tabindex="0"></span>
+          <span class="artist-name-prev" id="artistNamePrev"></span>
+        </div>
+      </div>
+      <div class="spotlight-bio-block">
+        <p class="spotlight-title">Bio:</p>
+        <p class="spotlight-desc-text" id="artistBio">Lädt…</p>
+      </div>
     </div>
 
-    <div class="spotlight-bio">
-      <select class="spotlight-select" id="artistSelect">
-        <option value="Polykrisis">Polykrisis</option>
-        <option value="MVROWI">MVROWI</option>
-        <option value="Der Verlorene Faden">Der Verlorene Faden</option>
-        <option value="Grodock">Grodock</option>
-      </select>
-      <p class="spotlight-desc" id="artistBio">[Bio zu Polykrisis – bitte ergänzen]</p>
-    </div>
   </div>
 </section>
 
@@ -2301,7 +2416,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const section = document.getElementById('contactSection');
   const btnTop = document.getElementById('contactBtnTop');
   const btnBottom = document.getElementById('contactBtnBottom');
-  if (!canvas || !section || !btnTop || !btnBottom) return;
+  const btnImpressum = document.getElementById('contactBtnImpressum');
+  if (!canvas || !section || !btnTop || !btnBottom || !btnImpressum) return;
 
   const ctx = canvas.getContext('2d');
   const PARTICLE_COUNT = 70;
@@ -2312,7 +2428,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   let rafId = null;
   let time = 0;
 
-  // 'top' | 'bottom' | null -- which button is currently hovered
+  // 'top' | 'bottom' | 'impressum' | null -- which button is currently hovered
   let hoverState = null;
 
   function sectionRelativeRect(btn){
@@ -2367,12 +2483,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   function randomFreePoint(){
     const topObs = obstacleFor(btnTop);
     const bottomObs = obstacleFor(btnBottom);
+    const impressumObs = obstacleFor(btnImpressum);
     let x, y, tries = 0;
     do {
       x = 20 + Math.random() * (width - 40);
       y = 20 + Math.random() * (height - 40);
       tries++;
-    } while ((insideRect(x, y, topObs) || insideRect(x, y, bottomObs)) && tries < 20);
+    } while ((insideRect(x, y, topObs) || insideRect(x, y, bottomObs) || insideRect(x, y, impressumObs)) && tries < 20);
     return { x: x, y: y };
   }
 
@@ -2432,6 +2549,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   btnTop.addEventListener('mouseleave', function(){ burstOutward(btnTop); hoverState = null; });
   btnBottom.addEventListener('mouseenter', function(){ hoverState = 'bottom'; hoverBoost = 1.7; });
   btnBottom.addEventListener('mouseleave', function(){ burstOutward(btnBottom); hoverState = null; });
+  btnImpressum.addEventListener('mouseenter', function(){ hoverState = 'impressum'; hoverBoost = 1.7; });
+  btnImpressum.addEventListener('mouseleave', function(){ burstOutward(btnImpressum); hoverState = null; });
 
   // mouse position, section-local -- used for the close-vicinity orbit
   let mouseX = null, mouseY = null, mouseActive = false;
@@ -2509,7 +2628,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
     const topObs = obstacleFor(btnTop);
     const bottomObs = obstacleFor(btnBottom);
-    const hoverObs = hoverState === 'top' ? topObs : (hoverState === 'bottom' ? bottomObs : null);
+    const impressumObs = obstacleFor(btnImpressum);
+    const hoverObs = hoverState === 'top' ? topObs : (hoverState === 'bottom' ? bottomObs : (hoverState === 'impressum' ? impressumObs : null));
 
     // each boost decays independently back to 0
     hoverBoost *= HOVER_BOOST_DECAY;
@@ -2577,7 +2697,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         p.vy = (p.vy / speed) * cap;
       }
 
-      advanceParticle(p, [topObs, bottomObs]);
+      advanceParticle(p, [topObs, bottomObs, impressumObs]);
 
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -2615,29 +2735,31 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }
 })();
 
-/* ---------- artist/program spotlight ---------- */
+/* ---------- artist/program spotlight: horizontal program bar ---------- */
 (function(){
-  const programSelect = document.getElementById('programSelect');
-  const artistSelect = document.getElementById('artistSelect');
+  const bar = document.getElementById('programBar');
   const artistImage = document.getElementById('artistImage');
-  const artistBg = document.getElementById('artistBg');
   const artistBio = document.getElementById('artistBio');
   const programDesc = document.getElementById('programDesc');
-  const playImg = document.getElementById('spotlightPlayImg');
-  if (!programSelect || !artistSelect || !artistImage || !artistBio || !programDesc || !playImg) return;
+  const playBtn = document.getElementById('spotlightPlayBtn');
+  const artistCurrentEl = document.getElementById('artistNameCurrent');
+  const artistNextEl = document.getElementById('artistNameNext');
+  const artistPrevEl = document.getElementById('artistNamePrev');
+  if (!bar || !artistImage || !artistBio || !programDesc || !playBtn || !artistCurrentEl || !artistNextEl || !artistPrevEl) return;
 
   // slug = lowercase, no spaces -- e.g. "Der Verlorene Faden" -> "derverlorenefaden"
   function slugify(name){
     return name.toLowerCase().replace(/\s+/g, '');
   }
 
-  // each program is paired 1:1 with an artist -- picking either one
-  // updates everything else to match. Files expected on disk:
+  // each program is paired 1:1 with an artist -- selecting a program
+  // (via the bar) always shows the paired artist too. Files expected
+  // on disk:
   //   artists/<slug>.png       (artist photo)
   //   bios/<slug>.txt          (artist bio)
   //   descriptions/<slug>.txt  (program description)
   //   examples/<slug>.wav      (sound to play, named after the program)
-  //   images/logo.png          (single play-button image, same for all)
+  //   images/logo.png          (single play-button icon, same for all)
   const spotlightData = [
     { artist: 'Polykrisis', program: 'Noise' },
     { artist: 'MVROWI', program: 'Drums' },
@@ -2652,8 +2774,34 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     };
   });
 
+  let currentIndex = 0;
   let currentWav = 'examples/' + spotlightData[0].programSlug + '.wav';
   let requestToken = 0; // guards against a slow fetch overwriting a newer selection
+
+  const SLOT_WIDTH = 130;
+  const barItems = [];
+
+  // builds the program bar labels once; their x-position is recomputed
+  // on every selection change so the chosen one always ends up centered
+  spotlightData.forEach(function(entry, idx){
+    const item = document.createElement('div');
+    item.className = 'program-bar-item';
+    item.textContent = entry.program;
+    item.addEventListener('click', function(){
+      currentIndex = idx;
+      applyEntry(spotlightData[currentIndex]);
+    });
+    bar.appendChild(item);
+    barItems.push(item);
+  });
+
+  function positionBar(){
+    barItems.forEach(function(item, idx){
+      const dx = (idx - currentIndex) * SLOT_WIDTH;
+      item.style.transform = 'translate(' + dx.toFixed(1) + 'px, -50%)';
+      item.classList.toggle('selected', idx === currentIndex);
+    });
+  }
 
   function fetchText(url){
     return fetch(url).then(function(res){
@@ -2665,29 +2813,32 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   function applyEntry(entry){
     const myToken = ++requestToken;
 
-    programSelect.value = entry.program;
-    artistSelect.value = entry.artist;
+    positionBar();
     currentWav = 'examples/' + entry.programSlug + '.wav';
+
+    // artist caption: current name (highlighted), next name (clickable,
+    // advances by one), previous name (shown for context only, not
+    // clickable) -- wraps around at either end of the list
+    const nextIdx = (currentIndex + 1) % spotlightData.length;
+    const prevIdx = (currentIndex - 1 + spotlightData.length) % spotlightData.length;
+    artistCurrentEl.textContent = entry.artist;
+    artistNextEl.textContent = '› ' + spotlightData[nextIdx].artist;
+    artistPrevEl.textContent = '‹ ' + spotlightData[prevIdx].artist;
 
     // artist photo
     artistImage.alt = entry.artist;
     artistImage.style.display = '';
-    const imgNotFound = artistImage.nextElementSibling && artistImage.nextElementSibling.classList.contains('spotlight-fallback')
-      ? artistImage.nextElementSibling
-      : null;
-    if (imgNotFound) imgNotFound.remove();
+    const existingFallback = artistImage.parentElement.querySelector('.spotlight-fallback');
+    if (existingFallback) existingFallback.remove();
     artistImage.onerror = function(){
       if (myToken !== requestToken) return;
       artistImage.style.display = 'none';
-      if (artistBg) artistBg.style.backgroundImage = 'none';
       const msg = document.createElement('p');
       msg.className = 'spotlight-fallback';
       msg.textContent = 'Bild nicht gefunden';
       artistImage.insertAdjacentElement('afterend', msg);
     };
-    const artistImgUrl = 'artists/' + entry.artistSlug + '.png';
-    artistImage.src = artistImgUrl;
-    if (artistBg) artistBg.style.backgroundImage = "url('" + artistImgUrl + "')";
+    artistImage.src = 'artists/' + entry.artistSlug + '.png';
 
     // artist bio
     artistBio.textContent = 'Lädt…';
@@ -2710,28 +2861,25 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     });
   }
 
-  applyEntry(spotlightData[0]);
+  artistNextEl.addEventListener('click', function(){
+    currentIndex = (currentIndex + 1) % spotlightData.length;
+    applyEntry(spotlightData[currentIndex]);
+  });
+  artistNextEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      currentIndex = (currentIndex + 1) % spotlightData.length;
+      applyEntry(spotlightData[currentIndex]);
+    }
+  });
 
-  programSelect.addEventListener('change', function(){
-    const entry = spotlightData.find(function(d){ return d.program === programSelect.value; });
-    if (entry) applyEntry(entry);
-  });
-  artistSelect.addEventListener('change', function(){
-    const entry = spotlightData.find(function(d){ return d.artist === artistSelect.value; });
-    if (entry) applyEntry(entry);
-  });
+  applyEntry(spotlightData[currentIndex]);
 
   function playCurrentWav(){
     const audio = new Audio(currentWav);
     audio.play().catch(function(){ /* ignored -- e.g. file missing or autoplay blocked */ });
   }
-  playImg.addEventListener('click', playCurrentWav);
-  playImg.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' || e.key === ' '){
-      e.preventDefault();
-      playCurrentWav();
-    }
-  });
+  playBtn.addEventListener('click', playCurrentWav);
 })();
 
 /* ---------- modals: Pre-Order / Kontakt / Newsletter ---------- */
