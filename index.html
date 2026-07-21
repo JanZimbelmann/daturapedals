@@ -1122,26 +1122,6 @@
     justify-content:center;
   }
 
-  .collab-signifier{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:0.5rem;
-    padding:0.5rem 0;
-    border-top:1px solid var(--grey-2);
-    border-bottom:1px solid var(--grey-2);
-  }
-  .collab-signifier-mark{
-    font-size:0.9rem;
-    color:var(--white);
-  }
-  .collab-signifier-text{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.62rem;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
-    color:var(--grey-3);
-  }
   .spotlight-bottom-row{
     display:flex;
   }
@@ -1254,6 +1234,13 @@
     stroke:var(--white);
     stroke-width:1.6;
     transition:stroke-width 0.2s ease, fill 0.2s ease;
+    pointer-events:all;
+  }
+  .poti-hit-area,
+  .button-hit-area{
+    fill:transparent;
+    stroke:none;
+    pointer-events:all;
   }
   .pedal-switch,
   .pedal-poti,
@@ -1650,18 +1637,22 @@
           <!-- row 2: 4 potis. all start pointing straight up; drag from
                bottom-left to bottom-right, the bottom-middle is a dead zone. -->
           <g class="pedal-poti" data-index="0" data-cx="40" data-cy="95">
+            <circle class="poti-hit-area" cx="40" cy="95" r="17"/>
             <circle class="poti-body" cx="40" cy="95" r="13"/>
             <line class="poti-line" x1="40" y1="95" x2="40" y2="82"/>
           </g>
           <g class="pedal-poti" data-index="1" data-cx="93" data-cy="95">
+            <circle class="poti-hit-area" cx="93" cy="95" r="17"/>
             <circle class="poti-body" cx="93" cy="95" r="13"/>
             <line class="poti-line" x1="93" y1="95" x2="93" y2="82"/>
           </g>
           <g class="pedal-poti" data-index="2" data-cx="146" data-cy="95">
+            <circle class="poti-hit-area" cx="146" cy="95" r="17"/>
             <circle class="poti-body" cx="146" cy="95" r="13"/>
             <line class="poti-line" x1="146" y1="95" x2="146" y2="82"/>
           </g>
           <g class="pedal-poti" data-index="3" data-cx="199" data-cy="95">
+            <circle class="poti-hit-area" cx="199" cy="95" r="17"/>
             <circle class="poti-body" cx="199" cy="95" r="13"/>
             <line class="poti-line" x1="199" y1="95" x2="199" y2="82"/>
           </g>
@@ -1671,20 +1662,17 @@
                state: the ring between outer/inner fills rose, the inner
                circle fills white. -->
           <g class="pedal-button" data-index="0">
+            <circle class="button-hit-area" cx="85" cy="155" r="20"/>
             <circle class="button-outer" cx="85" cy="155" r="18"/>
             <circle class="button-inner" cx="85" cy="155" r="8"/>
           </g>
           <g class="pedal-button" data-index="1">
+            <circle class="button-hit-area" cx="154" cy="155" r="20"/>
             <circle class="button-outer" cx="154" cy="155" r="18"/>
             <circle class="button-inner" cx="154" cy="155" r="8"/>
           </g>
         </svg>
       </div>
-    </div>
-
-    <div class="collab-signifier">
-      <span class="collab-signifier-mark">✳</span>
-      <span class="collab-signifier-text">in Kollaboration</span>
     </div>
 
     <div class="spotlight-bottom-row">
