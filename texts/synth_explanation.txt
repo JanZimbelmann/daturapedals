@@ -1,0 +1,2 @@
+A Synthesizer creates Noise, Drums or Melodies.
+The Input is forwarded without any changes.

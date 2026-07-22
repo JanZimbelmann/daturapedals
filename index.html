@@ -14,6 +14,8 @@
     --grey-1:#151515;
     --grey-2:#3a3a3a;
     --grey-3:#8a8a8a;
+    --color-fx:#5b8fd6;
+    --color-synth:#d9636e;
   }
 
   *{ margin:0; padding:0; box-sizing:border-box; }
@@ -1012,9 +1014,9 @@
     justify-content:center;
   }
   .spotlight-side-title{
-    font-family:'Anton', sans-serif;
-    font-size:1.05rem;
-    letter-spacing:0.06em;
+    font-family:'Bungee', sans-serif;
+    font-size:0.85rem;
+    letter-spacing:0.4em;
     color:var(--white);
     white-space:nowrap;
     transform:rotate(-90deg);
@@ -1122,28 +1124,75 @@
     justify-content:center;
   }
 
+  .collab-divider{
+    display:flex;
+    align-items:center;
+    height:2.2rem;
+    padding:0 1.75rem;
+    box-sizing:border-box;
+  }
+  .collab-divider-line{
+    height:1px;
+    background:var(--grey-2);
+  }
+  .collab-divider-line-left{
+    width:1.75rem;
+    flex-shrink:0;
+  }
+  .collab-divider-line-right{
+    flex:1;
+  }
+  .collab-divider-text{
+    padding:0 0.8rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.66rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+    white-space:nowrap;
+  }
+
   .spotlight-bottom-row{
     display:flex;
   }
   .spotlight-circle-block{
-    flex:0 0 190px;
-    width:190px;
+    flex:0 0 230px;
+    width:230px;
     display:flex;
     flex-direction:column;
     align-items:center;
     padding:1.75rem;
     box-sizing:border-box;
   }
+  .artist-circle-wrap{
+    position:relative;
+    width:170px;
+    height:140px; /* shorter than the circle's own diameter -- clips the
+                     bottom portion off flush, like a sunset horizon */
+    overflow:hidden;
+  }
+  .artist-circle-wrap::after{
+    content:'';
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:1px;
+    background:var(--white);
+  }
   .artist-circle-img{
-    width:130px;
-    height:130px;
+    position:absolute;
+    top:0;
+    left:0;
+    width:170px;
+    height:170px;
     border-radius:50%;
     object-fit:cover;
     border:1px solid var(--white);
     display:block;
   }
   .artist-caption{
-    margin-top:0.9rem;
+    margin-top:0.15rem;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -1599,7 +1648,7 @@
   <div class="spotlight-wrap">
 
     <div class="spotlight-side-box">
-      <p class="spotlight-side-title">Industrial Noise</p>
+      <p class="spotlight-side-title" id="spotlightSideTitle">Industrial Noise</p>
     </div>
 
     <div class="spotlight-box">
@@ -1614,7 +1663,7 @@
 
     <div class="spotlight-top-row">
       <div class="spotlight-desc-block">
-        <p class="spotlight-title">Synthesizer Pedal:</p>
+        <p class="spotlight-title" id="programTypeTitle">Synthesizer Pedal:</p>
         <p class="spotlight-desc-text" id="programDesc">Lädt…</p>
       </div>
       <div class="spotlight-diagram-block">
@@ -1675,9 +1724,17 @@
       </div>
     </div>
 
+    <div class="collab-divider">
+      <span class="collab-divider-line collab-divider-line-left"></span>
+      <span class="collab-divider-text">In Kooperation mit:</span>
+      <span class="collab-divider-line collab-divider-line-right"></span>
+    </div>
+
     <div class="spotlight-bottom-row">
       <div class="spotlight-circle-block">
-        <img class="artist-circle-img" id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+        <div class="artist-circle-wrap">
+          <img class="artist-circle-img" id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+        </div>
         <div class="artist-caption">
           <span class="artist-name-current" id="artistNameCurrent"></span>
           <div class="artist-nav-row">
@@ -2969,34 +3026,59 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const artistImage = document.getElementById('artistImage');
   const artistBio = document.getElementById('artistBio');
   const programDesc = document.getElementById('programDesc');
+  const programTypeTitle = document.getElementById('programTypeTitle');
+  const sideTitle = document.getElementById('spotlightSideTitle');
   const playBtn = document.getElementById('spotlightPlayBtn');
   const artistCurrentEl = document.getElementById('artistNameCurrent');
   const artistNextEl = document.getElementById('artistNameNext');
   const artistPrevEl = document.getElementById('artistNamePrev');
-  if (!bar || !artistImage || !artistBio || !programDesc || !playBtn || !artistCurrentEl || !artistNextEl || !artistPrevEl) return;
+  if (!bar || !artistImage || !artistBio || !programDesc || !programTypeTitle || !sideTitle || !playBtn || !artistCurrentEl || !artistNextEl || !artistPrevEl) return;
 
   // slug = lowercase, no spaces -- e.g. "Der Verlorene Faden" -> "derverlorenefaden"
   function slugify(name){
     return name.toLowerCase().replace(/\s+/g, '');
   }
 
+  // folder-name -> display title: underscores become spaces, each word
+  // capitalized -- e.g. "industrial_noise" -> "Industrial Noise"
+  function folderNameToTitle(name){
+    return name.split('_').map(function(word){
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(' ');
+  }
+
+  // NOTE: only one edition exists right now, but this is written so more
+  // can be added later -- each edition is just a folder name under
+  // /editions, and this constant is the only thing to change/extend
+  // when that happens.
+  const currentEditionSlug = 'industrial_noise';
+  sideTitle.textContent = folderNameToTitle(currentEditionSlug);
+
   // each program is paired 1:1 with an artist -- selecting a program
-  // (via the bar) always shows the paired artist too. Files expected
-  // on disk:
-  //   artists/<slug>.png       (artist photo)
-  //   bios/<slug>.txt          (artist bio)
-  //   descriptions/<slug>.txt  (program description)
-  //   examples/<slug>.wav      (sound to play, named after the program)
-  //   images/logo.png          (single play-button icon, same for all)
+  // (via the bar) always shows the paired artist too. "type" determines
+  // both the color coding (see --color-fx / --color-synth in :root) and
+  // which subfolder its description lives in. Files expected on disk:
+  //   artists/<slug>.png                                 (artist photo)
+  //   bios/<slug>.txt                                     (artist bio)
+  //   editions/<edition>/synths/<slug>.txt  (for type:'synth')
+  //   editions/<edition>/fxs/<slug>.txt     (for type:'fx')
+  //   examples/<slug>.wav          (sound to play, named after the program)
+  //   images/logo.png              (single play-button icon, same for all)
+  //
+  // NOTE: I don't know which of these four are actually synths vs
+  // effects on your end -- this is a guess (Noise/Drums as synths,
+  // Panic Attack/Filter as fx). Just change the "type" field below for
+  // any that are wrong.
   const spotlightData = [
-    { artist: 'Polykrisis', program: 'Noise' },
-    { artist: 'MVROWI', program: 'Drums' },
-    { artist: 'Der Verlorene Faden', program: 'Panic Attack' },
-    { artist: 'Grodock', program: 'Filter' }
+    { artist: 'Polykrisis', program: 'Noise', type: 'synth' },
+    { artist: 'MVROWI', program: 'Drums', type: 'synth' },
+    { artist: 'Der Verlorene Faden', program: 'Panic Attack', type: 'fx' },
+    { artist: 'Grodock', program: 'Filter', type: 'fx' }
   ].map(function(d){
     return {
       artist: d.artist,
       program: d.program,
+      type: d.type,
       artistSlug: slugify(d.artist),
       programSlug: slugify(d.program)
     };
@@ -3009,12 +3091,18 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const SLOT_WIDTH = 130;
   const barItems = [];
 
+  function colorForType(type){
+    return type === 'fx' ? 'var(--color-fx)' : 'var(--color-synth)';
+  }
+
   // builds the program bar labels once; their x-position is recomputed
-  // on every selection change so the chosen one always ends up centered
+  // on every selection change so the chosen one always ends up centered.
+  // each label is colorized by its type (fx = blue, synth = red).
   spotlightData.forEach(function(entry, idx){
     const item = document.createElement('div');
     item.className = 'program-bar-item';
     item.textContent = entry.program;
+    item.style.color = colorForType(entry.type);
     item.addEventListener('click', function(){
       currentIndex = idx;
       applyEntry(spotlightData[currentIndex]);
@@ -3044,6 +3132,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     positionBar();
     currentWav = 'examples/' + entry.programSlug + '.wav';
 
+    // pedal-type title + color: "Synthesizer Pedal:" (red) or
+    // "Effects Pedal:" (blue), depending on this program's type
+    programTypeTitle.textContent = entry.type === 'fx' ? 'Effects Pedal:' : 'Synthesizer Pedal:';
+    programTypeTitle.style.color = colorForType(entry.type);
+
     // artist caption: current name (highlighted), next name (clickable,
     // advances by one), previous name (shown for context only, not
     // clickable) -- wraps around at either end of the list
@@ -3056,15 +3149,16 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // artist photo
     artistImage.alt = entry.artist;
     artistImage.style.display = '';
-    const existingFallback = artistImage.parentElement.querySelector('.spotlight-fallback');
+    const circleWrap = artistImage.closest('.artist-circle-wrap');
+    const existingFallback = circleWrap.parentElement.querySelector('.spotlight-fallback');
     if (existingFallback) existingFallback.remove();
     artistImage.onerror = function(){
       if (myToken !== requestToken) return;
-      artistImage.style.display = 'none';
+      circleWrap.style.display = 'none';
       const msg = document.createElement('p');
       msg.className = 'spotlight-fallback';
       msg.textContent = 'Bild nicht gefunden';
-      artistImage.insertAdjacentElement('afterend', msg);
+      circleWrap.insertAdjacentElement('afterend', msg);
     };
     artistImage.src = 'artists/' + entry.artistSlug + '.png';
 
@@ -3078,9 +3172,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       artistBio.textContent = 'Bio nicht gefunden';
     });
 
-    // program description
+    // program description -- now lives under editions/<edition>/synths/
+    // or editions/<edition>/fxs/, matching this program's type
+    const typeFolder = entry.type === 'fx' ? 'fxs' : 'synths';
     programDesc.textContent = 'Lädt…';
-    fetchText('descriptions/' + entry.programSlug + '.txt').then(function(text){
+    fetchText('editions/' + currentEditionSlug + '/' + typeFolder + '/' + entry.programSlug + '.txt').then(function(text){
       if (myToken !== requestToken) return;
       programDesc.textContent = text.trim();
     }).catch(function(){
