@@ -1019,6 +1019,7 @@
     letter-spacing:0.4em;
     color:var(--white);
     white-space:nowrap;
+    user-select:none;
     transform:rotate(-90deg);
     transform-origin:center;
   }
@@ -1169,7 +1170,18 @@
     width:170px;
     height:140px; /* shorter than the circle's own diameter -- clips the
                      bottom portion off flush, like a sunset horizon */
+    overflow:visible;
+    cursor:pointer;
+  }
+  .artist-circle-clip{
+    position:relative;
+    width:100%;
+    height:100%;
     overflow:hidden;
+    transition:transform 0.25s ease;
+  }
+  .artist-circle-wrap:hover .artist-circle-clip{
+    transform:scale(1.05);
   }
   .artist-circle-wrap::after{
     content:'';
@@ -1179,6 +1191,10 @@
     bottom:0;
     height:1px;
     background:var(--white);
+    transition:height 0.2s ease;
+  }
+  .artist-circle-wrap:hover::after{
+    height:2px;
   }
   .artist-circle-img{
     position:absolute;
@@ -1190,6 +1206,10 @@
     object-fit:cover;
     border:1px solid var(--white);
     display:block;
+    transition:border-width 0.2s ease;
+  }
+  .artist-circle-wrap:hover .artist-circle-img{
+    border-width:2px;
   }
   .artist-caption{
     margin-top:0.15rem;
@@ -1227,18 +1247,14 @@
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-  }
-  .artist-name-next{
-    color:var(--grey-3);
+    user-select:none;
     cursor:pointer;
+    color:var(--grey-3);
     transition:color 0.25s ease;
   }
-  .artist-name-next:hover{
+  .artist-name-next:hover,
+  .artist-name-prev:hover{
     color:var(--white);
-  }
-  .artist-name-prev{
-    color:var(--grey-2);
-    cursor:default;
   }
   .spotlight-bio-block{
     flex:1;
@@ -1253,6 +1269,40 @@
     text-transform:uppercase;
     color:var(--grey-3);
     margin:0 0 0.8rem;
+  }
+  .spotlight-title-hoverable{
+    position:relative;
+    display:inline-block;
+    cursor:help;
+    transition:opacity 0.2s ease;
+  }
+  .spotlight-title-hoverable:hover{
+    opacity:0.75;
+    text-decoration:underline;
+    text-underline-offset:3px;
+  }
+  .pedal-type-tooltip{
+    position:absolute;
+    top:calc(100% + 0.6rem);
+    left:0;
+    z-index:10;
+    width:240px;
+    max-width:60vw;
+    padding:0.8rem 1rem;
+    background:var(--black);
+    border:1px solid var(--grey-2);
+    color:var(--grey-3);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.75rem;
+    line-height:1.6;
+    text-transform:none;
+    letter-spacing:0.01em;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.2s ease;
+  }
+  .pedal-type-tooltip.visible{
+    opacity:1;
   }
   .spotlight-desc-text{
     font-size:0.85rem;
@@ -1663,7 +1713,10 @@
 
     <div class="spotlight-top-row">
       <div class="spotlight-desc-block">
-        <p class="spotlight-title" id="programTypeTitle">Synthesizer Pedal:</p>
+        <p class="spotlight-title spotlight-title-hoverable" id="programTypeTitle">
+          <span id="programTypeLabel">Synthesizer Pedal:</span>
+          <span class="pedal-type-tooltip" id="pedalTypeTooltip"></span>
+        </p>
         <p class="spotlight-desc-text" id="programDesc">Lädt…</p>
       </div>
       <div class="spotlight-diagram-block">
@@ -1732,14 +1785,16 @@
 
     <div class="spotlight-bottom-row">
       <div class="spotlight-circle-block">
-        <div class="artist-circle-wrap">
-          <img class="artist-circle-img" id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+        <div class="artist-circle-wrap" id="artistCircleWrap" role="button" tabindex="0" aria-label="Links des Künstlers anzeigen">
+          <div class="artist-circle-clip">
+            <img class="artist-circle-img" id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+          </div>
         </div>
         <div class="artist-caption">
           <span class="artist-name-current" id="artistNameCurrent"></span>
           <div class="artist-nav-row">
             <span class="artist-name-next" id="artistNameNext" role="button" tabindex="0"></span>
-            <span class="artist-name-prev" id="artistNamePrev"></span>
+            <span class="artist-name-prev" id="artistNamePrev" role="button" tabindex="0"></span>
           </div>
         </div>
       </div>
@@ -1860,6 +1915,14 @@
         <p class="newsletter-note" id="newsletterNote"></p>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Artist credentials modal (placeholder for now) -->
+<div class="modal-overlay" id="modalArtistCredentials">
+  <div class="modal-box">
+    <button class="modal-close" id="modalArtistCredentialsClose" aria-label="Schließen">&times;</button>
+    <p class="modal-text">No credentials or links currently available.</p>
   </div>
 </div>
 
@@ -3027,12 +3090,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const artistBio = document.getElementById('artistBio');
   const programDesc = document.getElementById('programDesc');
   const programTypeTitle = document.getElementById('programTypeTitle');
+  const programTypeLabel = document.getElementById('programTypeLabel');
+  const pedalTypeTooltip = document.getElementById('pedalTypeTooltip');
   const sideTitle = document.getElementById('spotlightSideTitle');
   const playBtn = document.getElementById('spotlightPlayBtn');
   const artistCurrentEl = document.getElementById('artistNameCurrent');
   const artistNextEl = document.getElementById('artistNameNext');
   const artistPrevEl = document.getElementById('artistNamePrev');
-  if (!bar || !artistImage || !artistBio || !programDesc || !programTypeTitle || !sideTitle || !playBtn || !artistCurrentEl || !artistNextEl || !artistPrevEl) return;
+  if (!bar || !artistImage || !artistBio || !programDesc || !programTypeTitle || !programTypeLabel || !pedalTypeTooltip || !sideTitle || !playBtn || !artistCurrentEl || !artistNextEl || !artistPrevEl) return;
 
   // slug = lowercase, no spaces -- e.g. "Der Verlorene Faden" -> "derverlorenefaden"
   function slugify(name){
@@ -3086,6 +3151,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   let currentIndex = 0;
   let currentWav = 'examples/' + spotlightData[0].programSlug + '.wav';
+  let currentType = spotlightData[0].type;
+  let tooltipLoadedForType = null; // caches which type's explanation is currently loaded
   let requestToken = 0; // guards against a slow fetch overwriting a newer selection
 
   const SLOT_WIDTH = 130;
@@ -3134,8 +3201,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
     // pedal-type title + color: "Synthesizer Pedal:" (red) or
     // "Effects Pedal:" (blue), depending on this program's type
-    programTypeTitle.textContent = entry.type === 'fx' ? 'Effects Pedal:' : 'Synthesizer Pedal:';
+    programTypeLabel.textContent = entry.type === 'fx' ? 'Effects Pedal:' : 'Synthesizer Pedal:';
     programTypeTitle.style.color = colorForType(entry.type);
+    currentType = entry.type;
+    pedalTypeTooltip.classList.remove('visible');
+    tooltipLoadedForType = null;
 
     // artist caption: current name (highlighted), next name (clickable,
     // advances by one), previous name (shown for context only, not
@@ -3185,6 +3255,39 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     });
   }
 
+  // hover on "Synthesizer Pedal:" / "Effects Pedal:" -- shows a small
+  // explanation box for whichever type is currently selected. Text comes
+  // from texts/synth_explanation.txt or texts/fx_explanaition.txt
+  // (filenames exactly as specified), fetched once per type and cached.
+  const explanationCache = {};
+  function loadExplanation(type){
+    if (tooltipLoadedForType === type) return; // already showing this type's text
+    tooltipLoadedForType = type;
+    if (explanationCache[type] !== undefined){
+      pedalTypeTooltip.textContent = explanationCache[type];
+      return;
+    }
+    pedalTypeTooltip.textContent = 'Lädt…';
+    const filename = type === 'fx' ? 'fx_explanaition.txt' : 'synth_explanation.txt';
+    fetch('texts/' + filename)
+      .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
+      .then(function(text){
+        explanationCache[type] = text.trim();
+        if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
+      })
+      .catch(function(){
+        explanationCache[type] = 'Erklärung nicht gefunden';
+        if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
+      });
+  }
+  programTypeTitle.addEventListener('mouseenter', function(){
+    loadExplanation(currentType);
+    pedalTypeTooltip.classList.add('visible');
+  });
+  programTypeTitle.addEventListener('mouseleave', function(){
+    pedalTypeTooltip.classList.remove('visible');
+  });
+
   artistNextEl.addEventListener('click', function(){
     currentIndex = (currentIndex + 1) % spotlightData.length;
     applyEntry(spotlightData[currentIndex]);
@@ -3196,6 +3299,36 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       applyEntry(spotlightData[currentIndex]);
     }
   });
+  artistPrevEl.addEventListener('click', function(){
+    currentIndex = (currentIndex - 1 + spotlightData.length) % spotlightData.length;
+    applyEntry(spotlightData[currentIndex]);
+  });
+  artistPrevEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      currentIndex = (currentIndex - 1 + spotlightData.length) % spotlightData.length;
+      applyEntry(spotlightData[currentIndex]);
+    }
+  });
+
+  // clicking the artist circle: for now just shows a placeholder modal --
+  // intended to later open the artist's real links/credentials
+  const artistCircleWrap = document.getElementById('artistCircleWrap');
+  const modalArtistCredentials = document.getElementById('modalArtistCredentials');
+  if (artistCircleWrap && modalArtistCredentials){
+    const openCredentials = function(){
+      modalArtistCredentials.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    };
+    artistCircleWrap.addEventListener('click', openCredentials);
+    artistCircleWrap.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        openCredentials();
+      }
+    });
+  }
 
   applyEntry(spotlightData[currentIndex]);
 
@@ -3217,7 +3350,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const modalContact = document.getElementById('modalContact');
   const modalNewsletter = document.getElementById('modalNewsletter');
   const modalImpressum = document.getElementById('modalImpressum');
-  const allModals = [modalPreorder, modalContact, modalNewsletter, modalImpressum].filter(Boolean);
+  const modalArtistCredentials = document.getElementById('modalArtistCredentials');
+  const allModals = [modalPreorder, modalContact, modalNewsletter, modalImpressum, modalArtistCredentials].filter(Boolean);
 
   function openModal(modal){
     if (!modal) return;
@@ -3247,10 +3381,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const closeContact = document.getElementById('modalContactClose');
   const closeNewsletter = document.getElementById('modalNewsletterClose');
   const closeImpressum = document.getElementById('modalImpressumClose');
+  const closeArtistCredentials = document.getElementById('modalArtistCredentialsClose');
   if (closePreorder) closePreorder.addEventListener('click', function(){ closeModal(modalPreorder); });
   if (closeContact) closeContact.addEventListener('click', function(){ closeModal(modalContact); });
   if (closeNewsletter) closeNewsletter.addEventListener('click', function(){ closeModal(modalNewsletter); });
   if (closeImpressum) closeImpressum.addEventListener('click', function(){ closeModal(modalImpressum); });
+  if (closeArtistCredentials) closeArtistCredentials.addEventListener('click', function(){ closeModal(modalArtistCredentials); });
 
   // clicking the black backdrop itself (not the box) also closes it
   allModals.forEach(function(modal){
