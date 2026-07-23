@@ -1006,6 +1006,8 @@
   .spotlight-side-box{
     flex:0 0 auto;
     width:56px;
+    min-width:56px;
+    max-width:56px;
     border:1px solid var(--white);
     border-right:none;
     background:var(--black);
@@ -1013,9 +1015,18 @@
     align-items:center;
     justify-content:center;
     cursor:pointer;
+    position:relative;
     --side-translate:0px;
     transform:translateX(var(--side-translate));
-    transition:background 0.25s ease, border-color 0.25s ease, transform 0.5s cubic-bezier(.22,1,.36,1);
+    transition:background 0.25s ease, border-color 0.25s ease, transform 0.6s cubic-bezier(.65,0,.35,1), filter 0.6s ease;
+  }
+  .spotlight-wrap.card-collapsed .spotlight-side-box{
+    border-right:1px solid var(--white);
+  }
+  /* a brief motion-blur while the box is actually sliding, for a
+     punchier feel during the move -- fades back to sharp once settled */
+  .spotlight-side-box.sliding{
+    filter:blur(2.5px);
   }
   .spotlight-side-box:hover{
     background:var(--white);
@@ -1023,11 +1034,6 @@
   }
   .spotlight-side-box:hover .spotlight-side-title{
     color:var(--black);
-  }
-  /* once standalone (card collapsed), hovering also enlarges it slightly
-     to read clearly as its own clickable button */
-  .spotlight-side-box.collapsed-standalone:hover{
-    transform:translateX(var(--side-translate)) scale(1.12);
   }
   .spotlight-side-title{
     font-family:'Bungee', sans-serif;
@@ -1049,9 +1055,28 @@
     color:var(--white);
     border:1px solid var(--white);
     overflow:hidden;
-    transition:width 0.65s cubic-bezier(.22,1,.36,1), border-width 0.55s ease;
+    --box-slide:0px;
+    transform:translateX(var(--box-slide));
+    transition:flex-basis 0.45s ease, border-width 0.45s ease, transform 0.45s cubic-bezier(.65,0,.35,1);
+  }
+  .spotlight-wrap.card-collapsed .spotlight-box{
+    flex:0 0 0;
+    width:0;
+    min-width:0;
+    border-width:0;
+    pointer-events:none;
   }
 
+  /* the actual visual disappearance: content slides left and fades,
+     fully decoupled from the outer box's own width collapse (which now
+     only happens afterward, once the content is already invisible) */
+  .spotlight-box-inner{
+    transition:transform 0.45s cubic-bezier(.65,0,.35,1), opacity 0.35s ease;
+  }
+  .spotlight-box-inner.sliding-out{
+    transform:translateX(-100%);
+    opacity:0;
+  }
   /* horizontal bar of program names -- the selected one is always
      recentered in the bar and enlarged; every slot is a fixed width so
      switching never reflows the layout regardless of name length */
@@ -1330,9 +1355,16 @@
   .bio-panel-object.shift-front{
     right:0;
   }
+  /* both closed, rose mode active: swap which side each sits on */
+  .bio-panel-object.swapped{
+    right:0;
+  }
   .bio-panel-object-mod1{
     right:0; /* the inner one of the pair -- no offset needed */
     background:#2b2224; /* grey with a hint of rose, in addition to the bar */
+  }
+  .bio-panel-object-mod1.swapped{
+    right:14px;
   }
   .bio-panel-object-mod1::before{
     background:#e6a9b0;
@@ -1831,6 +1863,7 @@
     </div>
 
     <div class="spotlight-box" id="spotlightBox">
+    <div class="spotlight-box-inner" id="spotlightBoxInner">
 
     <div class="program-bar-wrap">
       <div class="program-bar" id="programBar"></div>
@@ -1935,20 +1968,21 @@
           </div>
           <div class="bio-panel-object" id="bioPanelObject" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
             <div class="object-info-inner">
-              <p class="spotlight-title"><span id="objectInfoTitle"></span> <span class="mod-tag">(Mod 0)</span></p>
-              <p class="spotlight-desc-text">Weitere Informationen folgen.</p>
+              <p class="spotlight-title"><span id="objectInfoTitle"></span> <span class="mod-tag" id="modTag0">(Mod 0)</span></p>
+              <p class="spotlight-desc-text" id="objectInfoDetail0">Weitere Informationen folgen.</p>
             </div>
           </div>
           <div class="bio-panel-object bio-panel-object-mod1" id="bioPanelObjectMod1" role="button" tabindex="0" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
             <div class="object-info-inner">
-              <p class="spotlight-title"><span id="objectInfoTitleMod1"></span> <span class="mod-tag">(Mod 1)</span></p>
-              <p class="spotlight-desc-text">Weitere Informationen folgen.</p>
+              <p class="spotlight-title"><span id="objectInfoTitleMod1"></span> <span class="mod-tag" id="modTag1">(Mod 1)</span></p>
+              <p class="spotlight-desc-text" id="objectInfoDetail1">Weitere Informationen folgen.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
 
+    </div>
   </div>
   </div>
 </section>
@@ -3135,6 +3169,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const bioPanelObjectMod1 = document.getElementById('bioPanelObjectMod1');
   let currentHighlighted = null; // the element actually showing the shadow right now
   let pendingTarget = null; // the element that *should* show it once a box is open
+  let pendingLabel = null; // the last real control label (null until something is actually clicked)
+  const NO_SELECTION_TEXT = 'Please select a button to obtain some information.';
   let roseModActive = false; // tracks the middle switch's global "rose mod" state
 
   function applyHighlight(targetEl){
@@ -3167,6 +3203,28 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     return !!box && box.classList.contains('expanded');
   }
 
+  function renderBoxTitles(){
+    const modTag0 = document.getElementById('modTag0');
+    const modTag1 = document.getElementById('modTag1');
+    const detail0 = document.getElementById('objectInfoDetail0');
+    const detail1 = document.getElementById('objectInfoDetail1');
+    if (pendingLabel){
+      if (objectInfoTitle) objectInfoTitle.textContent = pendingLabel;
+      if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = pendingLabel;
+      if (modTag0) modTag0.style.display = '';
+      if (modTag1) modTag1.style.display = '';
+      if (detail0) detail0.style.display = '';
+      if (detail1) detail1.style.display = '';
+    } else {
+      if (objectInfoTitle) objectInfoTitle.textContent = NO_SELECTION_TEXT;
+      if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = NO_SELECTION_TEXT;
+      if (modTag0) modTag0.style.display = 'none';
+      if (modTag1) modTag1.style.display = 'none';
+      if (detail0) detail0.style.display = 'none';
+      if (detail1) detail1.style.display = 'none';
+    }
+  }
+
   // updates which control's info is ready to show, and opens whichever
   // box matches the current mod state (Mod 0 normally, Mod 1 while the
   // rose mod is active), closing the other one. The white shadow only
@@ -3174,8 +3232,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // window so the "switch to a different program" handler can reset it.
   window.showPedalObjectInfo = function(label, targetEl){
     pendingTarget = targetEl;
-    if (objectInfoTitle) objectInfoTitle.textContent = label;
-    if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = label;
+    pendingLabel = label;
+    renderBoxTitles();
     openMatchingBox();
     applyHighlight(targetEl);
   };
@@ -3183,21 +3241,36 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     closeBox(bioPanelObject);
     closeBox(bioPanelObjectMod1);
     pendingTarget = null;
+    pendingLabel = null;
+    renderBoxTitles();
     clearHighlight();
-    syncShiftFront();
+    syncBoxLayout();
   };
 
-  // opens whichever box matches the current mod state, and keeps the
-  // grey box's side-by-side vs. front-edge position in sync (it needs
-  // to shift to the true edge whenever the rose box is the expanded one,
-  // so it stays visible/clickable on top of it)
-  // the grey box needs to sit at the true edge (shift-front) only while
-  // the rose box is the one actually expanded -- not just whenever the
-  // switch happens to be in the rose position, since the box can be
-  // closed again independently of the switch state
-  function syncShiftFront(){
-    if (bioPanelObject){
-      bioPanelObject.classList.toggle('shift-front', isOpen(bioPanelObjectMod1));
+  // keeps the two boxes' left/right arrangement correct in every
+  // situation: if one is expanded, the other (still closed) needs to
+  // sit at the true edge so it stays visible/clickable on top of it; if
+  // both are closed, they sit side by side -- grey on the left normally,
+  // but swapped (rose on the left) whenever the switch is in the rose
+  // position, matching how the rest of this already reflects switch
+  // state everywhere else
+  function syncBoxLayout(){
+    const roseOpen = isOpen(bioPanelObjectMod1);
+    const greyOpen = isOpen(bioPanelObject);
+
+    if (roseOpen){
+      if (bioPanelObject) bioPanelObject.classList.add('shift-front');
+      if (bioPanelObject) bioPanelObject.classList.remove('swapped');
+      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.remove('swapped');
+    } else if (greyOpen){
+      if (bioPanelObject) bioPanelObject.classList.remove('shift-front');
+      if (bioPanelObject) bioPanelObject.classList.remove('swapped');
+      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.remove('swapped');
+    } else {
+      if (bioPanelObject) bioPanelObject.classList.remove('shift-front');
+      const shouldSwap = roseModActive;
+      if (bioPanelObject) bioPanelObject.classList.toggle('swapped', shouldSwap);
+      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.toggle('swapped', shouldSwap);
     }
   }
 
@@ -3209,7 +3282,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       closeBox(bioPanelObjectMod1);
       if (bioPanelObject) bioPanelObject.classList.add('expanded');
     }
-    syncShiftFront();
+    syncBoxLayout();
   }
   // exposed so the middle switch's handler can flip which box is "live"
   window.setPedalRoseMod = function(active){
@@ -3225,7 +3298,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // trigger it (clicking a box also drives the switch, not just the
   // other way around).
   const middleSwitchEl = diagram.querySelector('.pedal-switch[data-index="1"]');
-  function applyMiddleSwitchState(newState){
+  renderBoxTitles();
+  function applyMiddleSwitchState(newState, announce){
     if (!middleSwitchEl) return;
     const trackX = parseFloat(middleSwitchEl.getAttribute('data-track-x'));
     const thumb = middleSwitchEl.querySelector('.switch-thumb');
@@ -3233,7 +3307,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (thumb) thumb.setAttribute('cx', newState === 'left' ? trackX + 8 : trackX + 36);
     diagram.classList.toggle('mod-rose-active', newState === 'right');
     window.setPedalRoseMod(newState === 'right');
-    window.showPedalObjectInfo('Switch 2', middleSwitchEl);
+    if (announce){
+      window.showPedalObjectInfo('Switch 2', middleSwitchEl);
+    } else {
+      // just move to the matching box without treating switch 2 itself
+      // as "selected" -- no highlight, and the title keeps showing
+      // whatever was already selected (or the placeholder, if nothing
+      // has been clicked yet)
+      openMatchingBox();
+    }
   }
 
   function wireToggle(box, otherBox, forcedSwitchState){
@@ -3242,14 +3324,22 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       const willOpen = !box.classList.contains('expanded');
       // clicking either box also drives the middle switch to match --
       // grey box -> switch left (normal), rose box -> switch right (mod)
-      applyMiddleSwitchState(forcedSwitchState);
+      // (this only changes the switch/coloring state -- it does not
+      // treat switch 2 as "selected", so no title/highlight side effect)
+      applyMiddleSwitchState(forcedSwitchState, false);
       if (!willOpen){
         // the box we clicked was already the open/matching one; a second
-        // click just closes it back down without changing anything else
+        // click just closes it back down without changing anything else.
+        // The position-swap sync is deliberately delayed until after the
+        // width collapse finishes -- doing both at once (this box's own
+        // width shrinking while its "right" offset also changes) is what
+        // caused the jumpy motion.
         box.classList.remove('expanded');
         clearHighlight();
+        setTimeout(syncBoxLayout, 370);
+      } else {
+        syncBoxLayout();
       }
-      syncShiftFront();
     }
     box.addEventListener('click', function(){
       if (!isPlainClick()) return;
@@ -3287,7 +3377,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         // function above, so box state and switch state can never
         // disagree regardless of which one triggered the change
         const state = sw.getAttribute('data-state');
-        applyMiddleSwitchState(state === 'left' ? 'right' : 'left');
+        applyMiddleSwitchState(state === 'left' ? 'right' : 'left', true);
         return;
       }
       const state = sw.getAttribute('data-state');
@@ -3383,93 +3473,94 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 })();
 
 /* ---------- "Industrial Noise" side box: click collapses/expands the
-   whole card in two clear stages rather than simultaneously.
-   Collapsing: the card (bio, objects, description, outer border --
-   everything) folds fully into the side box first; only once that's
-   completely finished does the side box then glide to the center.
-   Expanding reverses the order: the side box returns to its attached
-   position first, then the card unfolds back out from there.
-   Uses real measured pixel values for width/position rather than
-   animating flex-basis or justify-content, since those don't interpolate
-   smoothly. ---------- */
+   whole card. Closing: the whole card (border + content together, as
+   one unit) slides left toward the side box's position and fades --
+   only once that's fully invisible does the layout actually collapse
+   and the side box move to center. Opening reverses the order: side box
+   returns first, then the whole card (again as one unit) slides back in
+   from the left, originating at the side box. ---------- */
 (function(){
   const wrap = document.getElementById('spotlightWrap');
   const sideBox = document.getElementById('spotlightSideBox');
   const card = document.getElementById('spotlightBox');
-  if (!wrap || !sideBox || !card) return;
+  const cardInner = document.getElementById('spotlightBoxInner');
+  if (!wrap || !sideBox || !card || !cardInner) return;
 
-  const CARD_MS = 650;  // stage 1: the card folding away/back, matches CSS below
-  const SIDE_MS = 500;  // stage 2: the side box gliding to/from center, matches CSS below
+  const CARD_MS = 450;  // the card's own slide-and-fade (both border and content together)
+  const SLIDE_MS = 600; // the side box's move to/from center
 
-  let collapsed = false;
-  let animating = false;
-  let naturalCardWidth = null; // measured once, reused so we can animate back to it smoothly
-  let safetyTimer = null;
+  // lock in a fixed height for the whole row so it never changes size
+  // during collapse/expand -- without this, the card's content shrinking
+  // toward width:0 also collapses its natural height (since most content
+  // needs some width to lay out at all), and because the row uses
+  // align-items:stretch, that shrinking height was also dragging the
+  // side box down with it.
+  function lockHeight(){
+    const naturalHeight = wrap.getBoundingClientRect().height;
+    const current = parseFloat(wrap.style.minHeight) || 0;
+    if (naturalHeight > current){
+      wrap.style.minHeight = naturalHeight + 'px';
+    }
+  }
+  lockHeight();
+  window.addEventListener('load', lockHeight); // catches height changes from late-loading fonts/images
 
-  function finishAnimating(){
-    animating = false;
-    clearTimeout(safetyTimer);
+  function slideSideBox(target){
+    sideBox.classList.add('sliding');
+    sideBox.style.setProperty('--side-translate', target.toFixed(1) + 'px');
+    clearTimeout(toggleCard._blurTimer);
+    toggleCard._blurTimer = setTimeout(function(){
+      sideBox.classList.remove('sliding');
+    }, SLIDE_MS + 40);
   }
 
   function toggleCard(){
-    if (animating) return;
-    animating = true;
+    const collapsing = !wrap.classList.contains('card-collapsed');
+    clearTimeout(toggleCard._stageTimer);
 
-    const wrapWidth = wrap.getBoundingClientRect().width;
-    const sideBoxWidth = sideBox.getBoundingClientRect().width;
+    if (collapsing){
+      // clicking to collapse also closes whichever pedal-info box (grey
+      // or rose) happens to be open
+      if (window.resetPedalObjectInfo) window.resetPedalObjectInfo();
 
-    if (!collapsed){
-      // --- COLLAPSING ---
-      // stage 1: fold the whole card away first (measure its current
-      // width for a real starting pixel value, since we can't smoothly
-      // transition from "auto")
-      naturalCardWidth = card.getBoundingClientRect().width;
-      card.style.width = naturalCardWidth + 'px';
-      card.getBoundingClientRect(); // force reflow so the browser registers the starting width
-      card.style.width = '0px';
-      card.style.borderWidth = '0px';
+      // measured now, while the box is still at its natural width --
+      // used as a fixed pixel value so the slide distance stays
+      // constant even though the layout width collapses afterward
+      const naturalBoxWidth = card.getBoundingClientRect().width;
 
-      collapsed = true;
+      // stage 1: the whole card -- border and content together, as one
+      // unit -- slides left toward the side box and fades. Both the
+      // outer box's transform and the inner content's transform+opacity
+      // start at the exact same instant, so they move as a single piece.
+      card.style.setProperty('--box-slide', (-naturalBoxWidth).toFixed(1) + 'px');
+      cardInner.classList.add('sliding-out');
 
-      clearTimeout(safetyTimer);
-      safetyTimer = setTimeout(function(){
-        // stage 2: only now, after the card has fully folded away, does
-        // the side box glide over to the center
-        const targetTranslate = (wrapWidth / 2 - sideBoxWidth / 2);
-        sideBox.style.setProperty('--side-translate', targetTranslate.toFixed(1) + 'px');
-        sideBox.style.borderRight = '1px solid var(--white)';
-
-        clearTimeout(safetyTimer);
-        safetyTimer = setTimeout(function(){
-          sideBox.classList.add('collapsed-standalone');
-          finishAnimating();
-        }, SIDE_MS + 60);
-      }, CARD_MS + 60);
+      // stage 2: only once that's finished (fully invisible/off to the
+      // left) does the layout actually collapse, and the side box move
+      toggleCard._stageTimer = setTimeout(function(){
+        wrap.classList.add('card-collapsed');
+        const wrapWidth = wrap.getBoundingClientRect().width;
+        const sideBoxWidth = sideBox.getBoundingClientRect().width;
+        slideSideBox(wrapWidth / 2 - sideBoxWidth / 2);
+      }, CARD_MS + 40);
 
     } else {
-      // --- EXPANDING (reverse order) ---
+      lockHeight(); // re-check in case content grew while collapsed
+
       // stage 1: the side box returns to its attached position first
-      sideBox.classList.remove('collapsed-standalone');
-      sideBox.style.setProperty('--side-translate', '0px');
-      sideBox.style.borderRight = 'none';
+      slideSideBox(0);
 
-      collapsed = false;
-
-      clearTimeout(safetyTimer);
-      safetyTimer = setTimeout(function(){
-        // stage 2: only now does the card unfold back out
-        card.style.width = (naturalCardWidth || 0) + 'px';
-        card.style.borderWidth = '1px';
-
-        clearTimeout(safetyTimer);
-        safetyTimer = setTimeout(function(){
-          card.style.width = ''; // back to auto once fully expanded, stays responsive
-          finishAnimating();
-        }, CARD_MS + 60);
-      }, SIDE_MS + 60);
+      // stage 2: once that's finished, the layout expands back out, and
+      // in the exact same instant the whole card -- border and content
+      // together -- slides back in from the left, originating at the
+      // side box's position
+      toggleCard._stageTimer = setTimeout(function(){
+        wrap.classList.remove('card-collapsed');
+        card.style.setProperty('--box-slide', '0px');
+        cardInner.classList.remove('sliding-out');
+      }, SLIDE_MS + 40);
     }
   }
-
   sideBox.addEventListener('click', toggleCard);
   sideBox.addEventListener('keydown', function(e){
     if (e.key === 'Enter' || e.key === ' '){
