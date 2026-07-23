@@ -1012,6 +1012,22 @@
     display:flex;
     align-items:center;
     justify-content:center;
+    cursor:pointer;
+    --side-translate:0px;
+    transform:translateX(var(--side-translate));
+    transition:background 0.25s ease, border-color 0.25s ease, transform 0.5s cubic-bezier(.22,1,.36,1);
+  }
+  .spotlight-side-box:hover{
+    background:var(--white);
+    border-color:var(--white);
+  }
+  .spotlight-side-box:hover .spotlight-side-title{
+    color:var(--black);
+  }
+  /* once standalone (card collapsed), hovering also enlarges it slightly
+     to read clearly as its own clickable button */
+  .spotlight-side-box.collapsed-standalone:hover{
+    transform:translateX(var(--side-translate)) scale(1.12);
   }
   .spotlight-side-title{
     font-family:'Bungee', sans-serif;
@@ -1022,6 +1038,7 @@
     user-select:none;
     transform:rotate(-90deg);
     transform-origin:center;
+    transition:color 0.25s ease;
   }
 
   .spotlight-box{
@@ -1031,6 +1048,8 @@
     background:var(--black);
     color:var(--white);
     border:1px solid var(--white);
+    overflow:hidden;
+    transition:width 0.65s cubic-bezier(.22,1,.36,1), border-width 0.55s ease;
   }
 
   /* horizontal bar of program names -- the selected one is always
@@ -1040,6 +1059,7 @@
     padding:0.7rem 0;
     border-bottom:1px solid var(--grey-2);
     overflow:hidden;
+    min-width:0;
   }
   .program-bar{
     position:relative;
@@ -1065,7 +1085,7 @@
     transition:transform 0.4s cubic-bezier(.22,1,.36,1), color 0.3s ease, opacity 0.3s ease;
   }
   .program-bar-item:hover{
-    color:var(--white);
+    filter:brightness(1.5);
   }
   .program-bar-item.selected{
     font-family:'Anton', sans-serif;
@@ -1110,6 +1130,7 @@
 
   .spotlight-top-row{
     display:flex;
+    min-width:0;
   }
   .spotlight-desc-block,
   .spotlight-diagram-block{
@@ -1155,9 +1176,11 @@
 
   .spotlight-bottom-row{
     display:flex;
+    min-width:0;
   }
   .spotlight-circle-block{
-    flex:0 0 230px;
+    flex:0 1 230px;
+    min-width:0;
     width:230px;
     display:flex;
     flex-direction:column;
@@ -1183,7 +1206,7 @@
   .artist-circle-wrap:hover .artist-circle-clip{
     transform:scale(1.05);
   }
-  .artist-circle-wrap::after{
+  .artist-circle-clip::after{
     content:'';
     position:absolute;
     left:0;
@@ -1193,7 +1216,7 @@
     background:var(--white);
     transition:height 0.2s ease;
   }
-  .artist-circle-wrap:hover::after{
+  .artist-circle-wrap:hover .artist-circle-clip::after{
     height:2px;
   }
   .artist-circle-img{
@@ -1260,6 +1283,77 @@
     flex:1;
     min-width:0;
     padding:1.75rem 1.75rem 1.75rem 0.5rem;
+    position:relative;
+    overflow:hidden;
+  }
+  .bio-slider{
+    position:relative;
+    width:100%;
+    height:100%;
+  }
+  .bio-panel-bio{
+    position:relative;
+  }
+  .bio-panel-object{
+    position:absolute;
+    top:0;
+    bottom:0;
+    right:14px; /* offset so both boxes sit side by side when both are closed */
+    width:14px;
+    overflow:hidden;
+    background:var(--grey-1);
+    cursor:pointer;
+    z-index:3; /* closed boxes sit in front, so they stay clickable even
+                  while the other one is expanded underneath them */
+    transition:width 0.35s cubic-bezier(.22,1,.36,1), right 0.35s cubic-bezier(.22,1,.36,1), background 0.2s ease;
+  }
+  .bio-panel-object::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:4px;
+    background:var(--white);
+  }
+  .bio-panel-object:hover{
+    background:#2a2a2a;
+  }
+  .bio-panel-object.expanded{
+    width:100%;
+    right:0;
+    z-index:1; /* drops behind once open, so the other box's strip can sit on top */
+  }
+  /* when the rose box is expanded, the grey box (still closed) needs to
+     shift from its side-by-side offset to the true edge so it stays
+     visible/clickable on top of the expanded rose box */
+  .bio-panel-object.shift-front{
+    right:0;
+  }
+  .bio-panel-object-mod1{
+    right:0; /* the inner one of the pair -- no offset needed */
+    background:#2b2224; /* grey with a hint of rose, in addition to the bar */
+  }
+  .bio-panel-object-mod1::before{
+    background:#e6a9b0;
+  }
+  .bio-panel-object-mod1:hover{
+    background:#352a2c;
+  }
+  .mod-tag{
+    color:var(--grey-2);
+    font-size:0.85em;
+  }
+  .object-info-inner{
+    position:relative;
+    height:100%;
+    box-sizing:border-box;
+    padding:0.9rem 1rem;
+    opacity:0;
+    transition:opacity 0.2s ease;
+  }
+  .bio-panel-object.expanded .object-info-inner{
+    opacity:1;
   }
 
   .spotlight-title{
@@ -1383,6 +1477,41 @@
   }
   .pedal-button.pressed .button-inner{
     fill:var(--white);
+  }
+
+  /* the middle switch's "rose mod": recolors every switch, poti, and
+     button when active */
+  .pedal-diagram.mod-rose-active .pedal-switch .switch-track,
+  .pedal-diagram.mod-rose-active .pedal-switch .switch-thumb,
+  .pedal-diagram.mod-rose-active .pedal-poti .poti-body,
+  .pedal-diagram.mod-rose-active .pedal-poti .poti-line,
+  .pedal-diagram.mod-rose-active .pedal-button .button-outer,
+  .pedal-diagram.mod-rose-active .pedal-button .button-inner{
+    stroke:#e6a9b0;
+  }
+  .pedal-diagram.mod-rose-active .pedal-switch .switch-thumb{
+    fill:#e6a9b0;
+  }
+
+  /* rose glow around whichever control the object-info panel is
+     currently describing, so it's clear which one is meant -- and a
+     slight enlarge while the box is open */
+  .object-highlighted{
+    transform-box:fill-box;
+    transform-origin:center;
+    transform:scale(1.18);
+    transition:transform 0.25s ease;
+  }
+  .object-highlighted .switch-track,
+  .object-highlighted .poti-body,
+  .object-highlighted .poti-line,
+  .object-highlighted .button-outer,
+  .object-highlighted .button-inner{
+    stroke-width:3.2; /* no color/filter here on purpose -- it just
+                          thickens whichever control is being described,
+                          so it always matches that control's current
+                          color (white in Mod 0, rose in Mod 1) instead
+                          of introducing its own mismatched glow color */
   }
 
   @media (max-width:640px){
@@ -1695,13 +1824,13 @@
 </section>
 
 <section class="spotlight" id="spotlightSection">
-  <div class="spotlight-wrap">
+  <div class="spotlight-wrap" id="spotlightWrap">
 
-    <div class="spotlight-side-box">
+    <div class="spotlight-side-box" id="spotlightSideBox" role="button" tabindex="0" aria-label="Karte ein-/ausklappen">
       <p class="spotlight-side-title" id="spotlightSideTitle">Industrial Noise</p>
     </div>
 
-    <div class="spotlight-box">
+    <div class="spotlight-box" id="spotlightBox">
 
     <div class="program-bar-wrap">
       <div class="program-bar" id="programBar"></div>
@@ -1779,7 +1908,7 @@
 
     <div class="collab-divider">
       <span class="collab-divider-line collab-divider-line-left"></span>
-      <span class="collab-divider-text">In Kooperation mit:</span>
+      <span class="collab-divider-text" id="collabDividerText">In Kooperation mit:</span>
       <span class="collab-divider-line collab-divider-line-right"></span>
     </div>
 
@@ -1799,8 +1928,24 @@
         </div>
       </div>
       <div class="spotlight-bio-block">
-        <p class="spotlight-title">Bio:</p>
-        <p class="spotlight-desc-text" id="artistBio">Lädt…</p>
+        <div class="bio-slider" id="bioSlider">
+          <div class="bio-panel bio-panel-bio" id="bioPanelBio">
+            <p class="spotlight-title">Bio:</p>
+            <p class="spotlight-desc-text" id="artistBio">Lädt…</p>
+          </div>
+          <div class="bio-panel-object" id="bioPanelObject" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
+            <div class="object-info-inner">
+              <p class="spotlight-title"><span id="objectInfoTitle"></span> <span class="mod-tag">(Mod 0)</span></p>
+              <p class="spotlight-desc-text">Weitere Informationen folgen.</p>
+            </div>
+          </div>
+          <div class="bio-panel-object bio-panel-object-mod1" id="bioPanelObjectMod1" role="button" tabindex="0" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
+            <div class="object-info-inner">
+              <p class="spotlight-title"><span id="objectInfoTitleMod1"></span> <span class="mod-tag">(Mod 1)</span></p>
+              <p class="spotlight-desc-text">Weitere Informationen folgen.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2980,8 +3125,145 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
 /* ---------- interactive pedal diagram ---------- */
 (function(){
+  try{
   const diagram = document.getElementById('pedalDiagram');
   if (!diagram) return;
+
+  const objectInfoTitle = document.getElementById('objectInfoTitle');
+  const objectInfoTitleMod1 = document.getElementById('objectInfoTitleMod1');
+  const bioPanelObject = document.getElementById('bioPanelObject');
+  const bioPanelObjectMod1 = document.getElementById('bioPanelObjectMod1');
+  let currentHighlighted = null; // the element actually showing the shadow right now
+  let pendingTarget = null; // the element that *should* show it once a box is open
+  let roseModActive = false; // tracks the middle switch's global "rose mod" state
+
+  function applyHighlight(targetEl){
+    if (currentHighlighted && currentHighlighted !== targetEl){
+      currentHighlighted.classList.remove('object-highlighted');
+    }
+    if (targetEl){
+      targetEl.classList.add('object-highlighted');
+    }
+    currentHighlighted = targetEl;
+  }
+  function clearHighlight(){
+    if (currentHighlighted){
+      currentHighlighted.classList.remove('object-highlighted');
+      currentHighlighted = null;
+    }
+  }
+
+  // ignore clicks that are actually the end of a text-selection drag, so
+  // selecting text inside an open box doesn't also close it
+  function isPlainClick(){
+    const selection = window.getSelection();
+    return !selection || selection.toString().length === 0;
+  }
+
+  function closeBox(box){
+    if (box) box.classList.remove('expanded');
+  }
+  function isOpen(box){
+    return !!box && box.classList.contains('expanded');
+  }
+
+  // updates which control's info is ready to show, and opens whichever
+  // box matches the current mod state (Mod 0 normally, Mod 1 while the
+  // rose mod is active), closing the other one. The white shadow only
+  // appears on the actual control while a box is open. Exposed on
+  // window so the "switch to a different program" handler can reset it.
+  window.showPedalObjectInfo = function(label, targetEl){
+    pendingTarget = targetEl;
+    if (objectInfoTitle) objectInfoTitle.textContent = label;
+    if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = label;
+    openMatchingBox();
+    applyHighlight(targetEl);
+  };
+  window.resetPedalObjectInfo = function(){
+    closeBox(bioPanelObject);
+    closeBox(bioPanelObjectMod1);
+    pendingTarget = null;
+    clearHighlight();
+    syncShiftFront();
+  };
+
+  // opens whichever box matches the current mod state, and keeps the
+  // grey box's side-by-side vs. front-edge position in sync (it needs
+  // to shift to the true edge whenever the rose box is the expanded one,
+  // so it stays visible/clickable on top of it)
+  // the grey box needs to sit at the true edge (shift-front) only while
+  // the rose box is the one actually expanded -- not just whenever the
+  // switch happens to be in the rose position, since the box can be
+  // closed again independently of the switch state
+  function syncShiftFront(){
+    if (bioPanelObject){
+      bioPanelObject.classList.toggle('shift-front', isOpen(bioPanelObjectMod1));
+    }
+  }
+
+  function openMatchingBox(){
+    if (roseModActive){
+      closeBox(bioPanelObject);
+      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.add('expanded');
+    } else {
+      closeBox(bioPanelObjectMod1);
+      if (bioPanelObject) bioPanelObject.classList.add('expanded');
+    }
+    syncShiftFront();
+  }
+  // exposed so the middle switch's handler can flip which box is "live"
+  window.setPedalRoseMod = function(active){
+    roseModActive = active;
+  };
+
+  const POTI_LABELS = ['Potentiometer 1', 'Potentiometer 2', 'Potentiometer 3', 'Potentiometer 4'];
+
+  // the middle switch (index 1) is special: it drives a global "rose
+  // mod" that recolors every switch, poti, and button -- rose when
+  // pushed right, back to normal when pushed left. Defined once here so
+  // both the switch's own click handler and the two info boxes can
+  // trigger it (clicking a box also drives the switch, not just the
+  // other way around).
+  const middleSwitchEl = diagram.querySelector('.pedal-switch[data-index="1"]');
+  function applyMiddleSwitchState(newState){
+    if (!middleSwitchEl) return;
+    const trackX = parseFloat(middleSwitchEl.getAttribute('data-track-x'));
+    const thumb = middleSwitchEl.querySelector('.switch-thumb');
+    middleSwitchEl.setAttribute('data-state', newState);
+    if (thumb) thumb.setAttribute('cx', newState === 'left' ? trackX + 8 : trackX + 36);
+    diagram.classList.toggle('mod-rose-active', newState === 'right');
+    window.setPedalRoseMod(newState === 'right');
+    window.showPedalObjectInfo('Switch 2', middleSwitchEl);
+  }
+
+  function wireToggle(box, otherBox, forcedSwitchState){
+    if (!box) return;
+    function toggleBox(){
+      const willOpen = !box.classList.contains('expanded');
+      // clicking either box also drives the middle switch to match --
+      // grey box -> switch left (normal), rose box -> switch right (mod)
+      applyMiddleSwitchState(forcedSwitchState);
+      if (!willOpen){
+        // the box we clicked was already the open/matching one; a second
+        // click just closes it back down without changing anything else
+        box.classList.remove('expanded');
+        clearHighlight();
+      }
+      syncShiftFront();
+    }
+    box.addEventListener('click', function(){
+      if (!isPlainClick()) return;
+      toggleBox();
+    });
+    box.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        toggleBox();
+      }
+    });
+  }
+  wireToggle(bioPanelObject, bioPanelObjectMod1, 'left');
+  wireToggle(bioPanelObjectMod1, bioPanelObject, 'right');
 
   // switches: click toggles between the left and right resting position
   diagram.querySelectorAll('.pedal-switch').forEach(function(sw){
@@ -2990,6 +3272,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const trackX = parseFloat(sw.getAttribute('data-track-x'));
     const leftCx = trackX + 8;
     const rightCx = trackX + 36;
+    const switchIndex = parseInt(sw.getAttribute('data-index'), 10);
+    const switchNumber = switchIndex + 1;
 
     function render(){
       const state = sw.getAttribute('data-state');
@@ -2998,9 +3282,19 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     render();
 
     sw.addEventListener('click', function(){
+      if (switchIndex === 1){
+        // the middle switch's own toggling goes through the shared
+        // function above, so box state and switch state can never
+        // disagree regardless of which one triggered the change
+        const state = sw.getAttribute('data-state');
+        applyMiddleSwitchState(state === 'left' ? 'right' : 'left');
+        return;
+      }
       const state = sw.getAttribute('data-state');
-      sw.setAttribute('data-state', state === 'left' ? 'right' : 'left');
+      const newState = state === 'left' ? 'right' : 'left';
+      sw.setAttribute('data-state', newState);
       render();
+      window.showPedalObjectInfo('Switch ' + switchNumber, sw);
     });
   });
 
@@ -3016,6 +3310,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const line = poti.querySelector('.poti-line');
     const cx = parseFloat(poti.getAttribute('data-cx'));
     const cy = parseFloat(poti.getAttribute('data-cy'));
+    const potiIndex = parseInt(poti.getAttribute('data-index'), 10);
     let angleDeg = 0; // starts pointing straight up
     let dragging = false;
 
@@ -3050,6 +3345,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       poti.classList.add('poti-active');
       angleDeg = angleFromPointer(evt);
       render();
+      window.showPedalObjectInfo(POTI_LABELS[potiIndex] || 'Potentiometer', poti);
       evt.preventDefault();
     }
     function moveDrag(evt){
@@ -3077,9 +3373,109 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   // buttons: click toggles a pressed state (ring fills rose, center fills white)
   diagram.querySelectorAll('.pedal-button').forEach(function(btn){
+    const buttonNumber = parseInt(btn.getAttribute('data-index'), 10) + 1;
     btn.addEventListener('click', function(){
       btn.classList.toggle('pressed');
+      window.showPedalObjectInfo('Button ' + buttonNumber, btn);
     });
+  });
+  } catch(e) { console.error('Pedal diagram setup failed:', e); }
+})();
+
+/* ---------- "Industrial Noise" side box: click collapses/expands the
+   whole card in two clear stages rather than simultaneously.
+   Collapsing: the card (bio, objects, description, outer border --
+   everything) folds fully into the side box first; only once that's
+   completely finished does the side box then glide to the center.
+   Expanding reverses the order: the side box returns to its attached
+   position first, then the card unfolds back out from there.
+   Uses real measured pixel values for width/position rather than
+   animating flex-basis or justify-content, since those don't interpolate
+   smoothly. ---------- */
+(function(){
+  const wrap = document.getElementById('spotlightWrap');
+  const sideBox = document.getElementById('spotlightSideBox');
+  const card = document.getElementById('spotlightBox');
+  if (!wrap || !sideBox || !card) return;
+
+  const CARD_MS = 650;  // stage 1: the card folding away/back, matches CSS below
+  const SIDE_MS = 500;  // stage 2: the side box gliding to/from center, matches CSS below
+
+  let collapsed = false;
+  let animating = false;
+  let naturalCardWidth = null; // measured once, reused so we can animate back to it smoothly
+  let safetyTimer = null;
+
+  function finishAnimating(){
+    animating = false;
+    clearTimeout(safetyTimer);
+  }
+
+  function toggleCard(){
+    if (animating) return;
+    animating = true;
+
+    const wrapWidth = wrap.getBoundingClientRect().width;
+    const sideBoxWidth = sideBox.getBoundingClientRect().width;
+
+    if (!collapsed){
+      // --- COLLAPSING ---
+      // stage 1: fold the whole card away first (measure its current
+      // width for a real starting pixel value, since we can't smoothly
+      // transition from "auto")
+      naturalCardWidth = card.getBoundingClientRect().width;
+      card.style.width = naturalCardWidth + 'px';
+      card.getBoundingClientRect(); // force reflow so the browser registers the starting width
+      card.style.width = '0px';
+      card.style.borderWidth = '0px';
+
+      collapsed = true;
+
+      clearTimeout(safetyTimer);
+      safetyTimer = setTimeout(function(){
+        // stage 2: only now, after the card has fully folded away, does
+        // the side box glide over to the center
+        const targetTranslate = (wrapWidth / 2 - sideBoxWidth / 2);
+        sideBox.style.setProperty('--side-translate', targetTranslate.toFixed(1) + 'px');
+        sideBox.style.borderRight = '1px solid var(--white)';
+
+        clearTimeout(safetyTimer);
+        safetyTimer = setTimeout(function(){
+          sideBox.classList.add('collapsed-standalone');
+          finishAnimating();
+        }, SIDE_MS + 60);
+      }, CARD_MS + 60);
+
+    } else {
+      // --- EXPANDING (reverse order) ---
+      // stage 1: the side box returns to its attached position first
+      sideBox.classList.remove('collapsed-standalone');
+      sideBox.style.setProperty('--side-translate', '0px');
+      sideBox.style.borderRight = 'none';
+
+      collapsed = false;
+
+      clearTimeout(safetyTimer);
+      safetyTimer = setTimeout(function(){
+        // stage 2: only now does the card unfold back out
+        card.style.width = (naturalCardWidth || 0) + 'px';
+        card.style.borderWidth = '1px';
+
+        clearTimeout(safetyTimer);
+        safetyTimer = setTimeout(function(){
+          card.style.width = ''; // back to auto once fully expanded, stays responsive
+          finishAnimating();
+        }, CARD_MS + 60);
+      }, SIDE_MS + 60);
+    }
+  }
+
+  sideBox.addEventListener('click', toggleCard);
+  sideBox.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      toggleCard();
+    }
   });
 })();
 
@@ -3198,6 +3594,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
     positionBar();
     currentWav = 'examples/' + entry.programSlug + '.wav';
+    if (window.resetPedalObjectInfo) window.resetPedalObjectInfo();
 
     // pedal-type title + color: "Synthesizer Pedal:" (red) or
     // "Effects Pedal:" (blue), depending on this program's type
@@ -3317,6 +3714,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const modalArtistCredentials = document.getElementById('modalArtistCredentials');
   if (artistCircleWrap && modalArtistCredentials){
     const openCredentials = function(){
+      if (window.resetPedalObjectInfo) window.resetPedalObjectInfo();
       modalArtistCredentials.classList.add('active');
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
