@@ -1,0 +1,5 @@
+{
+  "color_bg": "#050505",
+  "color_fg": "#ffffff",
+  "programs": ["noise", "drums", "panicattack", "filter"]
+}

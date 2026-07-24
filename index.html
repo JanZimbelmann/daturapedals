@@ -996,11 +996,53 @@
     padding:3rem 1.5rem;
   }
 
+  /* outer row: holds one .spotlight-wrap per edition (folder under
+     /editions), side by side as a row of tabs when all are collapsed */
+  .spotlight-wraps{
+    display:flex;
+    align-items:stretch;
+    justify-content:center; /* when every card is collapsed, the idle tabs
+      shrink down to their own combined width -- centering them here is
+      what makes the whole row settle back in the middle of the section
+      instead of hugging the row's own left edge (the row itself always
+      stays full-width up to the max-width) */
+    width:100%;
+    max-width:920px;
+  }
+
+  /* one edition's side box + card, as a flex item of .spotlight-wraps.
+     Default (idle, not the open one): just wide enough for its own side
+     box. .wrap-active (this edition's card is open): grows to fill the
+     row. .wrap-hidden-sibling (a DIFFERENT edition is open): shrinks
+     away to nothing, so only the open edition's wrap is visible. */
   .spotlight-wrap{
     display:flex;
     align-items:stretch;
-    width:100%;
-    max-width:920px;
+    flex:0 0 auto;
+    /* deliberately NOT overflow:hidden here (that lives on
+       .spotlight-card-clip instead) -- this box also contains the side
+       box, which needs to move via transform (hover-grow, and the
+       open/close FLIP reposition) without ever being clipped by an
+       ancestor sized tightly around it */
+    margin-right:16px; /* space between idle tabs -- collapsed to 0 by
+      .wrap-hidden-sibling below so a hidden tab never leaves a gap-sized
+      gap behind it */
+    transition:flex-basis 0.45s ease, width 0.45s ease, opacity 0.45s ease, height 0.45s ease, margin-right 0.45s ease;
+  }
+  .spotlight-wrap:last-child{
+    margin-right:0;
+  }
+  .spotlight-wrap.wrap-active{
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .spotlight-wrap.wrap-hidden-sibling{
+    flex:0 0 0;
+    width:0;
+    min-width:0;
+    margin-right:0;
+    opacity:0;
+    pointer-events:none;
   }
 
   .spotlight-side-box{
@@ -1008,38 +1050,49 @@
     width:56px;
     min-width:56px;
     max-width:56px;
-    border:1px solid var(--white);
-    border-right:none;
-    background:var(--black);
+    /* always fully bordered, open or collapsed -- colored per-edition via
+       --edition-bg/--edition-fg (set inline on .spotlight-wrap from that
+       edition's info.json), falling back to the site's default black/white
+       if an edition doesn't define them */
+    border:1px solid var(--edition-fg, var(--white));
+    background:var(--edition-bg, var(--black));
     display:flex;
     align-items:center;
     justify-content:center;
     cursor:pointer;
     position:relative;
+    z-index:2; /* stays above the card always, so the card sliding under/over
+                  its footprint during collapse/expand never covers it */
     --side-translate:0px;
-    transform:translateX(var(--side-translate));
-    transition:background 0.25s ease, border-color 0.25s ease, transform 0.6s cubic-bezier(.65,0,.35,1), filter 0.6s ease;
-  }
-  .spotlight-wrap.card-collapsed .spotlight-side-box{
-    border-right:1px solid var(--white);
-  }
-  /* a brief motion-blur while the box is actually sliding, for a
-     punchier feel during the move -- fades back to sharp once settled */
-  .spotlight-side-box.sliding{
-    filter:blur(2.5px);
+    transform:translateX(var(--side-translate)); /* JS-driven FLIP correction
+      only (see flipSideBoxes) -- the hover grow effect below deliberately
+      uses real width/min-width/max-width instead of transform:scale(), so
+      the auto-sized .spotlight-wrap grows right along with it */
+    transition:background 0.25s ease, border-color 0.25s ease, width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease, transform 0.45s cubic-bezier(.65,0,.35,1);
   }
   .spotlight-side-box:hover{
-    background:var(--white);
-    border-color:var(--white);
+    background:var(--edition-fg, var(--white));
+    border-color:var(--edition-fg, var(--white));
+    width:64px;
+    min-width:64px;
+    max-width:64px;
+  }
+  /* once a card is open, its own side box locks back to the normal size --
+     clicking it to open shouldn't leave it sitting there enlarged just
+     because the cursor happens to still be over it */
+  .spotlight-wrap.wrap-active .spotlight-side-box{
+    width:56px;
+    min-width:56px;
+    max-width:56px;
   }
   .spotlight-side-box:hover .spotlight-side-title{
-    color:var(--black);
+    color:var(--edition-bg, var(--black));
   }
   .spotlight-side-title{
     font-family:'Bungee', sans-serif;
     font-size:0.85rem;
     letter-spacing:0.4em;
-    color:var(--white);
+    color:var(--edition-fg, var(--white));
     white-space:nowrap;
     user-select:none;
     transform:rotate(-90deg);
@@ -1047,34 +1100,50 @@
     transition:color 0.25s ease;
   }
 
-  .spotlight-box{
+  /* clips the card's slide the instant it passes this box's own left edge
+     (flush against the side box) -- kept as its own element, separate
+     from .spotlight-wrap, so that clip never also catches the side box's
+     own transform-driven motion (hover-grow, open/close FLIP reposition) */
+  .spotlight-card-clip{
     flex:1 1 auto;
     min-width:0;
-    position:relative;
-    background:var(--black);
-    color:var(--white);
-    border:1px solid var(--white);
     overflow:hidden;
-    --box-slide:0px;
-    transform:translateX(var(--box-slide));
-    transition:flex-basis 0.45s ease, border-width 0.45s ease, transform 0.45s cubic-bezier(.65,0,.35,1);
+    transition:flex-basis 0.45s ease, width 0.45s ease;
   }
-  .spotlight-wrap.card-collapsed .spotlight-box{
+  .spotlight-wrap.card-collapsed .spotlight-card-clip{
     flex:0 0 0;
     width:0;
     min-width:0;
+  }
+  .spotlight-box{
+    position:relative;
+    width:100%;
+    height:100%;
+    background:var(--edition-bg, var(--black)); /* per-edition, see .spotlight-side-box above */
+    color:var(--white);
+    border:1px solid var(--edition-fg, var(--white));
+    overflow:hidden;
+    z-index:1; /* below the side box (z-index:2), so it slides under/behind
+                  it rather than covering it */
+    --box-slide:0px;
+    transform:translateX(var(--box-slide));
+    transition:border-width 0.45s ease, transform 0.45s cubic-bezier(.65,0,.35,1), opacity 0.45s ease;
+  }
+  .spotlight-wrap.card-collapsed .spotlight-box{
     border-width:0;
     pointer-events:none;
+    opacity:0;
   }
 
-  /* the actual visual disappearance: content slides left and fades,
-     fully decoupled from the outer box's own width collapse (which now
-     only happens afterward, once the content is already invisible) */
-  .spotlight-box-inner{
-    transition:transform 0.45s cubic-bezier(.65,0,.35,1), opacity 0.35s ease;
-  }
-  .spotlight-box-inner.sliding-out{
-    transform:translateX(-100%);
+  /* the whole card -- border and content together, as a single piece --
+     slides the full distance toward the side box while fading out, so it
+     reads as disappearing INTO the box rather than just nudging a
+     little before popping away. The fade lives on this outer box (not
+     just the inner content) so the border fades too: since the card is
+     much wider than the side box, translating its full width would
+     otherwise leave a chunk of its still-opaque border exposed past the
+     side box's edges rather than hidden behind it. */
+  .spotlight-box.sliding-out{
     opacity:0;
   }
   /* horizontal bar of program names -- the selected one is always
@@ -1121,10 +1190,16 @@
     cursor:default;
   }
 
-  /* circular play button, sitting at the exact center of the whole box */
+  /* circular play button. Its `top` is set inline in px by JS (see
+     mountEdition), pinned a fixed distance below the program bar's own
+     separator line rather than a % of the box's height, since the vines
+     below need to start exactly on that line regardless of card height.
+     Starts hidden and unclickable -- it only fades in once the vine
+     animation has finished drawing the circle it sits in
+     (see triggerVineReveal) */
   .spotlight-center-play{
     position:absolute;
-    top:50%;
+    top:50%; /* fallback; overridden inline once JS measures the real line */
     left:50%;
     transform:translate(-50%, -50%);
     z-index:5;
@@ -1138,7 +1213,13 @@
     justify-content:center;
     cursor:pointer;
     padding:0;
-    transition:transform 0.25s ease, background 0.25s ease;
+    opacity:0;
+    pointer-events:none;
+    transition:transform 0.25s ease, background 0.25s ease, opacity 0.4s ease;
+  }
+  .spotlight-center-play.revealed{
+    opacity:1;
+    pointer-events:auto;
   }
   .spotlight-center-play img{
     width:22px;
@@ -1151,6 +1232,61 @@
   }
   .spotlight-center-play:hover img{
     filter:invert(1);
+  }
+
+  /* vine reveal: 3 sharp, angular zig-zag lines (straight segments, not
+     curves -- more like a plotted graph/circuit trace than an organic
+     vine) draw themselves in (stroke-dashoffset animating to 0) starting
+     exactly on the program bar's own grey separator line. Their zig-zags
+     run in opposing phase so they cross through each other repeatedly on
+     the way down, then converge into the circle. `top` is set inline in
+     px by JS to match that line's real position (see mountEdition); the
+     SVG's own (50,0) is that line, so nothing extra is needed here -- the
+     button's inline top is computed to land on the circle's center */
+  .vine-reveal{
+    position:absolute;
+    left:50%;
+    width:100px;
+    height:125px;
+    transform:translateX(-50%);
+    z-index:4;
+    pointer-events:none;
+    overflow:visible;
+    opacity:1;
+    transition:opacity 0.35s ease;
+  }
+  .vine-reveal.vine-hidden{
+    opacity:0;
+  }
+  .vine-reveal .vine{
+    fill:none;
+    stroke:var(--grey-2); /* same grey as the program bar's own separator line */
+    stroke-width:1.3;
+    stroke-linecap:butt;
+    stroke-linejoin:miter;
+    opacity:0.9;
+    transition:stroke-dashoffset 0.55s ease;
+  }
+  .vine-reveal .vine-center{
+    transition-delay:0.12s;
+  }
+  .vine-reveal .vine-fourth{
+    transition-delay:0.06s;
+  }
+  .vine-reveal .vine-circle{
+    fill:none;
+    stroke:var(--grey-2);
+    stroke-width:1.4;
+    stroke-linejoin:miter;
+    transition:stroke-dashoffset 0.4s ease 0.4s;
+  }
+  @keyframes vineCircleSpark{
+    0%{ stroke:var(--grey-2); filter:brightness(1); }
+    35%{ stroke:var(--edition-fg, var(--white)); filter:brightness(1.7); }
+    100%{ stroke:var(--grey-2); filter:brightness(1); }
+  }
+  .vine-reveal.sparked .vine-circle{
+    animation:vineCircleSpark 0.5s ease-out;
   }
 
   .spotlight-top-row{
@@ -1169,6 +1305,22 @@
   .spotlight-diagram-block{
     align-items:center;
     justify-content:center;
+  }
+  /* snug panel hugging just the pedal diagram itself (not the whole
+     column) -- same background as the Mod 0 panel (.bio-panel-object) so
+     the pedal object reads as the same kind of panel, kept tight/compact
+     rather than stretching to fill the block around it */
+  .pedal-diagram-panel{
+    display:inline-flex;
+    padding:0.85rem;
+    background:var(--grey-1);
+    border-radius:10px;
+    transition:background 0.3s ease;
+  }
+  /* matches the Mod 1 panel's own background (.bio-panel-object-mod1)
+     while the rose mod is active, same as the Mod 0 panel above */
+  .pedal-diagram-panel.mod-rose-active{
+    background:#2b2224;
   }
 
   .collab-divider{
@@ -1349,6 +1501,15 @@
     right:0;
     z-index:1; /* drops behind once open, so the other box's strip can sit on top */
   }
+  /* while a box is shrinking back down from expanded, it needs to keep
+     this same behind z-index for the whole shrink -- removing 'expanded'
+     already resets z-index to 3 (tied with its sibling) instantly, before
+     the width/right transition has visually caught up, and since this box
+     is later in the DOM it would win that tie and cover its (already
+     correctly-sized, stationary) sibling for the whole 0.35s shrink */
+  .bio-panel-object.closing{
+    z-index:1;
+  }
   /* when the rose box is expanded, the grey box (still closed) needs to
      shift from its side-by-side offset to the true edge so it stays
      visible/clickable on top of the expanded rose box */
@@ -1401,6 +1562,36 @@
     display:inline-block;
     cursor:help;
     transition:opacity 0.2s ease;
+  }
+  /* briefly pops the whole title row (label + its "(Mod n)" tag, as one
+     unit) when the label changes to a *different* control while the
+     panel is already open -- so the change itself is noticeable, not
+     just the new text. All of this rides on transform/color/filter, none
+     of which reflow, so nothing below ever shifts position. A small
+     rotational wobble plus a quick overshoot-dip-rebound scale (instead
+     of a plain grow-shrink) gives it a snappy, spring-like "pop" rather
+     than a soft blur -- the label's own color flashes to that panel's
+     own accent-bar color (the strip along the top of .bio-panel-object /
+     .bio-panel-object-mod1) for an instant as a second, subtler cue --
+     not the edition accent, so it always matches whichever bar (grey/
+     white for Mod 0, rose for Mod 1) is actually showing */
+  @keyframes objectLabelEmphasize{
+    0%{ transform:scale(1) rotate(0deg); }
+    10%{ transform:scale(1.22) rotate(-3deg); color:var(--emphasize-color, var(--white)); filter:brightness(1.45); }
+    22%{ transform:scale(0.95) rotate(2deg); color:var(--grey-3); filter:brightness(1); }
+    46%{ transform:scale(1.05) rotate(-1deg); }
+    72%{ transform:scale(0.98) rotate(0.4deg); }
+    100%{ transform:scale(1) rotate(0deg); }
+  }
+  .label-emphasize{
+    transform-origin:left center;
+    animation:objectLabelEmphasize 0.65s ease-out;
+  }
+  .bio-panel-object:not(.bio-panel-object-mod1) .label-emphasize{
+    --emphasize-color:var(--white); /* matches .bio-panel-object::before */
+  }
+  .bio-panel-object-mod1 .label-emphasize{
+    --emphasize-color:#e6a9b0; /* matches .bio-panel-object-mod1::before */
   }
   .spotlight-title-hoverable:hover{
     opacity:0.75;
@@ -1856,33 +2047,50 @@
 </section>
 
 <section class="spotlight" id="spotlightSection">
-  <div class="spotlight-wrap" id="spotlightWrap">
+  <div class="spotlight-wraps" id="spotlightWraps"></div>
+</section>
 
-    <div class="spotlight-side-box" id="spotlightSideBox" role="button" tabindex="0" aria-label="Karte ein-/ausklappen">
-      <p class="spotlight-side-title" id="spotlightSideTitle">Industrial Noise</p>
+<template id="editionCardTemplate">
+  <div class="spotlight-wrap">
+
+    <div class="spotlight-side-box" role="button" tabindex="0" aria-label="Karte ein-/ausklappen">
+      <p class="spotlight-side-title"></p>
     </div>
 
-    <div class="spotlight-box" id="spotlightBox">
-    <div class="spotlight-box-inner" id="spotlightBoxInner">
+    <div class="spotlight-card-clip">
+    <div class="spotlight-box">
+    <div class="spotlight-box-inner">
 
     <div class="program-bar-wrap">
-      <div class="program-bar" id="programBar"></div>
+      <div class="program-bar"></div>
     </div>
 
-    <button class="spotlight-center-play" id="spotlightPlayBtn" aria-label="Sound abspielen">
+    <button class="spotlight-center-play" aria-label="Sound abspielen">
       <img src="images/logo.png" alt="">
     </button>
+    <!-- decorative only: vine-like tendrils that draw themselves in from
+         below the program bar and curl into the circle whenever a
+         program is selected, before the real button above fades in --
+         see triggerVineReveal() -->
+    <svg class="vine-reveal" viewBox="0 0 100 125" width="100" height="125" aria-hidden="true">
+      <path class="vine vine-left" d="M50,0 L58,18 L18,36 L60,53 L44,67"/>
+      <path class="vine vine-right" d="M50,0 L42,18 L82,36 L40,53 L56,67"/>
+      <path class="vine vine-center" d="M50,0 L22,24 L78,44 L50,67"/>
+      <path class="vine vine-fourth" d="M50,0 L78,24 L22,44 L50,67"/>
+      <circle class="vine-circle" cx="50" cy="96" r="29"/>
+    </svg>
 
     <div class="spotlight-top-row">
       <div class="spotlight-desc-block">
-        <p class="spotlight-title spotlight-title-hoverable" id="programTypeTitle">
-          <span id="programTypeLabel">Synthesizer Pedal:</span>
-          <span class="pedal-type-tooltip" id="pedalTypeTooltip"></span>
+        <p class="spotlight-title spotlight-title-hoverable program-type-title">
+          <span class="program-type-label">Synthesizer Pedal:</span>
+          <span class="pedal-type-tooltip"></span>
         </p>
-        <p class="spotlight-desc-text" id="programDesc">Lädt…</p>
+        <p class="spotlight-desc-text program-desc">Lädt…</p>
       </div>
       <div class="spotlight-diagram-block">
-        <svg class="pedal-diagram" id="pedalDiagram" viewBox="0 0 220 190" xmlns="http://www.w3.org/2000/svg">
+        <div class="pedal-diagram-panel">
+        <svg class="pedal-diagram" viewBox="9.5 0 220 190" xmlns="http://www.w3.org/2000/svg">
           <!-- row 1: 3 switches, each centered exactly between two adjacent potis.
                all start pushed left; click toggles left/right. -->
           <g class="pedal-switch" data-index="0" data-track-x="44.5" data-state="left">
@@ -1936,46 +2144,47 @@
             <circle class="button-inner" cx="154" cy="155" r="8"/>
           </g>
         </svg>
+        </div>
       </div>
     </div>
 
     <div class="collab-divider">
       <span class="collab-divider-line collab-divider-line-left"></span>
-      <span class="collab-divider-text" id="collabDividerText">In Kooperation mit:</span>
+      <span class="collab-divider-text">In Kooperation mit:</span>
       <span class="collab-divider-line collab-divider-line-right"></span>
     </div>
 
     <div class="spotlight-bottom-row">
       <div class="spotlight-circle-block">
-        <div class="artist-circle-wrap" id="artistCircleWrap" role="button" tabindex="0" aria-label="Links des Künstlers anzeigen">
+        <div class="artist-circle-wrap" role="button" tabindex="0" aria-label="Links des Künstlers anzeigen">
           <div class="artist-circle-clip">
-            <img class="artist-circle-img" id="artistImage" src="artists/polykrisis.png" alt="Polykrisis">
+            <img class="artist-circle-img" alt="">
           </div>
         </div>
         <div class="artist-caption">
-          <span class="artist-name-current" id="artistNameCurrent"></span>
+          <span class="artist-name-current"></span>
           <div class="artist-nav-row">
-            <span class="artist-name-next" id="artistNameNext" role="button" tabindex="0"></span>
-            <span class="artist-name-prev" id="artistNamePrev" role="button" tabindex="0"></span>
+            <span class="artist-name-next" role="button" tabindex="0"></span>
+            <span class="artist-name-prev" role="button" tabindex="0"></span>
           </div>
         </div>
       </div>
       <div class="spotlight-bio-block">
-        <div class="bio-slider" id="bioSlider">
-          <div class="bio-panel bio-panel-bio" id="bioPanelBio">
+        <div class="bio-slider">
+          <div class="bio-panel bio-panel-bio">
             <p class="spotlight-title">Bio:</p>
-            <p class="spotlight-desc-text" id="artistBio">Lädt…</p>
+            <p class="spotlight-desc-text artist-bio">Lädt…</p>
           </div>
-          <div class="bio-panel-object" id="bioPanelObject" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
+          <div class="bio-panel-object" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
             <div class="object-info-inner">
-              <p class="spotlight-title"><span id="objectInfoTitle"></span> <span class="mod-tag" id="modTag0">(Mod 0)</span></p>
-              <p class="spotlight-desc-text" id="objectInfoDetail0">Weitere Informationen folgen.</p>
+              <p class="spotlight-title"><span class="object-info-title"></span> <span class="mod-tag mod-tag-0">(Mod 0)</span></p>
+              <p class="spotlight-desc-text object-info-detail-0">Weitere Informationen folgen.</p>
             </div>
           </div>
-          <div class="bio-panel-object bio-panel-object-mod1" id="bioPanelObjectMod1" role="button" tabindex="0" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
+          <div class="bio-panel-object bio-panel-object-mod1" role="button" tabindex="0" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
             <div class="object-info-inner">
-              <p class="spotlight-title"><span id="objectInfoTitleMod1"></span> <span class="mod-tag" id="modTag1">(Mod 1)</span></p>
-              <p class="spotlight-desc-text" id="objectInfoDetail1">Weitere Informationen folgen.</p>
+              <p class="spotlight-title"><span class="object-info-title-mod1"></span> <span class="mod-tag mod-tag-1">(Mod 1)</span></p>
+              <p class="spotlight-desc-text object-info-detail-1">Weitere Informationen folgen.</p>
             </div>
           </div>
         </div>
@@ -1983,9 +2192,10 @@
     </div>
 
     </div>
+    </div>
+    </div>
   </div>
-  </div>
-</section>
+</template>
 
 <section class="why" id="whySection">
   <div class="why-left">
@@ -3157,522 +3367,39 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }
 })();
 
-/* ---------- interactive pedal diagram ---------- */
+/* ---------- edition spotlight cards ----------
+   One .spotlight-wrap (side box + card) per folder under /editions,
+   cloned from the shared <template id="editionCardTemplate">. Only one
+   edition can be open at a time: opening one hides every OTHER
+   edition's side box entirely (not just its card, the whole tab), and
+   closing the open one brings all the other tabs back. Everything that
+   used to be singleton (getElementById, window.showPedalObjectInfo,
+   etc.) is now scoped per clone via querySelector, so N cards can exist
+   and run independently at once. ---------- */
 (function(){
-  try{
-  const diagram = document.getElementById('pedalDiagram');
-  if (!diagram) return;
+  const container = document.getElementById('spotlightWraps');
+  const template = document.getElementById('editionCardTemplate');
+  if (!container || !template) return;
 
-  const objectInfoTitle = document.getElementById('objectInfoTitle');
-  const objectInfoTitleMod1 = document.getElementById('objectInfoTitleMod1');
-  const bioPanelObject = document.getElementById('bioPanelObject');
-  const bioPanelObjectMod1 = document.getElementById('bioPanelObjectMod1');
-  let currentHighlighted = null; // the element actually showing the shadow right now
-  let pendingTarget = null; // the element that *should* show it once a box is open
-  let pendingLabel = null; // the last real control label (null until something is actually clicked)
-  const NO_SELECTION_TEXT = 'Please select a button to obtain some information.';
-  let roseModActive = false; // tracks the middle switch's global "rose mod" state
+  const CARD_MS = 450; // card's own slide+fade, and the sibling show/hide -- all share this duration
 
-  function applyHighlight(targetEl){
-    if (currentHighlighted && currentHighlighted !== targetEl){
-      currentHighlighted.classList.remove('object-highlighted');
-    }
-    if (targetEl){
-      targetEl.classList.add('object-highlighted');
-    }
-    currentHighlighted = targetEl;
-  }
-  function clearHighlight(){
-    if (currentHighlighted){
-      currentHighlighted.classList.remove('object-highlighted');
-      currentHighlighted = null;
-    }
-  }
-
-  // ignore clicks that are actually the end of a text-selection drag, so
-  // selecting text inside an open box doesn't also close it
-  function isPlainClick(){
-    const selection = window.getSelection();
-    return !selection || selection.toString().length === 0;
-  }
-
-  function closeBox(box){
-    if (box) box.classList.remove('expanded');
-  }
-  function isOpen(box){
-    return !!box && box.classList.contains('expanded');
-  }
-
-  function renderBoxTitles(){
-    const modTag0 = document.getElementById('modTag0');
-    const modTag1 = document.getElementById('modTag1');
-    const detail0 = document.getElementById('objectInfoDetail0');
-    const detail1 = document.getElementById('objectInfoDetail1');
-    if (pendingLabel){
-      if (objectInfoTitle) objectInfoTitle.textContent = pendingLabel;
-      if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = pendingLabel;
-      if (modTag0) modTag0.style.display = '';
-      if (modTag1) modTag1.style.display = '';
-      if (detail0) detail0.style.display = '';
-      if (detail1) detail1.style.display = '';
-    } else {
-      if (objectInfoTitle) objectInfoTitle.textContent = NO_SELECTION_TEXT;
-      if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = NO_SELECTION_TEXT;
-      if (modTag0) modTag0.style.display = 'none';
-      if (modTag1) modTag1.style.display = 'none';
-      if (detail0) detail0.style.display = 'none';
-      if (detail1) detail1.style.display = 'none';
-    }
-  }
-
-  // updates which control's info is ready to show, and opens whichever
-  // box matches the current mod state (Mod 0 normally, Mod 1 while the
-  // rose mod is active), closing the other one. The white shadow only
-  // appears on the actual control while a box is open. Exposed on
-  // window so the "switch to a different program" handler can reset it.
-  window.showPedalObjectInfo = function(label, targetEl){
-    pendingTarget = targetEl;
-    pendingLabel = label;
-    renderBoxTitles();
-    openMatchingBox();
-    applyHighlight(targetEl);
-  };
-  window.resetPedalObjectInfo = function(){
-    closeBox(bioPanelObject);
-    closeBox(bioPanelObjectMod1);
-    pendingTarget = null;
-    pendingLabel = null;
-    renderBoxTitles();
-    clearHighlight();
-    syncBoxLayout();
-  };
-
-  // keeps the two boxes' left/right arrangement correct in every
-  // situation: if one is expanded, the other (still closed) needs to
-  // sit at the true edge so it stays visible/clickable on top of it; if
-  // both are closed, they sit side by side -- grey on the left normally,
-  // but swapped (rose on the left) whenever the switch is in the rose
-  // position, matching how the rest of this already reflects switch
-  // state everywhere else
-  function syncBoxLayout(){
-    const roseOpen = isOpen(bioPanelObjectMod1);
-    const greyOpen = isOpen(bioPanelObject);
-
-    if (roseOpen){
-      if (bioPanelObject) bioPanelObject.classList.add('shift-front');
-      if (bioPanelObject) bioPanelObject.classList.remove('swapped');
-      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.remove('swapped');
-    } else if (greyOpen){
-      if (bioPanelObject) bioPanelObject.classList.remove('shift-front');
-      if (bioPanelObject) bioPanelObject.classList.remove('swapped');
-      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.remove('swapped');
-    } else {
-      if (bioPanelObject) bioPanelObject.classList.remove('shift-front');
-      const shouldSwap = roseModActive;
-      if (bioPanelObject) bioPanelObject.classList.toggle('swapped', shouldSwap);
-      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.toggle('swapped', shouldSwap);
-    }
-  }
-
-  function openMatchingBox(){
-    if (roseModActive){
-      closeBox(bioPanelObject);
-      if (bioPanelObjectMod1) bioPanelObjectMod1.classList.add('expanded');
-    } else {
-      closeBox(bioPanelObjectMod1);
-      if (bioPanelObject) bioPanelObject.classList.add('expanded');
-    }
-    syncBoxLayout();
-  }
-  // exposed so the middle switch's handler can flip which box is "live"
-  window.setPedalRoseMod = function(active){
-    roseModActive = active;
-  };
-
-  const POTI_LABELS = ['Potentiometer 1', 'Potentiometer 2', 'Potentiometer 3', 'Potentiometer 4'];
-
-  // the middle switch (index 1) is special: it drives a global "rose
-  // mod" that recolors every switch, poti, and button -- rose when
-  // pushed right, back to normal when pushed left. Defined once here so
-  // both the switch's own click handler and the two info boxes can
-  // trigger it (clicking a box also drives the switch, not just the
-  // other way around).
-  const middleSwitchEl = diagram.querySelector('.pedal-switch[data-index="1"]');
-  renderBoxTitles();
-  function applyMiddleSwitchState(newState, announce){
-    if (!middleSwitchEl) return;
-    const trackX = parseFloat(middleSwitchEl.getAttribute('data-track-x'));
-    const thumb = middleSwitchEl.querySelector('.switch-thumb');
-    middleSwitchEl.setAttribute('data-state', newState);
-    if (thumb) thumb.setAttribute('cx', newState === 'left' ? trackX + 8 : trackX + 36);
-    diagram.classList.toggle('mod-rose-active', newState === 'right');
-    window.setPedalRoseMod(newState === 'right');
-    if (announce){
-      window.showPedalObjectInfo('Switch 2', middleSwitchEl);
-    } else {
-      // just move to the matching box without treating switch 2 itself
-      // as "selected" -- no highlight, and the title keeps showing
-      // whatever was already selected (or the placeholder, if nothing
-      // has been clicked yet)
-      openMatchingBox();
-    }
-  }
-
-  function wireToggle(box, otherBox, forcedSwitchState){
-    if (!box) return;
-    function toggleBox(){
-      const willOpen = !box.classList.contains('expanded');
-      // clicking either box also drives the middle switch to match --
-      // grey box -> switch left (normal), rose box -> switch right (mod)
-      // (this only changes the switch/coloring state -- it does not
-      // treat switch 2 as "selected", so no title/highlight side effect)
-      applyMiddleSwitchState(forcedSwitchState, false);
-      if (!willOpen){
-        // the box we clicked was already the open/matching one; a second
-        // click just closes it back down without changing anything else.
-        // The position-swap sync is deliberately delayed until after the
-        // width collapse finishes -- doing both at once (this box's own
-        // width shrinking while its "right" offset also changes) is what
-        // caused the jumpy motion.
-        box.classList.remove('expanded');
-        clearHighlight();
-        setTimeout(syncBoxLayout, 370);
-      } else {
-        syncBoxLayout();
-      }
-    }
-    box.addEventListener('click', function(){
-      if (!isPlainClick()) return;
-      toggleBox();
-    });
-    box.addEventListener('keydown', function(e){
-      if (e.key === 'Enter' || e.key === ' '){
-        e.preventDefault();
-        toggleBox();
-      }
-    });
-  }
-  wireToggle(bioPanelObject, bioPanelObjectMod1, 'left');
-  wireToggle(bioPanelObjectMod1, bioPanelObject, 'right');
-
-  // switches: click toggles between the left and right resting position
-  diagram.querySelectorAll('.pedal-switch').forEach(function(sw){
-    const track = sw.querySelector('.switch-track');
-    const thumb = sw.querySelector('.switch-thumb');
-    const trackX = parseFloat(sw.getAttribute('data-track-x'));
-    const leftCx = trackX + 8;
-    const rightCx = trackX + 36;
-    const switchIndex = parseInt(sw.getAttribute('data-index'), 10);
-    const switchNumber = switchIndex + 1;
-
-    function render(){
-      const state = sw.getAttribute('data-state');
-      thumb.setAttribute('cx', state === 'left' ? leftCx : rightCx);
-    }
-    render();
-
-    sw.addEventListener('click', function(){
-      if (switchIndex === 1){
-        // the middle switch's own toggling goes through the shared
-        // function above, so box state and switch state can never
-        // disagree regardless of which one triggered the change
-        const state = sw.getAttribute('data-state');
-        applyMiddleSwitchState(state === 'left' ? 'right' : 'left', true);
-        return;
-      }
-      const state = sw.getAttribute('data-state');
-      const newState = state === 'left' ? 'right' : 'left';
-      sw.setAttribute('data-state', newState);
-      render();
-      window.showPedalObjectInfo('Switch ' + switchNumber, sw);
-    });
-  });
-
-  // potis: drag the knob between -135deg (bottom-left) and +135deg
-  // (bottom-right), measured from straight up (0deg) -- the bottom 90deg
-  // arc in between is a dead zone the knob can't enter, like a real pot's
-  // mechanical stop
-  const POTI_MIN_DEG = -135;
-  const POTI_MAX_DEG = 135;
-  const POTI_LINE_LEN = 13;
-
-  diagram.querySelectorAll('.pedal-poti').forEach(function(poti){
-    const line = poti.querySelector('.poti-line');
-    const cx = parseFloat(poti.getAttribute('data-cx'));
-    const cy = parseFloat(poti.getAttribute('data-cy'));
-    const potiIndex = parseInt(poti.getAttribute('data-index'), 10);
-    let angleDeg = 0; // starts pointing straight up
-    let dragging = false;
-
-    function render(){
-      const rad = angleDeg * Math.PI / 180;
-      // 0deg = straight up; positive = clockwise
-      const x2 = cx + POTI_LINE_LEN * Math.sin(rad);
-      const y2 = cy - POTI_LINE_LEN * Math.cos(rad);
-      line.setAttribute('x2', x2.toFixed(1));
-      line.setAttribute('y2', y2.toFixed(1));
-    }
-    render();
-
-    function angleFromPointer(evt){
-      const rect = diagram.getBoundingClientRect();
-      const viewBox = diagram.viewBox.baseVal;
-      const scaleX = viewBox.width / rect.width;
-      const scaleY = viewBox.height / rect.height;
-      const px = (evt.clientX - rect.left) * scaleX + viewBox.x;
-      const py = (evt.clientY - rect.top) * scaleY + viewBox.y;
-      const dx = px - cx;
-      const dy = py - cy;
-      // angle measured clockwise from straight up
-      let deg = Math.atan2(dx, -dy) * 180 / Math.PI;
-      if (deg < POTI_MIN_DEG) deg = POTI_MIN_DEG;
-      if (deg > POTI_MAX_DEG) deg = POTI_MAX_DEG;
-      return deg;
-    }
-
-    function startDrag(evt){
-      dragging = true;
-      poti.classList.add('poti-active');
-      angleDeg = angleFromPointer(evt);
-      render();
-      window.showPedalObjectInfo(POTI_LABELS[potiIndex] || 'Potentiometer', poti);
-      evt.preventDefault();
-    }
-    function moveDrag(evt){
-      if (!dragging) return;
-      angleDeg = angleFromPointer(evt);
-      render();
-    }
-    function endDrag(){
-      dragging = false;
-      poti.classList.remove('poti-active');
-    }
-
-    poti.addEventListener('mousedown', startDrag);
-    window.addEventListener('mousemove', moveDrag);
-    window.addEventListener('mouseup', endDrag);
-
-    poti.addEventListener('touchstart', function(evt){
-      startDrag(evt.touches[0]);
-    }, { passive:false });
-    window.addEventListener('touchmove', function(evt){
-      if (dragging) moveDrag(evt.touches[0]);
-    }, { passive:true });
-    window.addEventListener('touchend', endDrag);
-  });
-
-  // buttons: click toggles a pressed state (ring fills rose, center fills white)
-  diagram.querySelectorAll('.pedal-button').forEach(function(btn){
-    const buttonNumber = parseInt(btn.getAttribute('data-index'), 10) + 1;
-    btn.addEventListener('click', function(){
-      btn.classList.toggle('pressed');
-      window.showPedalObjectInfo('Button ' + buttonNumber, btn);
-    });
-  });
-  } catch(e) { console.error('Pedal diagram setup failed:', e); }
-})();
-
-/* ---------- "Industrial Noise" side box: click collapses/expands the
-   whole card. Closing: the whole card (border + content together, as
-   one unit) slides left toward the side box's position and fades --
-   only once that's fully invisible does the layout actually collapse
-   and the side box move to center. Opening reverses the order: side box
-   returns first, then the whole card (again as one unit) slides back in
-   from the left, originating at the side box. ---------- */
-(function(){
-  const wrap = document.getElementById('spotlightWrap');
-  const sideBox = document.getElementById('spotlightSideBox');
-  const card = document.getElementById('spotlightBox');
-  const cardInner = document.getElementById('spotlightBoxInner');
-  if (!wrap || !sideBox || !card || !cardInner) return;
-
-  const CARD_MS = 450;  // the card's own slide-and-fade (both border and content together)
-  const SLIDE_MS = 600; // the side box's move to/from center
-
-  // lock in a fixed height for the whole row so it never changes size
-  // during collapse/expand -- without this, the card's content shrinking
-  // toward width:0 also collapses its natural height (since most content
-  // needs some width to lay out at all), and because the row uses
-  // align-items:stretch, that shrinking height was also dragging the
-  // side box down with it.
-  function lockHeight(){
-    const naturalHeight = wrap.getBoundingClientRect().height;
-    const current = parseFloat(wrap.style.minHeight) || 0;
-    if (naturalHeight > current){
-      wrap.style.minHeight = naturalHeight + 'px';
-    }
-  }
-  lockHeight();
-  window.addEventListener('load', lockHeight); // catches height changes from late-loading fonts/images
-
-  function slideSideBox(target){
-    sideBox.classList.add('sliding');
-    sideBox.style.setProperty('--side-translate', target.toFixed(1) + 'px');
-    clearTimeout(toggleCard._blurTimer);
-    toggleCard._blurTimer = setTimeout(function(){
-      sideBox.classList.remove('sliding');
-    }, SLIDE_MS + 40);
-  }
-
-  function toggleCard(){
-    const collapsing = !wrap.classList.contains('card-collapsed');
-    clearTimeout(toggleCard._stageTimer);
-
-    if (collapsing){
-      // clicking to collapse also closes whichever pedal-info box (grey
-      // or rose) happens to be open
-      if (window.resetPedalObjectInfo) window.resetPedalObjectInfo();
-
-      // measured now, while the box is still at its natural width --
-      // used as a fixed pixel value so the slide distance stays
-      // constant even though the layout width collapses afterward
-      const naturalBoxWidth = card.getBoundingClientRect().width;
-
-      // stage 1: the whole card -- border and content together, as one
-      // unit -- slides left toward the side box and fades. Both the
-      // outer box's transform and the inner content's transform+opacity
-      // start at the exact same instant, so they move as a single piece.
-      card.style.setProperty('--box-slide', (-naturalBoxWidth).toFixed(1) + 'px');
-      cardInner.classList.add('sliding-out');
-
-      // stage 2: only once that's finished (fully invisible/off to the
-      // left) does the layout actually collapse, and the side box move
-      toggleCard._stageTimer = setTimeout(function(){
-        wrap.classList.add('card-collapsed');
-        const wrapWidth = wrap.getBoundingClientRect().width;
-        const sideBoxWidth = sideBox.getBoundingClientRect().width;
-        slideSideBox(wrapWidth / 2 - sideBoxWidth / 2);
-      }, CARD_MS + 40);
-
-    } else {
-      lockHeight(); // re-check in case content grew while collapsed
-
-      // stage 1: the side box returns to its attached position first
-      slideSideBox(0);
-
-      // stage 2: once that's finished, the layout expands back out, and
-      // in the exact same instant the whole card -- border and content
-      // together -- slides back in from the left, originating at the
-      // side box's position
-      toggleCard._stageTimer = setTimeout(function(){
-        wrap.classList.remove('card-collapsed');
-        card.style.setProperty('--box-slide', '0px');
-        cardInner.classList.remove('sliding-out');
-      }, SLIDE_MS + 40);
-    }
-  }
-  sideBox.addEventListener('click', toggleCard);
-  sideBox.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' || e.key === ' '){
-      e.preventDefault();
-      toggleCard();
-    }
-  });
-})();
-
-/* ---------- artist/program spotlight: horizontal program bar ---------- */
-(function(){
-  const bar = document.getElementById('programBar');
-  const artistImage = document.getElementById('artistImage');
-  const artistBio = document.getElementById('artistBio');
-  const programDesc = document.getElementById('programDesc');
-  const programTypeTitle = document.getElementById('programTypeTitle');
-  const programTypeLabel = document.getElementById('programTypeLabel');
-  const pedalTypeTooltip = document.getElementById('pedalTypeTooltip');
-  const sideTitle = document.getElementById('spotlightSideTitle');
-  const playBtn = document.getElementById('spotlightPlayBtn');
-  const artistCurrentEl = document.getElementById('artistNameCurrent');
-  const artistNextEl = document.getElementById('artistNameNext');
-  const artistPrevEl = document.getElementById('artistNamePrev');
-  if (!bar || !artistImage || !artistBio || !programDesc || !programTypeTitle || !programTypeLabel || !pedalTypeTooltip || !sideTitle || !playBtn || !artistCurrentEl || !artistNextEl || !artistPrevEl) return;
-
-  // slug = lowercase, no spaces -- e.g. "Der Verlorene Faden" -> "derverlorenefaden"
   function slugify(name){
     return name.toLowerCase().replace(/\s+/g, '');
   }
-
-  // folder-name -> display title: underscores become spaces, each word
-  // capitalized -- e.g. "industrial_noise" -> "Industrial Noise"
   function folderNameToTitle(name){
     return name.split('_').map(function(word){
       return word.charAt(0).toUpperCase() + word.slice(1);
     }).join(' ');
   }
-
-  // NOTE: only one edition exists right now, but this is written so more
-  // can be added later -- each edition is just a folder name under
-  // /editions, and this constant is the only thing to change/extend
-  // when that happens.
-  const currentEditionSlug = 'industrial_noise';
-  sideTitle.textContent = folderNameToTitle(currentEditionSlug);
-
-  // each program is paired 1:1 with an artist -- selecting a program
-  // (via the bar) always shows the paired artist too. "type" determines
-  // both the color coding (see --color-fx / --color-synth in :root) and
-  // which subfolder its description lives in. Files expected on disk:
-  //   artists/<slug>.png                                 (artist photo)
-  //   bios/<slug>.txt                                     (artist bio)
-  //   editions/<edition>/synths/<slug>.txt  (for type:'synth')
-  //   editions/<edition>/fxs/<slug>.txt     (for type:'fx')
-  //   examples/<slug>.wav          (sound to play, named after the program)
-  //   images/logo.png              (single play-button icon, same for all)
-  //
-  // NOTE: I don't know which of these four are actually synths vs
-  // effects on your end -- this is a guess (Noise/Drums as synths,
-  // Panic Attack/Filter as fx). Just change the "type" field below for
-  // any that are wrong.
-  const spotlightData = [
-    { artist: 'Polykrisis', program: 'Noise', type: 'synth' },
-    { artist: 'MVROWI', program: 'Drums', type: 'synth' },
-    { artist: 'Der Verlorene Faden', program: 'Panic Attack', type: 'fx' },
-    { artist: 'Grodock', program: 'Filter', type: 'fx' }
-  ].map(function(d){
-    return {
-      artist: d.artist,
-      program: d.program,
-      type: d.type,
-      artistSlug: slugify(d.artist),
-      programSlug: slugify(d.program)
-    };
-  });
-
-  let currentIndex = 0;
-  let currentWav = 'examples/' + spotlightData[0].programSlug + '.wav';
-  let currentType = spotlightData[0].type;
-  let tooltipLoadedForType = null; // caches which type's explanation is currently loaded
-  let requestToken = 0; // guards against a slow fetch overwriting a newer selection
-
-  const SLOT_WIDTH = 130;
-  const barItems = [];
-
   function colorForType(type){
     return type === 'fx' ? 'var(--color-fx)' : 'var(--color-synth)';
   }
-
-  // builds the program bar labels once; their x-position is recomputed
-  // on every selection change so the chosen one always ends up centered.
-  // each label is colorized by its type (fx = blue, synth = red).
-  spotlightData.forEach(function(entry, idx){
-    const item = document.createElement('div');
-    item.className = 'program-bar-item';
-    item.textContent = entry.program;
-    item.style.color = colorForType(entry.type);
-    item.addEventListener('click', function(){
-      currentIndex = idx;
-      applyEntry(spotlightData[currentIndex]);
-    });
-    bar.appendChild(item);
-    barItems.push(item);
-  });
-
-  function positionBar(){
-    barItems.forEach(function(item, idx){
-      const dx = (idx - currentIndex) * SLOT_WIDTH;
-      item.style.transform = 'translate(' + dx.toFixed(1) + 'px, -50%)';
-      item.classList.toggle('selected', idx === currentIndex);
+  function fetchJSON(url){
+    return fetch(url).then(function(res){
+      if (!res.ok) throw new Error('not found: ' + url);
+      return res.json();
     });
   }
-
   function fetchText(url){
     return fetch(url).then(function(res){
       if (!res.ok) throw new Error('not found');
@@ -3680,152 +3407,786 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     });
   }
 
-  function applyEntry(entry){
-    const myToken = ++requestToken;
+  // ---------- shared accordion coordinator: at most one instance "active" ----------
+  const instances = [];
+  let activeInstance = null;
 
-    positionBar();
-    currentWav = 'examples/' + entry.programSlug + '.wav';
-    if (window.resetPedalObjectInfo) window.resetPedalObjectInfo();
-
-    // pedal-type title + color: "Synthesizer Pedal:" (red) or
-    // "Effects Pedal:" (blue), depending on this program's type
-    programTypeLabel.textContent = entry.type === 'fx' ? 'Effects Pedal:' : 'Synthesizer Pedal:';
-    programTypeTitle.style.color = colorForType(entry.type);
-    currentType = entry.type;
-    pedalTypeTooltip.classList.remove('visible');
-    tooltipLoadedForType = null;
-
-    // artist caption: current name (highlighted), next name (clickable,
-    // advances by one), previous name (shown for context only, not
-    // clickable) -- wraps around at either end of the list
-    const nextIdx = (currentIndex + 1) % spotlightData.length;
-    const prevIdx = (currentIndex - 1 + spotlightData.length) % spotlightData.length;
-    artistCurrentEl.textContent = entry.artist;
-    artistNextEl.textContent = '› ' + spotlightData[nextIdx].artist;
-    artistPrevEl.textContent = '‹ ' + spotlightData[prevIdx].artist;
-
-    // artist photo
-    artistImage.alt = entry.artist;
-    artistImage.style.display = '';
-    const circleWrap = artistImage.closest('.artist-circle-wrap');
-    const existingFallback = circleWrap.parentElement.querySelector('.spotlight-fallback');
-    if (existingFallback) existingFallback.remove();
-    artistImage.onerror = function(){
-      if (myToken !== requestToken) return;
-      circleWrap.style.display = 'none';
-      const msg = document.createElement('p');
-      msg.className = 'spotlight-fallback';
-      msg.textContent = 'Bild nicht gefunden';
-      circleWrap.insertAdjacentElement('afterend', msg);
-    };
-    artistImage.src = 'artists/' + entry.artistSlug + '.png';
-
-    // artist bio
-    artistBio.textContent = 'Lädt…';
-    fetchText('bios/' + entry.artistSlug + '.txt').then(function(text){
-      if (myToken !== requestToken) return;
-      artistBio.textContent = text.trim();
-    }).catch(function(){
-      if (myToken !== requestToken) return;
-      artistBio.textContent = 'Bio nicht gefunden';
+  // FLIP (First-Last-Invert-Play): the tabs' actual left/right movement
+  // during an open/close is a byproduct of several *different* elements'
+  // width/margin transitions (the opening card, the collapsing siblings,
+  // the row's own centering) all resolving at once, which layout doesn't
+  // guarantee will read as one smooth motion. So instead each side box's
+  // position is snapshotted before the class change, the class change is
+  // applied instantly, then the box is nudged back to where it visually
+  // was (transition suppressed) and released into a single clean
+  // transform transition toward its real spot -- one deliberate motion
+  // regardless of how choppy the underlying reflow actually is.
+  // returns true if any side box actually had to move (so callers can wait
+  // out the move before doing anything that assumes the tabs have settled)
+  function flipSideBoxes(mutate){
+    const before = instances.map(function(inst){
+      return inst.sideBox.getBoundingClientRect().left;
     });
-
-    // program description -- now lives under editions/<edition>/synths/
-    // or editions/<edition>/fxs/, matching this program's type
-    const typeFolder = entry.type === 'fx' ? 'fxs' : 'synths';
-    programDesc.textContent = 'Lädt…';
-    fetchText('editions/' + currentEditionSlug + '/' + typeFolder + '/' + entry.programSlug + '.txt').then(function(text){
-      if (myToken !== requestToken) return;
-      programDesc.textContent = text.trim();
-    }).catch(function(){
-      if (myToken !== requestToken) return;
-      programDesc.textContent = 'Beschreibung nicht gefunden';
+    mutate();
+    let animated = false;
+    instances.forEach(function(inst, i){
+      const sideBox = inst.sideBox;
+      const dx = before[i] - sideBox.getBoundingClientRect().left;
+      if (Math.abs(dx) < 0.5) return;
+      animated = true;
+      sideBox.style.transition = 'none';
+      sideBox.style.transform = 'translateX(' + dx + 'px)';
+      void sideBox.offsetHeight; // commit the jump before releasing it
+      sideBox.style.transition = '';
+      sideBox.style.transform = '';
+      sideBox.addEventListener('transitionend', function onDone(){
+        sideBox.style.transition = ''; // hand control back to the stylesheet
+        sideBox.removeEventListener('transitionend', onDone);
+      }, { once:true });
     });
+    return animated;
   }
 
-  // hover on "Synthesizer Pedal:" / "Effects Pedal:" -- shows a small
-  // explanation box for whichever type is currently selected. Text comes
-  // from texts/synth_explanation.txt or texts/fx_explanaition.txt
-  // (filenames exactly as specified), fetched once per type and cached.
-  const explanationCache = {};
-  function loadExplanation(type){
-    if (tooltipLoadedForType === type) return; // already showing this type's text
-    tooltipLoadedForType = type;
-    if (explanationCache[type] !== undefined){
-      pedalTypeTooltip.textContent = explanationCache[type];
-      return;
-    }
-    pedalTypeTooltip.textContent = 'Lädt…';
-    const filename = type === 'fx' ? 'fx_explanaition.txt' : 'synth_explanation.txt';
-    fetch('texts/' + filename)
-      .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
-      .then(function(text){
-        explanationCache[type] = text.trim();
-        if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
-      })
-      .catch(function(){
-        explanationCache[type] = 'Erklärung nicht gefunden';
-        if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
+  function requestOpen(instance){
+    if (activeInstance) return; // inactive siblings are unclickable while one is open, shouldn't normally reach here
+    activeInstance = instance;
+    const tabsAreMoving = flipSideBoxes(function(){
+      instances.forEach(function(other){
+        if (other === instance) other.wrap.classList.add('wrap-active');
+        else other.wrap.classList.add('wrap-hidden-sibling');
       });
+    });
+    // the card sliding out from behind its side box while that side box is
+    // still visibly sliding into place reads as the card popping out of
+    // nowhere -- so it only starts opening once the tab has actually
+    // finished settling into its final spot.
+    if (tabsAreMoving) setTimeout(function(){ instance.openCard(); }, CARD_MS);
+    else instance.openCard();
   }
-  programTypeTitle.addEventListener('mouseenter', function(){
-    loadExplanation(currentType);
-    pedalTypeTooltip.classList.add('visible');
-  });
-  programTypeTitle.addEventListener('mouseleave', function(){
-    pedalTypeTooltip.classList.remove('visible');
-  });
+  function requestClose(instance){
+    if (activeInstance !== instance) return;
+    instance.closeCard(function(){
+      activeInstance = null;
+      flipSideBoxes(function(){
+        instances.forEach(function(other){
+          if (other === instance) other.wrap.classList.remove('wrap-active');
+          else other.wrap.classList.remove('wrap-hidden-sibling');
+        });
+      });
+    });
+  }
 
-  artistNextEl.addEventListener('click', function(){
-    currentIndex = (currentIndex + 1) % spotlightData.length;
-    applyEntry(spotlightData[currentIndex]);
-  });
-  artistNextEl.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' || e.key === ' '){
-      e.preventDefault();
-      currentIndex = (currentIndex + 1) % spotlightData.length;
-      applyEntry(spotlightData[currentIndex]);
-    }
-  });
-  artistPrevEl.addEventListener('click', function(){
-    currentIndex = (currentIndex - 1 + spotlightData.length) % spotlightData.length;
-    applyEntry(spotlightData[currentIndex]);
-  });
-  artistPrevEl.addEventListener('keydown', function(e){
-    if (e.key === 'Enter' || e.key === ' '){
-      e.preventDefault();
-      currentIndex = (currentIndex - 1 + spotlightData.length) % spotlightData.length;
-      applyEntry(spotlightData[currentIndex]);
-    }
-  });
+  // ---------- builds one edition's card: clones the template, wires the
+  // pedal diagram, mod-info panels, program bar/artist swapping, and its
+  // own open/close animation, all scoped to this one clone ----------
+  function mountEdition(editionSlug, programs, colors){
+    const fragment = template.content.cloneNode(true);
+    const wrap = fragment.querySelector('.spotlight-wrap');
+    container.appendChild(fragment);
 
-  // clicking the artist circle: for now just shows a placeholder modal --
-  // intended to later open the artist's real links/credentials
-  const artistCircleWrap = document.getElementById('artistCircleWrap');
-  const modalArtistCredentials = document.getElementById('modalArtistCredentials');
-  if (artistCircleWrap && modalArtistCredentials){
-    const openCredentials = function(){
-      if (window.resetPedalObjectInfo) window.resetPedalObjectInfo();
-      modalArtistCredentials.classList.add('active');
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-    };
-    artistCircleWrap.addEventListener('click', openCredentials);
-    artistCircleWrap.addEventListener('keydown', function(e){
+    const sideBox = wrap.querySelector('.spotlight-side-box');
+    const sideTitle = wrap.querySelector('.spotlight-side-title');
+    const card = wrap.querySelector('.spotlight-box');
+    sideTitle.textContent = folderNameToTitle(editionSlug);
+    if (colors){
+      if (colors.color_bg) wrap.style.setProperty('--edition-bg', colors.color_bg);
+      if (colors.color_fg) wrap.style.setProperty('--edition-fg', colors.color_fg);
+    }
+
+    /* ---- pedal diagram + mod-info panels ---- */
+    const diagram = wrap.querySelector('.pedal-diagram');
+    const diagramPanel = wrap.querySelector('.pedal-diagram-panel');
+    const objectInfoTitle = wrap.querySelector('.object-info-title');
+    const objectInfoTitleMod1 = wrap.querySelector('.object-info-title-mod1');
+    // the whole title row (label + "(Mod n)" tag together), so the emphasize
+    // animation pops both as one unit instead of just the label
+    const objectInfoTitleRow = objectInfoTitle ? objectInfoTitle.closest('.spotlight-title') : null;
+    const objectInfoTitleMod1Row = objectInfoTitleMod1 ? objectInfoTitleMod1.closest('.spotlight-title') : null;
+    const bioPanelObject = wrap.querySelector('.bio-panel-object:not(.bio-panel-object-mod1)');
+    const bioPanelObjectMod1 = wrap.querySelector('.bio-panel-object-mod1');
+    let currentHighlighted = null; // the element actually showing the shadow right now
+    let pendingLabel = null; // the last real control label (null until something is actually clicked)
+    const NO_SELECTION_TEXT = 'Please select a button to obtain some information.';
+    let roseModActive = false; // tracks the middle switch's global "rose mod" state
+
+    function applyHighlight(targetEl){
+      if (currentHighlighted && currentHighlighted !== targetEl){
+        currentHighlighted.classList.remove('object-highlighted');
+      }
+      if (targetEl) targetEl.classList.add('object-highlighted');
+      currentHighlighted = targetEl;
+    }
+    function clearHighlight(){
+      if (currentHighlighted){
+        currentHighlighted.classList.remove('object-highlighted');
+        currentHighlighted = null;
+      }
+    }
+    // ignore clicks that are actually the end of a text-selection drag, so
+    // selecting text inside an open box doesn't also close it
+    function isPlainClick(){
+      const selection = window.getSelection();
+      return !selection || selection.toString().length === 0;
+    }
+    // keepBehind: only when this box is closing *without* its sibling
+    // taking over as the new expanded one (i.e. going all the way back to
+    // idle) does it need to be artificially pinned behind while it
+    // shrinks (see .closing above) -- when it's closing *because* the
+    // sibling is opening in its place, this box needs to stay in front
+    // (its normal, non-expanded z-index) the whole time, since that's
+    // its real final role: the closed tab sitting on top of the sibling
+    // that's now expanded underneath it.
+    function closeBox(box, keepBehind){
+      if (!box) return;
+      if (keepBehind && box.classList.contains('expanded')){
+        box.classList.add('closing');
+        setTimeout(function(){ box.classList.remove('closing'); }, 360);
+      }
+      box.classList.remove('expanded');
+    }
+    function isOpen(box){
+      return !!box && box.classList.contains('expanded');
+    }
+    function renderBoxTitles(){
+      const modTag0 = wrap.querySelector('.mod-tag-0');
+      const modTag1 = wrap.querySelector('.mod-tag-1');
+      const detail0 = wrap.querySelector('.object-info-detail-0');
+      const detail1 = wrap.querySelector('.object-info-detail-1');
+      if (pendingLabel){
+        if (objectInfoTitle) objectInfoTitle.textContent = pendingLabel;
+        if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = pendingLabel;
+        if (modTag0) modTag0.style.display = '';
+        if (modTag1) modTag1.style.display = '';
+        if (detail0) detail0.style.display = '';
+        if (detail1) detail1.style.display = '';
+      } else {
+        if (objectInfoTitle) objectInfoTitle.textContent = NO_SELECTION_TEXT;
+        if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = NO_SELECTION_TEXT;
+        if (modTag0) modTag0.style.display = 'none';
+        if (modTag1) modTag1.style.display = 'none';
+        if (detail0) detail0.style.display = 'none';
+        if (detail1) detail1.style.display = 'none';
+      }
+    }
+    // updates which control's info is ready to show, and opens whichever
+    // box matches the current mod state (Mod 0 normally, Mod 1 while the
+    // rose mod is active), closing the other one. The white shadow only
+    // appears on the actual control while a box is open.
+    function emphasizeLabelChange(){
+      [objectInfoTitleRow, objectInfoTitleMod1Row].forEach(function(el){
+        if (!el) return;
+        el.classList.remove('label-emphasize');
+        void el.offsetWidth; // restart the animation even if it's still attached from last time
+        el.classList.add('label-emphasize');
+      });
+    }
+    function showPedalObjectInfo(label, targetEl){
+      // only emphasize when the panel was already open showing a
+      // *different* control -- not on the very first selection
+      const isChange = pendingLabel !== null && pendingLabel !== label;
+      pendingLabel = label;
+      renderBoxTitles();
+      openMatchingBox();
+      applyHighlight(targetEl);
+      if (isChange) emphasizeLabelChange();
+    }
+    function resetPedalObjectInfo(){
+      closeBox(bioPanelObject, true);
+      closeBox(bioPanelObjectMod1, true);
+      pendingLabel = null;
+      renderBoxTitles();
+      clearHighlight();
+      syncBoxLayout();
+    }
+    // keeps the two boxes' left/right arrangement correct in every
+    // situation: if one is expanded, the other (still closed) needs to
+    // sit at the true edge so it stays visible/clickable on top of it; if
+    // both are closed, they sit side by side -- grey on the left normally,
+    // but swapped (rose on the left) whenever the switch is in the rose
+    // position, matching how the rest of this already reflects switch
+    // state everywhere else
+    function syncBoxLayout(){
+      const roseOpen = isOpen(bioPanelObjectMod1);
+      const greyOpen = isOpen(bioPanelObject);
+      if (roseOpen){
+        if (bioPanelObject) bioPanelObject.classList.add('shift-front');
+        if (bioPanelObject) bioPanelObject.classList.remove('swapped');
+        if (bioPanelObjectMod1) bioPanelObjectMod1.classList.remove('swapped');
+      } else if (greyOpen){
+        if (bioPanelObject) bioPanelObject.classList.remove('shift-front');
+        if (bioPanelObject) bioPanelObject.classList.remove('swapped');
+        if (bioPanelObjectMod1) bioPanelObjectMod1.classList.remove('swapped');
+      } else {
+        if (bioPanelObject) bioPanelObject.classList.remove('shift-front');
+        const shouldSwap = roseModActive;
+        if (bioPanelObject) bioPanelObject.classList.toggle('swapped', shouldSwap);
+        if (bioPanelObjectMod1) bioPanelObjectMod1.classList.toggle('swapped', shouldSwap);
+      }
+    }
+    function openMatchingBox(){
+      if (roseModActive){
+        closeBox(bioPanelObject);
+        if (bioPanelObjectMod1) bioPanelObjectMod1.classList.add('expanded');
+      } else {
+        closeBox(bioPanelObjectMod1);
+        if (bioPanelObject) bioPanelObject.classList.add('expanded');
+      }
+      syncBoxLayout();
+    }
+    function setPedalRoseMod(active){
+      roseModActive = active;
+    }
+
+    if (diagram){
+      try{
+      const POTI_LABELS = ['Potentiometer 1', 'Potentiometer 2', 'Potentiometer 3', 'Potentiometer 4'];
+
+      // the middle switch (index 1) is special: it drives this card's
+      // own "rose mod" that recolors every switch, poti, and button --
+      // rose when pushed right, back to normal when pushed left.
+      const middleSwitchEl = diagram.querySelector('.pedal-switch[data-index="1"]');
+      renderBoxTitles();
+      function applyMiddleSwitchState(newState, announce){
+        if (!middleSwitchEl) return;
+        const trackX = parseFloat(middleSwitchEl.getAttribute('data-track-x'));
+        const thumb = middleSwitchEl.querySelector('.switch-thumb');
+        middleSwitchEl.setAttribute('data-state', newState);
+        if (thumb) thumb.setAttribute('cx', newState === 'left' ? trackX + 8 : trackX + 36);
+        diagram.classList.toggle('mod-rose-active', newState === 'right');
+        if (diagramPanel) diagramPanel.classList.toggle('mod-rose-active', newState === 'right');
+        setPedalRoseMod(newState === 'right');
+        if (announce){
+          showPedalObjectInfo('Switch 2', middleSwitchEl);
+        } else {
+          openMatchingBox();
+        }
+      }
+
+      function wireToggle(box, otherBox, forcedSwitchState){
+        if (!box) return;
+        function toggleBox(){
+          const willOpen = !box.classList.contains('expanded');
+          applyMiddleSwitchState(forcedSwitchState, false);
+          if (!willOpen){
+            closeBox(box, true); // going back to idle -- keep it behind while it shrinks (see .closing)
+            clearHighlight();
+            // run in the same tick as closeBox, not delayed -- so the
+            // swapped position (if any) is baked into the very first
+            // frame of the shrink, and it animates straight to its real
+            // final spot instead of snapping to the unswapped position
+            // first and then correcting over to the swapped one after
+            syncBoxLayout();
+          } else {
+            syncBoxLayout();
+          }
+        }
+        box.addEventListener('click', function(){
+          if (!isPlainClick()) return;
+          toggleBox();
+        });
+        box.addEventListener('keydown', function(e){
+          if (e.key === 'Enter' || e.key === ' '){
+            e.preventDefault();
+            toggleBox();
+          }
+        });
+      }
+      wireToggle(bioPanelObject, bioPanelObjectMod1, 'left');
+      wireToggle(bioPanelObjectMod1, bioPanelObject, 'right');
+
+      // switches: click toggles between the left and right resting position
+      diagram.querySelectorAll('.pedal-switch').forEach(function(sw){
+        const thumb = sw.querySelector('.switch-thumb');
+        const trackX = parseFloat(sw.getAttribute('data-track-x'));
+        const leftCx = trackX + 8;
+        const rightCx = trackX + 36;
+        const switchIndex = parseInt(sw.getAttribute('data-index'), 10);
+        const switchNumber = switchIndex + 1;
+        function render(){
+          const state = sw.getAttribute('data-state');
+          thumb.setAttribute('cx', state === 'left' ? leftCx : rightCx);
+        }
+        render();
+        sw.addEventListener('click', function(){
+          if (switchIndex === 1){
+            const state = sw.getAttribute('data-state');
+            applyMiddleSwitchState(state === 'left' ? 'right' : 'left', true);
+            return;
+          }
+          const state = sw.getAttribute('data-state');
+          const newState = state === 'left' ? 'right' : 'left';
+          sw.setAttribute('data-state', newState);
+          render();
+          showPedalObjectInfo('Switch ' + switchNumber, sw);
+        });
+      });
+
+      // potis: drag the knob between -135deg (bottom-left) and +135deg
+      // (bottom-right), measured from straight up (0deg) -- the bottom
+      // 90deg arc in between is a dead zone, like a real pot's mechanical stop
+      const POTI_MIN_DEG = -135;
+      const POTI_MAX_DEG = 135;
+      const POTI_LINE_LEN = 13;
+      diagram.querySelectorAll('.pedal-poti').forEach(function(poti){
+        const line = poti.querySelector('.poti-line');
+        const cx = parseFloat(poti.getAttribute('data-cx'));
+        const cy = parseFloat(poti.getAttribute('data-cy'));
+        const potiIndex = parseInt(poti.getAttribute('data-index'), 10);
+        let angleDeg = 0;
+        let dragging = false;
+        function render(){
+          const rad = angleDeg * Math.PI / 180;
+          const x2 = cx + POTI_LINE_LEN * Math.sin(rad);
+          const y2 = cy - POTI_LINE_LEN * Math.cos(rad);
+          line.setAttribute('x2', x2.toFixed(1));
+          line.setAttribute('y2', y2.toFixed(1));
+        }
+        render();
+        function angleFromPointer(evt){
+          const rect = diagram.getBoundingClientRect();
+          const viewBox = diagram.viewBox.baseVal;
+          const scaleX = viewBox.width / rect.width;
+          const scaleY = viewBox.height / rect.height;
+          const px = (evt.clientX - rect.left) * scaleX + viewBox.x;
+          const py = (evt.clientY - rect.top) * scaleY + viewBox.y;
+          const dx = px - cx;
+          const dy = py - cy;
+          let deg = Math.atan2(dx, -dy) * 180 / Math.PI;
+          if (deg < POTI_MIN_DEG) deg = POTI_MIN_DEG;
+          if (deg > POTI_MAX_DEG) deg = POTI_MAX_DEG;
+          return deg;
+        }
+        function startDrag(evt){
+          dragging = true;
+          poti.classList.add('poti-active');
+          angleDeg = angleFromPointer(evt);
+          render();
+          showPedalObjectInfo(POTI_LABELS[potiIndex] || 'Potentiometer', poti);
+          evt.preventDefault();
+        }
+        function moveDrag(evt){
+          if (!dragging) return;
+          angleDeg = angleFromPointer(evt);
+          render();
+        }
+        function endDrag(){
+          dragging = false;
+          poti.classList.remove('poti-active');
+        }
+        poti.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', moveDrag);
+        window.addEventListener('mouseup', endDrag);
+        poti.addEventListener('touchstart', function(evt){
+          startDrag(evt.touches[0]);
+        }, { passive:false });
+        window.addEventListener('touchmove', function(evt){
+          if (dragging) moveDrag(evt.touches[0]);
+        }, { passive:true });
+        window.addEventListener('touchend', endDrag);
+      });
+
+      // buttons: click toggles a pressed state (ring fills rose, center fills white)
+      diagram.querySelectorAll('.pedal-button').forEach(function(btn){
+        const buttonNumber = parseInt(btn.getAttribute('data-index'), 10) + 1;
+        btn.addEventListener('click', function(){
+          btn.classList.toggle('pressed');
+          showPedalObjectInfo('Button ' + buttonNumber, btn);
+        });
+      });
+      } catch(e) { console.error('Pedal diagram setup failed:', e); }
+    }
+
+    /* ---- program bar + artist/description swapping ---- */
+    const bar = wrap.querySelector('.program-bar');
+    const artistImage = wrap.querySelector('.artist-circle-img');
+    const artistBio = wrap.querySelector('.artist-bio');
+    const programDesc = wrap.querySelector('.program-desc');
+    const programTypeTitle = wrap.querySelector('.program-type-title');
+    const programTypeLabel = wrap.querySelector('.program-type-label');
+    const pedalTypeTooltip = wrap.querySelector('.pedal-type-tooltip');
+    const playBtn = wrap.querySelector('.spotlight-center-play');
+    const vineReveal = wrap.querySelector('.vine-reveal');
+    const vineCircleEl = vineReveal ? vineReveal.querySelector('.vine-circle') : null;
+    // only 2 vines are actually randomized (vine-left, vine-center) --
+    // vine-right and vine-fourth are just those two, copied and flipped
+    // across the vertical center axis, so they're always an exact mirror
+    // of whatever random shape their source just got, never randomized
+    // themselves
+    const vineLeftEl = vineReveal ? vineReveal.querySelector('.vine-left') : null;
+    const vineRightEl = vineReveal ? vineReveal.querySelector('.vine-right') : null;
+    const vineCenterEl = vineReveal ? vineReveal.querySelector('.vine-center') : null;
+    const vineFourthEl = vineReveal ? vineReveal.querySelector('.vine-fourth') : null;
+    function pointsToPath(points){
+      return points.map(function(p, i){
+        return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+      }).join(' ');
+    }
+    function mirrorPoints(points){
+      return points.map(function(p){ return [100 - p[0], p[1]]; });
+    }
+    // generates a fresh random zig-zag from the shared start point (50,0)
+    // down to a random landing spot at the circle's top edge (y=67) --
+    // a random count of interior waypoints (so the number of edges/
+    // potential intersections varies) each placed at a random x (so every
+    // segment's angle varies too)
+    function randomZigzagPoints(){
+      const segments = 2 + Math.floor(Math.random() * 3); // 2-4 interior waypoints
+      const points = [[50, 0]];
+      for (let i = 1; i <= segments; i++){
+        const y = 67 * (i / (segments + 1));
+        const x = 8 + Math.random() * 84;
+        points.push([x, y]);
+      }
+      points.push([32 + Math.random() * 36, 67]);
+      return points;
+    }
+    // re-randomizes the 2 source vines, then derives the other 2 as exact
+    // mirrored copies -- everything gets re-measured in triggerVineReveal()
+    // so the dash-draw animation always matches whatever shape is set
+    function reshuffleVines(){
+      const pointsA = randomZigzagPoints();
+      const pointsB = randomZigzagPoints();
+      if (vineLeftEl) vineLeftEl.setAttribute('d', pointsToPath(pointsA));
+      if (vineRightEl) vineRightEl.setAttribute('d', pointsToPath(mirrorPoints(pointsA)));
+      if (vineCenterEl) vineCenterEl.setAttribute('d', pointsToPath(pointsB));
+      if (vineFourthEl) vineFourthEl.setAttribute('d', pointsToPath(mirrorPoints(pointsB)));
+    }
+    function vineDrawEls(){
+      const els = [];
+      [vineLeftEl, vineRightEl, vineCenterEl, vineFourthEl].forEach(function(el){ if (el) els.push(el); });
+      if (vineCircleEl) els.push(vineCircleEl);
+      return els;
+    }
+    // pin the vines' start to the program bar's own separator line, and
+    // the button to the circle's center below it (both in real px, since
+    // the line sits a fixed distance from the top regardless of the
+    // card's own height, unlike a %-based position)
+    const barWrapEl = wrap.querySelector('.program-bar-wrap');
+    if (vineReveal && barWrapEl){
+      const lineY = barWrapEl.getBoundingClientRect().bottom - card.getBoundingClientRect().top;
+      vineReveal.style.top = lineY + 'px';
+      playBtn.style.top = (lineY + 96) + 'px'; // 96 = the circle's cy in the SVG above
+    }
+    let vineRevealTimer = null;
+    // vines grow in and curl together into the circle; once that's done,
+    // the real button fades in over it and the vines fade away
+    function triggerVineReveal(){
+      if (!vineReveal) return;
+      clearTimeout(vineRevealTimer);
+      playBtn.classList.remove('revealed');
+      vineReveal.classList.remove('vine-hidden', 'sparked');
+      reshuffleVines();
+      const els = vineDrawEls();
+      els.forEach(function(el){
+        el.style.transition = 'none';
+        const len = el.getTotalLength();
+        el.style.strokeDasharray = len;
+        el.style.strokeDashoffset = len;
+      });
+      void vineReveal.offsetWidth; // commit the reset before drawing again
+      els.forEach(function(el){
+        el.style.transition = '';
+        el.style.strokeDashoffset = '0';
+      });
+      vineRevealTimer = setTimeout(function(){
+        vineReveal.classList.add('sparked');
+        playBtn.classList.add('revealed');
+        setTimeout(function(){ vineReveal.classList.add('vine-hidden'); }, 150);
+      }, 820); // just past the circle's own delay+duration (0.4s + 0.4s)
+    }
+    const artistCurrentEl = wrap.querySelector('.artist-name-current');
+    const artistNextEl = wrap.querySelector('.artist-name-next');
+    const artistPrevEl = wrap.querySelector('.artist-name-prev');
+
+    let currentIndex = 0;
+    let currentWav = 'examples/' + programs[0].programSlug + '.wav';
+    let currentType = programs[0].type;
+    let tooltipLoadedForType = null; // caches which type's explanation is currently loaded
+    let requestToken = 0; // guards against a slow fetch overwriting a newer selection
+
+    const SLOT_WIDTH = 130;
+    const barItems = [];
+
+    // builds the program bar labels once; their x-position is recomputed
+    // on every selection change so the chosen one always ends up centered.
+    // each label is colorized by its type (fx = blue, synth = red).
+    programs.forEach(function(entry, idx){
+      const item = document.createElement('div');
+      item.className = 'program-bar-item';
+      item.textContent = entry.program;
+      item.style.color = colorForType(entry.type);
+      item.addEventListener('click', function(){
+        currentIndex = idx;
+        applyEntry(programs[currentIndex]);
+      });
+      bar.appendChild(item);
+      barItems.push(item);
+    });
+
+    function positionBar(){
+      barItems.forEach(function(item, idx){
+        const dx = (idx - currentIndex) * SLOT_WIDTH;
+        item.style.transform = 'translate(' + dx.toFixed(1) + 'px, -50%)';
+        item.classList.toggle('selected', idx === currentIndex);
+      });
+    }
+
+    function applyEntry(entry){
+      const myToken = ++requestToken;
+
+      positionBar();
+      currentWav = 'examples/' + entry.programSlug + '.wav';
+      resetPedalObjectInfo();
+      triggerVineReveal();
+
+      // pedal-type title + color: "Synthesizer Pedal:" (red) or
+      // "Effects Pedal:" (blue), depending on this program's type
+      programTypeLabel.textContent = entry.type === 'fx' ? 'Effects Pedal:' : 'Synthesizer Pedal:';
+      programTypeTitle.style.color = colorForType(entry.type);
+      currentType = entry.type;
+      pedalTypeTooltip.classList.remove('visible');
+      tooltipLoadedForType = null;
+
+      // artist caption: current name (highlighted), next name (clickable,
+      // advances by one), previous name (shown for context only, not
+      // clickable) -- wraps around at either end of the list
+      const nextIdx = (currentIndex + 1) % programs.length;
+      const prevIdx = (currentIndex - 1 + programs.length) % programs.length;
+      artistCurrentEl.textContent = entry.artist;
+      artistNextEl.textContent = '› ' + programs[nextIdx].artist;
+      artistPrevEl.textContent = '‹ ' + programs[prevIdx].artist;
+
+      // artist photo
+      artistImage.alt = entry.artist;
+      artistImage.style.display = '';
+      const circleWrap = artistImage.closest('.artist-circle-wrap');
+      const existingFallback = circleWrap.parentElement.querySelector('.spotlight-fallback');
+      if (existingFallback) existingFallback.remove();
+      artistImage.onerror = function(){
+        if (myToken !== requestToken) return;
+        circleWrap.style.display = 'none';
+        const msg = document.createElement('p');
+        msg.className = 'spotlight-fallback';
+        msg.textContent = 'Bild nicht gefunden';
+        circleWrap.insertAdjacentElement('afterend', msg);
+      };
+      artistImage.src = 'artists/' + entry.artistSlug + '.png';
+
+      // artist bio
+      artistBio.textContent = 'Lädt…';
+      fetchText('bios/' + entry.artistSlug + '.txt').then(function(text){
+        if (myToken !== requestToken) return;
+        artistBio.textContent = text.trim();
+      }).catch(function(){
+        if (myToken !== requestToken) return;
+        artistBio.textContent = 'Bio nicht gefunden';
+      });
+
+      // program description: bundled directly in this program's own
+      // manifest entry (editions/<edition>/descriptions/<program>.json)
+      programDesc.textContent = entry.text || 'Beschreibung nicht gefunden';
+    }
+
+    // hover on "Synthesizer Pedal:" / "Effects Pedal:" -- shows a small
+    // explanation box for whichever type is currently selected. Text comes
+    // from texts/synth_explanation.txt or texts/fx_explanaition.txt
+    // (filenames exactly as specified), fetched once per type and cached
+    // across every card on the page (the explanation text is the same
+    // regardless of which edition you're looking at).
+    const explanationCache = window.__pedalExplanationCache || (window.__pedalExplanationCache = {});
+    function loadExplanation(type){
+      if (tooltipLoadedForType === type) return;
+      tooltipLoadedForType = type;
+      if (explanationCache[type] !== undefined){
+        pedalTypeTooltip.textContent = explanationCache[type];
+        return;
+      }
+      pedalTypeTooltip.textContent = 'Lädt…';
+      const filename = type === 'fx' ? 'fx_explanaition.txt' : 'synth_explanation.txt';
+      fetch('texts/' + filename)
+        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
+        .then(function(text){
+          explanationCache[type] = text.trim();
+          if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
+        })
+        .catch(function(){
+          explanationCache[type] = 'Erklärung nicht gefunden';
+          if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
+        });
+    }
+    programTypeTitle.addEventListener('mouseenter', function(){
+      loadExplanation(currentType);
+      pedalTypeTooltip.classList.add('visible');
+    });
+    programTypeTitle.addEventListener('mouseleave', function(){
+      pedalTypeTooltip.classList.remove('visible');
+    });
+
+    artistNextEl.addEventListener('click', function(){
+      currentIndex = (currentIndex + 1) % programs.length;
+      applyEntry(programs[currentIndex]);
+    });
+    artistNextEl.addEventListener('keydown', function(e){
       if (e.key === 'Enter' || e.key === ' '){
         e.preventDefault();
-        openCredentials();
+        currentIndex = (currentIndex + 1) % programs.length;
+        applyEntry(programs[currentIndex]);
       }
     });
+    artistPrevEl.addEventListener('click', function(){
+      currentIndex = (currentIndex - 1 + programs.length) % programs.length;
+      applyEntry(programs[currentIndex]);
+    });
+    artistPrevEl.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        currentIndex = (currentIndex - 1 + programs.length) % programs.length;
+        applyEntry(programs[currentIndex]);
+      }
+    });
+
+    // clicking the artist circle: for now just shows a placeholder modal --
+    // intended to later open the artist's real links/credentials. The
+    // modal itself is a single shared element on the page, not per-card.
+    const artistCircleWrap = wrap.querySelector('.artist-circle-wrap');
+    const modalArtistCredentials = document.getElementById('modalArtistCredentials');
+    if (artistCircleWrap && modalArtistCredentials){
+      const openCredentials = function(){
+        resetPedalObjectInfo();
+        modalArtistCredentials.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+      };
+      artistCircleWrap.addEventListener('click', openCredentials);
+      artistCircleWrap.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          openCredentials();
+        }
+      });
+    }
+
+    applyEntry(programs[currentIndex]);
+
+    function playCurrentWav(){
+      const audio = new Audio(currentWav);
+      audio.play().catch(function(){ /* ignored -- e.g. file missing or autoplay blocked */ });
+    }
+    playBtn.addEventListener('click', playCurrentWav);
+
+    /* ---- this card's own open/close animation ----
+       Closing: the whole card (border + content together, as one unit)
+       slides its full width and fades -- only once that's fully
+       invisible does the layout actually collapse. Opening reverses:
+       the layout grows back out and the card slides/fades back in, in
+       the same instant. (See the .spotlight-box/.spotlight-wrap CSS for
+       the full history of why this animation is shaped this way.) */
+    function measureOpenHeight(){
+      const wasCollapsed = wrap.classList.contains('card-collapsed');
+      if (!wasCollapsed) return wrap.getBoundingClientRect().height;
+      // momentarily force the open layout, with transitions suppressed,
+      // to measure its true natural height without any visible flash --
+      // needed the first time a never-yet-opened card is about to open,
+      // since simply measuring while still collapsed would lock in the
+      // small tab-only height and clip the real content once it grows
+      const prevWrapT = wrap.style.transition;
+      const prevCardT = card.style.transition;
+      wrap.style.transition = 'none';
+      card.style.transition = 'none';
+      wrap.classList.remove('card-collapsed');
+      const h = wrap.getBoundingClientRect().height;
+      wrap.classList.add('card-collapsed');
+      void wrap.offsetHeight; // force reflow so the re-added class is committed before transitions return
+      wrap.style.transition = prevWrapT;
+      card.style.transition = prevCardT;
+      return h;
+    }
+    function lockHeight(){
+      const current = parseFloat(wrap.style.height) || 0;
+      const natural = measureOpenHeight();
+      wrap.style.height = Math.max(natural, current) + 'px';
+    }
+    lockHeight();
+    window.addEventListener('load', lockHeight); // catches height changes from late-loading fonts/images
+
+    let stageTimer = null;
+    function openCard(){
+      lockHeight();
+      wrap.classList.remove('card-collapsed');
+      card.style.setProperty('--box-slide', '0px');
+      card.classList.remove('sliding-out');
+    }
+    function closeCard(onDone){
+      lockHeight();
+      resetPedalObjectInfo();
+      // measured now, while the box is still at its natural width -- a
+      // fixed pixel value so the slide distance stays constant even
+      // though the layout width collapses afterward
+      const fullCardWidth = card.getBoundingClientRect().width;
+      card.style.setProperty('--box-slide', (-fullCardWidth).toFixed(1) + 'px');
+      card.classList.add('sliding-out');
+      clearTimeout(stageTimer);
+      stageTimer = setTimeout(function(){
+        wrap.classList.add('card-collapsed');
+        if (onDone) onDone();
+      }, CARD_MS + 40);
+    }
+
+    const instance = { wrap: wrap, sideBox: sideBox, openCard: openCard, closeCard: closeCard };
+    instances.push(instance);
+
+    function handleToggleClick(){
+      if (activeInstance === instance) requestClose(instance);
+      else if (!activeInstance) requestOpen(instance);
+    }
+    sideBox.addEventListener('click', handleToggleClick);
+    sideBox.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        handleToggleClick();
+      }
+    });
+
+    return instance;
   }
 
-  applyEntry(spotlightData[currentIndex]);
-
-  function playCurrentWav(){
-    const audio = new Audio(currentWav);
-    audio.play().catch(function(){ /* ignored -- e.g. file missing or autoplay blocked */ });
-  }
-  playBtn.addEventListener('click', playCurrentWav);
+  // ---------- bootstrap: discover editions, fetch each one's info (colors
+  // + program list) and programs, mount ----------
+  fetchJSON('editions/editions.json').then(function(editionSlugs){
+    return Promise.all(editionSlugs.map(function(slug){
+      return fetchJSON('editions/' + slug + '/info.json').then(function(info){
+        return Promise.all(info.programs.map(function(programSlug){
+          return fetchJSON('editions/' + slug + '/descriptions/' + programSlug + '.json').then(function(data){
+            return {
+              program: data.program,
+              artist: data.artist,
+              type: data.type,
+              text: data.text,
+              artistSlug: slugify(data.artist),
+              programSlug: programSlug
+            };
+          });
+        })).then(function(programs){
+          return { slug: slug, programs: programs, colors: { color_bg: info.color_bg, color_fg: info.color_fg } };
+        });
+      });
+    }));
+  }).then(function(editions){
+    editions.forEach(function(edition, idx){
+      const instance = mountEdition(edition.slug, edition.programs, edition.colors);
+      if (idx === 0){
+        // first edition starts open by default; the rest start as
+        // hidden siblings alongside it (no transition -- this is the
+        // initial state, not a user-triggered toggle)
+        activeInstance = instance;
+        instance.wrap.classList.add('wrap-active');
+      } else {
+        instance.wrap.classList.add('card-collapsed', 'wrap-hidden-sibling');
+      }
+    });
+  }).catch(function(e){
+    console.error('Failed to load editions:', e);
+  });
 })();
 
 /* ---------- modals: Pre-Order / Kontakt / Newsletter ---------- */
