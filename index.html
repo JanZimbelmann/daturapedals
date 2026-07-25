@@ -478,13 +478,10 @@
     transition:opacity 0.5s ease;
   }
 
-  /* subtle filter wobble layered underneath, always running once settled */
-  .settled .wordmark{
-    animation: idle-wobble 7s ease-in-out infinite;
-  }
-  .settled .wordmark.glitching-idle{
-    animation: glitch-shake-burst 0.28s steps(2,end) 2, idle-wobble 7s ease-in-out infinite;
-  }
+  /* idle-wobble intentionally not applied to .settled .wordmark for now
+     (see @keyframes idle-wobble below) -- it was making the title look
+     distorted even while nobody was hovering it; hover still gets its
+     own separate, much more chaotic JS-driven effect further down */
   .settled .wordmark:hover{
     animation:none;
   }
@@ -831,16 +828,27 @@
   }
 
   /* fixed-height carousel: the anchor row (arrows + highlighted title)
-     always lands at the exact same position, because the above/below
-     regions are equal 1fr grid tracks of a container with a constant
-     height -- switching entries changes how much the neighbor items or
-     the selected content fill those tracks, but never moves the anchor
-     itself. Content longer than its track simply overflows visually
-     (doesn't push anything) rather than growing the track. */
+     always lands at the exact same position. Row 2 is a fixed rem height
+     (not "auto") so it can never grow/shrink with content -- "auto" was
+     still letting the title's own row nudge up/down slightly depending
+     on its height. The above/below tracks split the remainder unevenly
+     (0.55fr / 1.45fr) so the anchor sits well above true center, leaving
+     the larger content box below it more room. No row-gap here on purpose -- the gap between the
+     title and its content (row 2/3) is now zero, so their two panels
+     touch and read as one connected shape (see .blog-highlight-titleblock
+     and .blog-item-content); .blog-region-above gets its own padding
+     below to recreate *that* specific gap instead, so the nearest
+     neighbor above still doesn't crowd the title. min-height:0 on every
+     row's content is what actually keeps row 1/3 from being forced taller
+     than their fr share by a long title or long content -- grid items
+     default to a content-based minimum size that silently overrides fr
+     sizing otherwise, which was the real reason the title/arrows still
+     drifted a little depending on the text -- and .blog-item-content now
+     scrolls internally past a fixed height instead of ever growing. */
   .blog-carousel{
     display:grid;
-    grid-template-rows:1fr auto 1fr;
-    height:300px;
+    grid-template-rows:0.55fr 4.5rem 1.45fr;
+    height:380px;
     width:100%;
   }
   .blog-region-above{
@@ -850,7 +858,10 @@
     flex-direction:column;
     align-items:center;
     justify-content:flex-end;
+    gap:0.5rem;
     width:100%;
+    min-height:0;
+    padding-bottom:1rem;
     overflow:hidden;
   }
   .blog-region-below{
@@ -859,7 +870,9 @@
     display:flex;
     flex-direction:column;
     align-items:center;
+    gap:0.5rem;
     width:100%;
+    min-height:0;
     overflow:visible;
   }
 
@@ -869,38 +882,60 @@
     align-items:center;
     justify-content:center;
     text-align:center;
-    width:100%;
+    width:400px; /* same fixed width as the title/content panels below */
+    max-width:100%;
     height:58px;
     flex-shrink:0;
+    box-sizing:border-box;
+    border:1px solid var(--grey-2);
+    border-radius:8px;
+    padding:0 1rem;
     cursor:pointer;
-    transition:opacity 0.3s ease, color 0.3s ease;
+    transition:opacity 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
+  /* fixed-width side columns for the arrows -- unlike a centered flex
+     row, these never shift position when the title between them changes
+     length, since the columns' own width has nothing to do with it */
   .blog-highlight-row{
     grid-row:2;
-    display:flex;
+    display:grid;
+    grid-template-columns:1.8rem 1fr 1.8rem;
     align-items:center;
-    justify-content:center;
     gap:0.9rem;
     width:100%;
+    min-height:0;
   }
+  /* same fixed width as .blog-item-content, rounded only on top -- the
+     two sit with zero gap between them (see .blog-carousel/.blog-item-content)
+     so together they read as one continuous panel, not two separate ones */
   .blog-highlight-titleblock{
-    flex:0 1 auto;
-    min-width:0;
+    width:400px;
+    margin:0 auto;
     text-align:center;
+    background:var(--grey-1);
+    border-radius:10px 10px 0 0;
+    padding:0.6rem 1.2rem;
   }
   .blog-neighbor-item .blog-item-date,
   .blog-highlight-titleblock .blog-item-date{
     font-size:0.65rem;
     letter-spacing:0.1em;
   }
-  .blog-neighbor-item .blog-item-title{
-    font-family:'Anton', sans-serif;
-    font-size:0.72rem;
-    letter-spacing:0.01em;
-  }
+  .blog-neighbor-item .blog-item-title,
   .blog-highlight-titleblock .blog-item-title{
     font-family:'Anton', sans-serif;
     letter-spacing:0.01em;
+    /* never wraps, regardless of how long the title is -- an overly long
+       one just quietly truncates instead of growing to a second line,
+       which is what kept nudging the highlighted title's own text off
+       its usual y-position depending on which entry was selected */
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+  }
+  .blog-neighbor-item .blog-item-title{
+    font-size:0.72rem;
   }
 
   /* distance-based dimming -- unselected entries read as smaller and
@@ -916,33 +951,58 @@
   }
   .blog-neighbor-item.dist-1{
     color:var(--grey-3);
+    border-color:var(--grey-2);
     opacity:0.45;
   }
   .blog-neighbor-item.dist-2{
     color:var(--grey-2);
+    border-color:var(--grey-1);
     opacity:0.2;
   }
 
-  /* small connector between the title and its content -- makes clear
-     the text underneath visually belongs to the title above it */
+  /* used to be a small connecting line between title and content -- now
+     that the two panels sit flush together as one continuous shape (see
+     .blog-highlight-titleblock/.blog-item-content), a divider between
+     them would just interrupt that, so it's retired */
   .blog-connector{
-    width:1px;
-    height:14px;
-    background:var(--grey-2);
-    margin:0.6rem auto 0;
+    display:none;
   }
 
   /* the highlighted entry's own content, directly under its title --
-     lives in .blog-region-below, right above any dimmed neighbors there */
+     same fixed width as the title, flush against it with zero gap and
+     rounded only on the bottom, so together they read as one connected
+     panel rather than two separate ones. Capped at a fixed height with
+     its own (thin, minimal) scrollbar rather than growing, both so an
+     unusually long entry can never nudge anything below it (including
+     the whole above/below track split that keeps the title/arrows fixed)
+     and so it's actually reachable instead of just quietly overflowing. */
   .blog-item-content{
-    margin-top:0.3rem;
+    width:400px;
+    max-height:190px;
+    margin:0 auto;
     font-size:0.92rem;
     line-height:1.75;
     color:var(--grey-3);
     white-space:pre-line;
     text-align:center;
-    max-width:100%;
+    background:var(--grey-1);
+    border-radius:0 0 10px 10px;
+    padding:0.9rem 1.2rem;
+    box-sizing:border-box;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:var(--grey-2) transparent;
     cursor:default;
+  }
+  .blog-item-content::-webkit-scrollbar{
+    width:5px;
+  }
+  .blog-item-content::-webkit-scrollbar-track{
+    background:transparent;
+  }
+  .blog-item-content::-webkit-scrollbar-thumb{
+    background:var(--grey-2);
+    border-radius:3px;
   }
   .blog-nav{
     display:flex;
@@ -1008,6 +1068,19 @@
       stays full-width up to the max-width) */
     width:100%;
     max-width:920px;
+    position:relative; /* anchors the old wrap during swapToEdition, once
+      it's pulled out of the flex flow (position:absolute) so its own
+      shrink can't get pushed around by the new one's simultaneous grow */
+  }
+  /* while any edition is (or is becoming) the active one, centering must
+     be off: with only one non-zero-width item in the row, justify-content
+     center would drag *that lone item* toward the middle while its width
+     is still transitioning (shrinking away or growing in), instead of it
+     staying pinned to the row's actual edge -- exactly the "box drifts
+     into the middle" glitch this avoids. Only re-enabled once every
+     edition is fully idle again (see requestClose). */
+  .spotlight-wraps.has-active{
+    justify-content:flex-start;
   }
 
   /* one edition's side box + card, as a flex item of .spotlight-wraps.
@@ -1206,8 +1279,8 @@
     width:58px;
     height:58px;
     border-radius:50%;
-    background:var(--black);
-    border:1px solid var(--white);
+    background:var(--edition-bg, var(--black));
+    border:1px solid var(--edition-fg, var(--white));
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1221,17 +1294,29 @@
     opacity:1;
     pointer-events:auto;
   }
-  .spotlight-center-play img{
+  /* the logo emblem, tinted via CSS mask instead of an <img> so it can be
+     colored dynamically with the edition's fg/bg rather than being stuck
+     with whatever colors are baked into the source PNG */
+  .spotlight-center-play .play-emblem{
     width:22px;
     height:22px;
-    object-fit:contain;
+    background-color:var(--edition-fg, var(--white));
+    -webkit-mask-image:url('images/logo.png');
+    mask-image:url('images/logo.png');
+    -webkit-mask-size:contain;
+    mask-size:contain;
+    -webkit-mask-repeat:no-repeat;
+    mask-repeat:no-repeat;
+    -webkit-mask-position:center;
+    mask-position:center;
+    transition:background-color 0.25s ease;
   }
   .spotlight-center-play:hover{
     transform:translate(-50%, -50%) scale(1.08);
-    background:var(--white);
+    background:var(--edition-fg, var(--white));
   }
-  .spotlight-center-play:hover img{
-    filter:invert(1);
+  .spotlight-center-play:hover .play-emblem{
+    background-color:var(--edition-bg, var(--black));
   }
 
   /* vine reveal: 3 sharp, angular zig-zag lines (straight segments, not
@@ -1323,12 +1408,23 @@
     background:#2b2224;
   }
 
+  /* a 2-column grid (not flex) specifically so the right column -- and
+     therefore the first collab button -- always starts at *exactly* 50%,
+     a fixed grid track boundary that doesn't shift with how much text or
+     how many buttons are on either side of it */
   .collab-divider{
-    display:flex;
+    display:grid;
+    grid-template-columns:50% 50%;
     align-items:center;
     height:2.2rem;
     padding:0 1.75rem;
     box-sizing:border-box;
+  }
+  .collab-divider-left-group,
+  .collab-divider-right-group{
+    display:flex;
+    align-items:center;
+    min-width:0;
   }
   .collab-divider-line{
     height:1px;
@@ -1338,6 +1434,11 @@
     width:1.75rem;
     flex-shrink:0;
   }
+  /* mid fills the rest of the left column (stopping at the 50% boundary,
+     never reaching the buttons); right fills the rest of the right
+     column (starting only once the buttons end) -- so the line can never
+     run behind/through the (often transparent) circles */
+  .collab-divider-line-mid,
   .collab-divider-line-right{
     flex:1;
   }
@@ -1349,6 +1450,50 @@
     text-transform:uppercase;
     color:var(--grey-3);
     white-space:nowrap;
+  }
+
+  /* one small numbered button per program this artist has ever appeared
+     on (across every edition, not just this one), in the order they
+     appear on the site. Always shown, even if it's just the one --
+     clicking a different one jumps to that program (switching editions
+     first if needed, see switchToProgram); the one matching what's
+     currently showing is highlighted and inert. */
+  .collab-buttons{
+    display:flex;
+    flex-wrap:nowrap;
+    flex-shrink:0;
+    gap:0.4rem;
+    margin-right:0.6rem;
+  }
+  .collab-button{
+    width:22px;
+    height:22px;
+    flex-shrink:0;
+    border-radius:50%;
+    border:1px solid var(--grey-2);
+    background:transparent;
+    color:var(--grey-3);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    user-select:none;
+    transition:background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+  .collab-button:hover{
+    border-color:var(--white);
+    color:var(--white);
+  }
+  .collab-button.active{
+    background:var(--edition-fg, var(--white));
+    border-color:var(--edition-fg, var(--white));
+    color:var(--edition-bg, var(--black));
+    cursor:default;
+    pointer-events:none;
   }
 
   .spotlight-bottom-row{
@@ -1390,7 +1535,7 @@
     right:0;
     bottom:0;
     height:1px;
-    background:var(--white);
+    background:var(--edition-fg, var(--white));
     transition:height 0.2s ease;
   }
   .artist-circle-wrap:hover .artist-circle-clip::after{
@@ -1404,7 +1549,7 @@
     height:170px;
     border-radius:50%;
     object-fit:cover;
-    border:1px solid var(--white);
+    border:1px solid var(--edition-fg, var(--white));
     display:block;
     transition:border-width 0.2s ease;
   }
@@ -1701,6 +1846,12 @@
   .pedal-button.pressed .button-inner{
     fill:var(--white);
   }
+  /* switch 3 left = momentary mode -- the buttons' own ring goes dotted
+     so it's visually obvious they now behave differently (light only
+     while held) than the solid-ring toggle behavior */
+  .pedal-diagram.buttons-momentary .pedal-button .button-outer{
+    stroke-dasharray:2.6 2.6;
+  }
 
   /* the middle switch's "rose mod": recolors every switch, poti, and
      button when active */
@@ -1753,6 +1904,72 @@
     height:100%;
     pointer-events:none;
     z-index:0;
+  }
+
+  /* particle-count fader: fills the section's entire right edge as a hit
+     target, but stays fully invisible until hovered/focused/dragged --
+     "hidden until you go looking for it" */
+  .particle-slider{
+    position:absolute;
+    top:0;
+    right:0;
+    bottom:0;
+    width:64px;
+    z-index:6;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:ns-resize;
+    opacity:0;
+    transition:opacity 0.5s ease;
+  }
+  .particle-slider:hover,
+  .particle-slider:focus-visible,
+  .particle-slider.active{
+    opacity:1;
+  }
+  .particle-slider-track{
+    position:relative;
+    width:2px;
+    height:60%;
+    background:var(--grey-2);
+    border-radius:2px;
+  }
+  .particle-slider-fill{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    height:0%;
+    background:var(--white);
+    border-radius:2px;
+  }
+  .particle-slider-thumb{
+    position:absolute;
+    left:50%;
+    bottom:0%;
+    transform:translate(-50%, 50%);
+    width:11px;
+    height:11px;
+    border-radius:50%;
+    background:var(--white);
+    box-shadow:0 0 10px rgba(238,238,234,0.65);
+    transition:box-shadow 0.2s ease;
+  }
+  .particle-slider.active .particle-slider-thumb{
+    box-shadow:0 0 14px rgba(238,238,234,0.9);
+  }
+  .particle-slider-value{
+    position:absolute;
+    bottom:0%;
+    right:calc(100% + 0.9rem);
+    transform:translateY(50%);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem;
+    letter-spacing:0.04em;
+    color:var(--white);
+    white-space:nowrap;
+    pointer-events:none;
   }
   .contact-btn-top{
     position:absolute;
@@ -1829,6 +2046,109 @@
     line-height:1.7;
     letter-spacing:0.02em;
     padding-right:1.5rem;
+  }
+
+  /* artist credentials modal: name + a row of icon links, filled in per
+     artist by JS (see openCredentials) */
+  /* laid out as a centered "profile card": big photo on top, name
+     underneath as a caption, then the links row -- tried the photo
+     beside the links first, but centered/stacked reads much cleaner
+     regardless of how many (or how few) links an artist has. Reuses the
+     bio card's own .artist-circle-wrap/-clip/-img (the "sunset" circle,
+     bottom sliver clipped off) for the photo itself, and matches its
+     caption spacing (.artist-caption's own 0.15rem) so the name sits
+     just as close beneath it here as it does there. */
+  .modal-artist-photo-wrap{
+    display:flex;
+    justify-content:center;
+    margin-bottom:0.15rem;
+  }
+  .modal-artist-photo-wrap .artist-circle-wrap{
+    cursor:default;
+  }
+  /* it's not clickable here (unlike on the card, where hovering it hints
+     that it opens this very modal), so none of the hover highlight
+     should apply either */
+  .modal-artist-photo-wrap .artist-circle-wrap:hover .artist-circle-clip{
+    transform:none;
+  }
+  .modal-artist-photo-wrap .artist-circle-wrap:hover .artist-circle-clip::after{
+    height:1px;
+  }
+  .modal-artist-photo-wrap .artist-circle-wrap:hover .artist-circle-img{
+    border-width:1px;
+  }
+  .modal-artist-name{
+    font-family:'Anton', sans-serif;
+    font-size:1.3rem;
+    letter-spacing:0.02em;
+    text-align:center;
+    margin:0 0 1.8rem;
+  }
+  .modal-artist-links{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center; /* a single link sitting flush left read as
+      empty/stranded -- centering the row looks intentional at any count */
+    gap:1.6rem;
+  }
+  .modal-artist-link{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0.6rem;
+    text-decoration:none;
+    color:var(--white);
+  }
+  /* the one-link case gets a little extra size/presence so it reads as
+     "the" link rather than a leftover fragment */
+  .modal-artist-link:only-child .modal-artist-link-icon{
+    width:60px;
+    height:60px;
+  }
+  .modal-artist-link:only-child .modal-artist-link-icon svg{
+    width:27px;
+    height:27px;
+  }
+  .modal-artist-link:only-child .modal-artist-link-caption{
+    font-size:0.75rem;
+  }
+  .modal-artist-link-icon{
+    width:48px;
+    height:48px;
+    flex-shrink:0;
+    border-radius:50%;
+    border:1px solid var(--edition-fg, var(--white));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background 0.25s ease, color 0.25s ease, transform 0.25s ease, width 0.2s ease, height 0.2s ease;
+  }
+  .modal-artist-link-icon svg{
+    width:22px;
+    height:22px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.6;
+    transition:width 0.2s ease, height 0.2s ease;
+  }
+  .modal-artist-link:hover .modal-artist-link-icon{
+    background:var(--edition-fg, var(--white));
+    color:var(--black);
+    transform:scale(1.06);
+  }
+  .modal-artist-link-caption{
+    font-size:0.68rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+  }
+  /* only shown when the current artist has zero links at all */
+  #modalArtistEmpty{
+    display:none;
+  }
+  #modalArtistEmpty.visible{
+    display:block;
   }
 
   .modal-box-impressum{
@@ -2066,7 +2386,7 @@
     </div>
 
     <button class="spotlight-center-play" aria-label="Sound abspielen">
-      <img src="images/logo.png" alt="">
+      <span class="play-emblem"></span>
     </button>
     <!-- decorative only: vine-like tendrils that draw themselves in from
          below the program bar and curl into the circle whenever a
@@ -2101,7 +2421,7 @@
             <rect class="switch-track" x="97.5" y="27" width="44" height="16" rx="8"/>
             <circle class="switch-thumb" cx="105.5" cy="35" r="6"/>
           </g>
-          <g class="pedal-switch" data-index="2" data-track-x="150.5" data-state="left">
+          <g class="pedal-switch" data-index="2" data-track-x="150.5" data-state="right">
             <rect class="switch-track" x="150.5" y="27" width="44" height="16" rx="8"/>
             <circle class="switch-thumb" cx="158.5" cy="35" r="6"/>
           </g>
@@ -2149,9 +2469,15 @@
     </div>
 
     <div class="collab-divider">
-      <span class="collab-divider-line collab-divider-line-left"></span>
-      <span class="collab-divider-text">In Kooperation mit:</span>
-      <span class="collab-divider-line collab-divider-line-right"></span>
+      <div class="collab-divider-left-group">
+        <span class="collab-divider-line collab-divider-line-left"></span>
+        <span class="collab-divider-text">In Kooperation mit:</span>
+        <span class="collab-divider-line collab-divider-line-mid"></span>
+      </div>
+      <div class="collab-divider-right-group">
+        <div class="collab-buttons"></div>
+        <span class="collab-divider-line collab-divider-line-right"></span>
+      </div>
     </div>
 
     <div class="spotlight-bottom-row">
@@ -2225,6 +2551,17 @@
   <button class="preorder-btn contact-btn-top" id="contactBtnTop">In Kontakt Treten</button>
   <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
   <button class="preorder-btn contact-btn-impressum" id="contactBtnImpressum">Impressum</button>
+
+  <!-- particle-count fader: invisible until hovered, spans the section's
+       full right edge. Exponential 10-1000 range, see the JS below -->
+  <div class="particle-slider" id="particleSlider" role="slider" tabindex="0"
+       aria-label="Anzahl der Partikel" aria-valuemin="10" aria-valuemax="1000">
+    <div class="particle-slider-track" id="particleSliderTrack">
+      <div class="particle-slider-fill" id="particleSliderFill"></div>
+      <div class="particle-slider-thumb" id="particleSliderThumb"></div>
+      <div class="particle-slider-value" id="particleSliderValue"></div>
+    </div>
+  </div>
 </section>
 
 <!-- Pre-Order modal -->
@@ -2307,11 +2644,20 @@
   </div>
 </div>
 
-<!-- Artist credentials modal (placeholder for now) -->
+<!-- Artist credentials modal: filled per-artist on open, see openCredentials -->
 <div class="modal-overlay" id="modalArtistCredentials">
   <div class="modal-box">
     <button class="modal-close" id="modalArtistCredentialsClose" aria-label="Schließen">&times;</button>
-    <p class="modal-text">No credentials or links currently available.</p>
+    <div class="modal-artist-photo-wrap">
+      <div class="artist-circle-wrap">
+        <div class="artist-circle-clip">
+          <img class="artist-circle-img" id="modalArtistPhoto" alt="">
+        </div>
+      </div>
+    </div>
+    <p class="modal-artist-name" id="modalArtistName"></p>
+    <div class="modal-artist-links" id="modalArtistLinks"></div>
+    <p class="modal-text" id="modalArtistEmpty">Keine Links verfügbar.</p>
   </div>
 </div>
 
@@ -2398,16 +2744,12 @@ async function runIntro(){
 
 runIntro();
 
-/* ---------- idle wordmark glitch: short burst every ~4.2s, not a continuous stutter ---------- */
 const wordmarkEl = document.querySelector('.wordmark');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-if (wordmarkEl && !reduceMotion) {
-  setInterval(function(){
-    wordmarkEl.classList.add('glitching-idle');
-    setTimeout(function(){ wordmarkEl.classList.remove('glitching-idle'); }, 320);
-  }, 4200);
-}
+// idle wordmark glitch burst (previously a setInterval firing every
+// ~4.2s) is off for now -- the title should just look clean/static
+// while not hovered; hover keeps its own separate chaotic effect below
 
 /* ---------- Datura hover: chaotic, non-repeating glitch ----------
    driven directly by JS (rather than a looping CSS animation) so it
@@ -2603,15 +2945,21 @@ const whySection = document.getElementById('whySection');
   if (!tabVideoBtn || !tabScriptBtn || !panelVideo || !panelScript || !videoIframe || !scriptTextEl) return;
 
   let scriptLoaded = false;
+  let videoPlaying = false; // embed doesn't autoplay, so it starts paused
 
-  function pauseVideo(){
+  function sendPlayerCommand(func){
     // requires enablejsapi=1 on the iframe src
     try {
       videoIframe.contentWindow.postMessage(
-        JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }),
+        JSON.stringify({ event: 'command', func: func, args: [] }),
         '*'
       );
     } catch (e) { /* ignored -- iframe API not ready yet */ }
+  }
+
+  function pauseVideo(){
+    videoPlaying = false;
+    sendPlayerCommand('pauseVideo');
   }
 
   function showVideo(){
@@ -2640,13 +2988,22 @@ const whySection = document.getElementById('whySection');
   tabVideoBtn.addEventListener('click', showVideo);
   tabScriptBtn.addEventListener('click', showScript);
 
-  // click passthrough: the overlay normally intercepts all pointer
-  // input (so wheel-scrolling reaches our page instead of YouTube's
-  // player), but briefly steps aside on press so a click still reaches
-  // the video underneath for play/pause/fullscreen
+  // the overlay intercepts all pointer input so wheel-scrolling reaches
+  // our page instead of YouTube's player -- but that means every click's
+  // mousedown lands on the guard, never on the iframe itself. A click
+  // event only fires where mousedown *and* mouseup both land, and a
+  // cross-origin iframe is a separate browsing context, so it can never
+  // see a "complete" click this way no matter how quickly the guard
+  // steps aside afterward -- that's what needed several attempts before
+  // one registered. Sending the play/pause command directly through the
+  // YouTube IFrame API instead is fully reliable on the very first
+  // click; the guard still steps aside briefly afterward too, so other
+  // controls (fullscreen, the seek bar) still get a chance to pass through.
   const scrollGuard = document.getElementById('videoScrollGuard');
   if (scrollGuard){
     scrollGuard.addEventListener('mousedown', function(){
+      videoPlaying = !videoPlaying;
+      sendPlayerCommand(videoPlaying ? 'playVideo' : 'pauseVideo');
       scrollGuard.style.pointerEvents = 'none';
       setTimeout(function(){
         scrollGuard.style.pointerEvents = 'auto';
@@ -3052,7 +3409,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   if (!canvas || !section || !btnTop || !btnBottom || !btnImpressum) return;
 
   const ctx = canvas.getContext('2d');
-  const PARTICLE_COUNT = 70;
+  let PARTICLE_COUNT = 100; // adjustable at runtime, see the particle-count slider below
   const reduceMotionFlow = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let width = 0, height = 0, dpr = 1;
@@ -3155,6 +3512,23 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     for (let i = 0; i < PARTICLE_COUNT; i++){
       particles.push(makeParticle());
     }
+  }
+
+  // adjusts the live particle count by adding/removing individual
+  // particles rather than rebuilding the whole array -- so dragging the
+  // slider grows/shrinks the existing flow instead of every particle
+  // suddenly respawning at a new random position each time it changes
+  function setParticleCount(count){
+    if (count > PARTICLE_COUNT){
+      for (let i = PARTICLE_COUNT; i < count; i++) particles.push(makeParticle());
+    } else if (count < PARTICLE_COUNT){
+      // removed at random rather than always trimming the newest ones off
+      // the end, so it doesn't read as "the last ones added disappear"
+      while (particles.length > count){
+        particles.splice(Math.floor(Math.random() * particles.length), 1);
+      }
+    }
+    PARTICLE_COUNT = count;
   }
 
   // two independent decaying boosts: one for hover-enter, one for hover-leave,
@@ -3365,6 +3739,91 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     }, { threshold: 0.05 });
     flowObserver.observe(section);
   }
+
+  // particle-count fader: hidden until hovered, exponential 10-1000 range
+  // (so most of the bar's length covers the smaller/more-common counts,
+  // matching how a fader like this is normally expected to feel)
+  (function(){
+    const slider = document.getElementById('particleSlider');
+    const track = document.getElementById('particleSliderTrack');
+    const fill = document.getElementById('particleSliderFill');
+    const thumb = document.getElementById('particleSliderThumb');
+    const valueLabel = document.getElementById('particleSliderValue');
+    if (!slider || !track || !fill || !thumb || !valueLabel) return;
+
+    const MIN_COUNT = 10;
+    const MAX_COUNT = 1000;
+    let dragging = false;
+
+    function countToFraction(count){
+      return Math.log(count / MIN_COUNT) / Math.log(MAX_COUNT / MIN_COUNT);
+    }
+    function fractionToCount(frac){
+      frac = Math.max(0, Math.min(1, frac));
+      return Math.round(MIN_COUNT * Math.pow(MAX_COUNT / MIN_COUNT, frac));
+    }
+    function render(frac){
+      const pct = (Math.max(0, Math.min(1, frac)) * 100).toFixed(2) + '%';
+      fill.style.height = pct;
+      thumb.style.bottom = pct;
+      valueLabel.style.bottom = pct;
+    }
+    function applyCount(count){
+      count = Math.max(MIN_COUNT, Math.min(MAX_COUNT, count));
+      valueLabel.textContent = count;
+      slider.setAttribute('aria-valuenow', count);
+      if (count !== PARTICLE_COUNT) setParticleCount(count);
+    }
+    function fractionFromEvent(evt){
+      const rect = track.getBoundingClientRect();
+      return (rect.bottom - evt.clientY) / rect.height;
+    }
+    function setFromEvent(evt){
+      const frac = fractionFromEvent(evt);
+      render(frac);
+      applyCount(fractionToCount(frac));
+    }
+
+    slider.addEventListener('mousedown', function(evt){
+      dragging = true;
+      slider.classList.add('active');
+      setFromEvent(evt);
+      evt.preventDefault();
+    });
+    window.addEventListener('mousemove', function(evt){
+      if (dragging) setFromEvent(evt);
+    });
+    window.addEventListener('mouseup', function(){
+      if (dragging){ dragging = false; slider.classList.remove('active'); }
+    });
+    slider.addEventListener('touchstart', function(evt){
+      dragging = true;
+      slider.classList.add('active');
+      setFromEvent(evt.touches[0]);
+      evt.preventDefault();
+    }, { passive:false });
+    window.addEventListener('touchmove', function(evt){
+      if (dragging) setFromEvent(evt.touches[0]);
+    }, { passive:true });
+    window.addEventListener('touchend', function(){
+      if (dragging){ dragging = false; slider.classList.remove('active'); }
+    });
+
+    // keyboard: arrow keys nudge by a fraction step, matching typical slider behavior
+    slider.addEventListener('keydown', function(evt){
+      if (evt.key !== 'ArrowUp' && evt.key !== 'ArrowDown' && evt.key !== 'ArrowRight' && evt.key !== 'ArrowLeft') return;
+      evt.preventDefault();
+      const direction = (evt.key === 'ArrowUp' || evt.key === 'ArrowRight') ? 1 : -1;
+      const frac = Math.max(0, Math.min(1, countToFraction(PARTICLE_COUNT) + direction * 0.02));
+      render(frac);
+      applyCount(fractionToCount(frac));
+    });
+
+    const initialFrac = countToFraction(PARTICLE_COUNT);
+    render(initialFrac);
+    valueLabel.textContent = PARTICLE_COUNT;
+    slider.setAttribute('aria-valuenow', PARTICLE_COUNT);
+  })();
 })();
 
 /* ---------- edition spotlight cards ----------
@@ -3400,16 +3859,58 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       return res.json();
     });
   }
-  function fetchText(url){
-    return fetch(url).then(function(res){
-      if (!res.ok) throw new Error('not found');
-      return res.text();
-    });
-  }
 
+  // hand-drawn, thin-outline icons (matching the pedal diagram's own
+  // fill:none/stroke aesthetic) for the artist credentials modal -- inner
+  // shapes only, wrapped in a viewBox="0 0 24 24" <svg> when rendered.
+  // A couple of small shapes (play triangles, the instagram dot) are
+  // deliberately filled solid via their own fill="currentColor" so they
+  // read clearly at this size, overriding the icon's own fill:none default.
+  const ARTIST_LINK_ICONS = {
+    instagram: { label: 'Instagram', svg: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17" cy="7" r="0.6" fill="currentColor" stroke="none"/>' },
+    bandcamp: { label: 'Bandcamp', svg: '<polygon points="4,16 10,8 20,8 14,16" fill="currentColor" stroke="none"/>' },
+    youtube: { label: 'YouTube', svg: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10 9 L16 12 L10 15 Z" fill="currentColor" stroke="none"/>' },
+    soundcloud: { label: 'SoundCloud', svg: '<path d="M6 16 h11 a4 4 0 0 0 0 -8 a5 5 0 0 0 -9.5 -1.5 a3.5 3.5 0 0 0 -1.5 9.5 Z"/><line x1="9" y1="12" x2="9" y2="16"/><line x1="11.5" y1="10" x2="11.5" y2="16"/><line x1="14" y1="11" x2="14" y2="16"/>' },
+    homepage: { label: 'Homepage', svg: '<path d="M4 11 L12 4 L20 11"/><path d="M15 8 V4 H17 V9.6"/><path d="M6 10 V19 H18 V10"/><path d="M10 19 V13 H14 V19"/>' }
+  };
+  // bios/*.json isn't consistent about where links live -- some nest them
+  // under "links", some put the platform keys flat alongside "text" -- so
+  // this checks both rather than assuming one shape
+  function extractArtistLinks(data){
+    const raw = (data && data.links) || data || {};
+    const links = {};
+    Object.keys(ARTIST_LINK_ICONS).forEach(function(key){
+      if (raw[key]) links[key] = raw[key];
+    });
+    return links;
+  }
   // ---------- shared accordion coordinator: at most one instance "active" ----------
   const instances = [];
   let activeInstance = null;
+  // one height, shared by every edition's wrap (not measured per-instance):
+  // whichever edition/program has ever needed the most room sets it for
+  // all of them. This is what guarantees no two editions' boxes can ever
+  // end up at different heights, and that pulling a wrap out of the flex
+  // flow (swapToEdition) never changes the row's height, since every wrap
+  // -- in flow or not, active or collapsed -- always agrees on this same
+  // number. It only ever grows (never shrinks back down once raised).
+  let sharedCardHeight = 0;
+  // wraps in here are mid-swapToEdition and deliberately frozen at an
+  // explicit height (its exact captured on-screen size while dissolving)
+  // -- applySharedHeight must never touch them, since closeCard/openCard
+  // (called on the *other* instance during that same swap) also call
+  // lockHeight() internally, and if the target program happens to need
+  // more room than ever measured before, that would otherwise overwrite
+  // the frozen wrap's height mid-dissolve, reading as a small unwanted
+  // vertical jump right as the swap plays
+  const frozenWraps = new Set();
+  function applySharedHeight(natural){
+    sharedCardHeight = Math.max(sharedCardHeight, natural);
+    instances.forEach(function(inst){
+      if (!frozenWraps.has(inst.wrap)) inst.wrap.style.height = sharedCardHeight + 'px';
+    });
+    return sharedCardHeight;
+  }
 
   // FLIP (First-Last-Invert-Play): the tabs' actual left/right movement
   // during an open/close is a byproduct of several *different* elements'
@@ -3450,7 +3951,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   function requestOpen(instance){
     if (activeInstance) return; // inactive siblings are unclickable while one is open, shouldn't normally reach here
     activeInstance = instance;
+    // toggled inside the same mutate() as the wrap classes (not before
+    // calling flipSideBoxes) so its "before" measurement still reflects
+    // the true, currently-centered idle layout, not this new state
     const tabsAreMoving = flipSideBoxes(function(){
+      container.classList.add('has-active');
       instances.forEach(function(other){
         if (other === instance) other.wrap.classList.add('wrap-active');
         else other.wrap.classList.add('wrap-hidden-sibling');
@@ -3460,20 +3965,105 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // still visibly sliding into place reads as the card popping out of
     // nowhere -- so it only starts opening once the tab has actually
     // finished settling into its final spot.
-    if (tabsAreMoving) setTimeout(function(){ instance.openCard(); }, CARD_MS);
-    else instance.openCard();
+    function openNow(){
+      instance.openCard();
+      // the vine-reveal is only worth watching once the card itself has
+      // actually finished sliding/fading into view -- playing it
+      // alongside openCard() would mean most of it happens while the
+      // card is still barely visible
+      setTimeout(function(){ instance.playVineReveal(); }, CARD_MS);
+    }
+    if (tabsAreMoving) setTimeout(openNow, CARD_MS);
+    else openNow();
   }
-  function requestClose(instance){
+  function requestClose(instance, onClosed){
     if (activeInstance !== instance) return;
     instance.closeCard(function(){
       activeInstance = null;
       flipSideBoxes(function(){
+        container.classList.remove('has-active');
         instances.forEach(function(other){
           if (other === instance) other.wrap.classList.remove('wrap-active');
           else other.wrap.classList.remove('wrap-hidden-sibling');
         });
       });
+      if (onClosed) onClosed();
     });
+  }
+
+  // used specifically for a collab-button jump to a *different* edition:
+  // the old card unexpands with its own normal closing animation while
+  // the new one simultaneously expands with its own normal opening
+  // animation. Turning off centering (has-active) fixed one source of
+  // the old wrap appearing in the wrong place, but not this one: as long
+  // as both wraps are ordinary flex items, the growing one still visually
+  // pushes the shrinking one around (whichever one is *earlier* in the
+  // DOM ends up shoving the other sideways as it grows), and which
+  // direction that happens in depends purely on which edition comes
+  // first in the row -- so it looked fine one way and wrong the other.
+  // Fixed at the root: the old wrap is pulled out of the flex flow
+  // entirely (frozen at its exact current on-screen position/size via
+  // position:absolute) the moment the swap starts, so its own shrink can
+  // never again interact with the new one's simultaneous grow, in either
+  // direction. It's handed back to normal flow once fully shrunk away.
+  function swapToEdition(oldInstance, newInstance){
+    const oldWrap = oldInstance.wrap;
+    const rect = oldWrap.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    frozenWraps.add(oldWrap);
+    oldWrap.style.position = 'absolute';
+    oldWrap.style.left = (rect.left - containerRect.left) + 'px';
+    oldWrap.style.top = (rect.top - containerRect.top) + 'px';
+    oldWrap.style.height = rect.height + 'px';
+    oldWrap.style.zIndex = '0';
+
+    oldInstance.closeCard();
+    oldWrap.classList.remove('wrap-active');
+    oldWrap.classList.add('wrap-hidden-sibling');
+
+    newInstance.wrap.classList.remove('card-collapsed', 'wrap-hidden-sibling');
+    newInstance.wrap.classList.add('wrap-active');
+    activeInstance = newInstance;
+    newInstance.openCard();
+    // delayed until the card has actually finished expanding into view --
+    // otherwise most of the reveal plays while it's still barely visible
+    setTimeout(function(){ newInstance.playVineReveal(); }, CARD_MS);
+
+    setTimeout(function(){
+      frozenWraps.delete(oldWrap);
+      oldWrap.style.position = '';
+      oldWrap.style.left = '';
+      oldWrap.style.top = '';
+      // catches up to the shared height in case it grew while frozen,
+      // rather than clearing to '' and relying on nothing to reset it
+      // until the next time this edition happens to open again
+      oldWrap.style.height = sharedCardHeight + 'px';
+      oldWrap.style.zIndex = '';
+    }, CARD_MS + 40);
+  }
+
+  // jumps to a specific program, in a specific edition, from a collab
+  // button. The target program is selected *before* its card is visible
+  // (skipping its vine-reveal animation, which would otherwise finish
+  // silently while still hidden and leave the play button just sitting
+  // there already fully formed the instant the card fades in -- see
+  // swapToEdition, which replays it for real once the card is shown), so
+  // by the time it's shown, it's already displaying the right thing.
+  function switchToProgram(editionSlug, programSlug){
+    const targetInstance = instances.find(function(inst){ return inst.editionSlug === editionSlug; });
+    if (!targetInstance) return;
+    if (activeInstance === targetInstance){
+      targetInstance.selectProgram(programSlug);
+      return;
+    }
+    if (activeInstance){
+      targetInstance.selectProgram(programSlug, { skipVineReveal: true });
+      swapToEdition(activeInstance, targetInstance);
+    } else {
+      targetInstance.selectProgram(programSlug);
+      requestOpen(targetInstance);
+    }
   }
 
   // ---------- builds one edition's card: clones the template, wires the
@@ -3487,6 +4077,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const sideBox = wrap.querySelector('.spotlight-side-box');
     const sideTitle = wrap.querySelector('.spotlight-side-title');
     const card = wrap.querySelector('.spotlight-box');
+    const cardClip = wrap.querySelector('.spotlight-card-clip');
     sideTitle.textContent = folderNameToTitle(editionSlug);
     if (colors){
       if (colors.color_bg) wrap.style.setProperty('--edition-bg', colors.color_bg);
@@ -3637,6 +4228,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       roseModActive = active;
     }
 
+    // reassigned below once the diagram's controls are actually wired up
+    // (real body needs the per-control render()/state closures) -- calling
+    // it whenever a program is shown puts the pedal back to its one true
+    // default configuration (every switch left, every poti straight up,
+    // every button unpressed) instead of carrying over whatever a previous
+    // interaction left it at, so it always looks the same everywhere
+    let resetPedalControls = function(){};
+
     if (diagram){
       try{
       const POTI_LABELS = ['Potentiometer 1', 'Potentiometer 2', 'Potentiometer 3', 'Potentiometer 4'];
@@ -3694,6 +4293,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       wireToggle(bioPanelObject, bioPanelObjectMod1, 'left');
       wireToggle(bioPanelObjectMod1, bioPanelObject, 'right');
 
+      const switchResets = [];
+      const potiResets = [];
+      const buttonEls = [];
+      // switch 3 (index 2) picks the buttons' interaction mode: right
+      // (its default) is a normal toggle, left is momentary -- pink light
+      // only lit while actually held down
+      let buttonsToggleMode = true;
+
       // switches: click toggles between the left and right resting position
       diagram.querySelectorAll('.pedal-switch').forEach(function(sw){
         const thumb = sw.querySelector('.switch-thumb');
@@ -3717,7 +4324,27 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           const newState = state === 'left' ? 'right' : 'left';
           sw.setAttribute('data-state', newState);
           render();
+          if (switchIndex === 2){
+            buttonsToggleMode = newState === 'right';
+            diagram.classList.toggle('buttons-momentary', !buttonsToggleMode);
+            // switching into momentary mode shouldn't leave a button
+            // stuck lit from whatever toggle state it was left in
+            if (!buttonsToggleMode) buttonEls.forEach(function(b){ b.classList.remove('pressed'); });
+          }
           showPedalObjectInfo('Switch ' + switchNumber, sw);
+        });
+        switchResets.push(function(){
+          sw.setAttribute('data-state', switchIndex === 2 ? 'right' : 'left');
+          render();
+          if (switchIndex === 1){
+            diagram.classList.remove('mod-rose-active');
+            if (diagramPanel) diagramPanel.classList.remove('mod-rose-active');
+            setPedalRoseMod(false);
+          }
+          if (switchIndex === 2){
+            buttonsToggleMode = true;
+            diagram.classList.remove('buttons-momentary');
+          }
         });
       });
 
@@ -3783,16 +4410,46 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           if (dragging) moveDrag(evt.touches[0]);
         }, { passive:true });
         window.addEventListener('touchend', endDrag);
+        potiResets.push(function(){
+          angleDeg = 0;
+          render();
+        });
       });
 
-      // buttons: click toggles a pressed state (ring fills rose, center fills white)
+      // buttons: while switch 3 is right (buttonsToggleMode), a click
+      // toggles a persistent pressed state (ring fills rose, center fills
+      // white); while it's left, the same look is momentary -- lit only
+      // for as long as the button is actually held down
       diagram.querySelectorAll('.pedal-button').forEach(function(btn){
         const buttonNumber = parseInt(btn.getAttribute('data-index'), 10) + 1;
         btn.addEventListener('click', function(){
+          if (!buttonsToggleMode) return; // momentary mode is driven by press/release below instead
           btn.classList.toggle('pressed');
           showPedalObjectInfo('Button ' + buttonNumber, btn);
         });
+        function press(){
+          if (buttonsToggleMode) return;
+          btn.classList.add('pressed');
+          showPedalObjectInfo('Button ' + buttonNumber, btn);
+        }
+        function release(){
+          if (buttonsToggleMode) return;
+          btn.classList.remove('pressed');
+        }
+        btn.addEventListener('mousedown', press);
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
+        btn.addEventListener('touchstart', function(evt){ evt.preventDefault(); press(); }, { passive:false });
+        btn.addEventListener('touchend', release);
+        btn.addEventListener('touchcancel', release);
+        buttonEls.push(btn);
       });
+
+      resetPedalControls = function(){
+        switchResets.forEach(function(fn){ fn(); });
+        potiResets.forEach(function(fn){ fn(); });
+        buttonEls.forEach(function(btn){ btn.classList.remove('pressed'); });
+      };
       } catch(e) { console.error('Pedal diagram setup failed:', e); }
     }
 
@@ -3894,15 +4551,33 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         setTimeout(function(){ vineReveal.classList.add('vine-hidden'); }, 150);
       }, 820); // just past the circle's own delay+duration (0.4s + 0.4s)
     }
+    // undoes triggerVineReveal's end state -- called when the card
+    // closes, so the button's "revealed" class (and the vine SVG's own
+    // fully-drawn/faded state) never carries over to the next time this
+    // same edition is opened. Without this, reopening it would show the
+    // button riding in already-visible alongside the card's own fade-in
+    // (stale from last time), only for it to vanish the instant
+    // triggerVineReveal's delayed call strips it back off to start the
+    // animation over -- reading as "it was there, then disappeared,
+    // then the animation played" instead of just playing cleanly.
+    function resetVineReveal(){
+      if (!vineReveal) return;
+      clearTimeout(vineRevealTimer);
+      playBtn.classList.remove('revealed');
+      vineReveal.classList.remove('sparked');
+      vineReveal.classList.add('vine-hidden');
+    }
     const artistCurrentEl = wrap.querySelector('.artist-name-current');
     const artistNextEl = wrap.querySelector('.artist-name-next');
     const artistPrevEl = wrap.querySelector('.artist-name-prev');
+    const collabButtonsEl = wrap.querySelector('.collab-buttons');
 
     let currentIndex = 0;
     let currentWav = 'examples/' + programs[0].programSlug + '.wav';
     let currentType = programs[0].type;
     let tooltipLoadedForType = null; // caches which type's explanation is currently loaded
     let requestToken = 0; // guards against a slow fetch overwriting a newer selection
+    let currentArtistLinks = {}; // populated from the bio fetch below, read by openCredentials
 
     const SLOT_WIDTH = 130;
     const barItems = [];
@@ -3931,13 +4606,21 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       });
     }
 
-    function applyEntry(entry){
+    function applyEntry(entry, opts){
       const myToken = ++requestToken;
 
       positionBar();
       currentWav = 'examples/' + entry.programSlug + '.wav';
+      resetPedalControls();
       resetPedalObjectInfo();
-      triggerVineReveal();
+      // skipped when pre-populating a card that isn't visible yet (e.g. a
+      // collab-button jump to another edition, still mid-swap) -- firing
+      // it there would run the whole draw-in-and-reveal animation while
+      // hidden, so the button is already just sitting there fully formed
+      // the instant the card actually fades into view, rather than
+      // visibly forming. It's replayed for real once the card is shown
+      // (see swapToEdition).
+      if (!opts || !opts.skipVineReveal) triggerVineReveal();
 
       // pedal-type title + color: "Synthesizer Pedal:" (red) or
       // "Effects Pedal:" (blue), depending on this program's type
@@ -3972,11 +4655,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       };
       artistImage.src = 'artists/' + entry.artistSlug + '.png';
 
-      // artist bio
+      // artist bio (+ whatever credential links this artist has, shown
+      // later in the modal opened from the photo -- see openCredentials)
       artistBio.textContent = 'Lädt…';
-      fetchText('bios/' + entry.artistSlug + '.txt').then(function(text){
+      currentArtistLinks = {};
+      fetchJSON('bios/' + entry.artistSlug + '.json').then(function(data){
         if (myToken !== requestToken) return;
-        artistBio.textContent = text.trim();
+        artistBio.textContent = data.text;
+        currentArtistLinks = extractArtistLinks(data);
       }).catch(function(){
         if (myToken !== requestToken) return;
         artistBio.textContent = 'Bio nicht gefunden';
@@ -3985,6 +4671,30 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // program description: bundled directly in this program's own
       // manifest entry (editions/<edition>/descriptions/<program>.json)
       programDesc.textContent = entry.text || 'Beschreibung nicht gefunden';
+
+      // one button per program this artist has ever collaborated on,
+      // across every edition, in the order they appear on the site --
+      // always at least one (this program itself). Whichever one matches
+      // what's currently showing is highlighted and inert; the rest jump
+      // straight to their own program (switching editions if needed).
+      if (collabButtonsEl){
+        collabButtonsEl.innerHTML = '';
+        (entry.collabs || [entry]).forEach(function(c, i){
+          const btn = document.createElement('button');
+          btn.className = 'collab-button';
+          btn.type = 'button';
+          btn.textContent = String(i + 1);
+          const isCurrent = c.editionSlug === editionSlug && c.programSlug === entry.programSlug;
+          btn.classList.toggle('active', isCurrent);
+          btn.setAttribute('aria-label', c.program + ' (' + folderNameToTitle(c.editionSlug) + ')');
+          if (!isCurrent){
+            btn.addEventListener('click', function(){
+              switchToProgram(c.editionSlug, c.programSlug);
+            });
+          }
+          collabButtonsEl.appendChild(btn);
+        });
+      }
     }
 
     // hover on "Synthesizer Pedal:" / "Effects Pedal:" -- shows a small
@@ -4045,14 +4755,46 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       }
     });
 
-    // clicking the artist circle: for now just shows a placeholder modal --
-    // intended to later open the artist's real links/credentials. The
-    // modal itself is a single shared element on the page, not per-card.
+    // clicking the artist circle: opens the (single, shared) credentials
+    // modal filled with whichever artist is currently showing on this
+    // card -- name plus one icon link per platform in currentArtistLinks
     const artistCircleWrap = wrap.querySelector('.artist-circle-wrap');
     const modalArtistCredentials = document.getElementById('modalArtistCredentials');
     if (artistCircleWrap && modalArtistCredentials){
+      const modalArtistNameEl = document.getElementById('modalArtistName');
+      const modalArtistPhotoEl = document.getElementById('modalArtistPhoto');
+      const modalArtistLinksEl = document.getElementById('modalArtistLinks');
+      const modalArtistEmptyEl = document.getElementById('modalArtistEmpty');
       const openCredentials = function(){
         resetPedalObjectInfo();
+        // the modal is a single shared element outside any .spotlight-wrap,
+        // so it can't inherit --edition-fg on its own -- copy this edition's
+        // accent onto it directly so the link icons match its color scheme
+        if (colors && colors.color_fg) modalArtistCredentials.style.setProperty('--edition-fg', colors.color_fg);
+        if (modalArtistNameEl) modalArtistNameEl.textContent = artistCurrentEl.textContent;
+        if (modalArtistPhotoEl){
+          modalArtistPhotoEl.style.display = '';
+          modalArtistPhotoEl.onerror = function(){ modalArtistPhotoEl.style.display = 'none'; };
+          modalArtistPhotoEl.alt = artistCurrentEl.textContent;
+          modalArtistPhotoEl.src = artistImage.src;
+        }
+        if (modalArtistLinksEl){
+          modalArtistLinksEl.innerHTML = '';
+          Object.keys(currentArtistLinks).forEach(function(key){
+            const icon = ARTIST_LINK_ICONS[key];
+            if (!icon) return;
+            const a = document.createElement('a');
+            a.className = 'modal-artist-link';
+            a.href = currentArtistLinks[key];
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.innerHTML =
+              '<span class="modal-artist-link-icon"><svg viewBox="0 0 24 24">' + icon.svg + '</svg></span>' +
+              '<span class="modal-artist-link-caption">' + icon.label + '</span>';
+            modalArtistLinksEl.appendChild(a);
+          });
+          if (modalArtistEmptyEl) modalArtistEmptyEl.classList.toggle('visible', modalArtistLinksEl.children.length === 0);
+        }
         modalArtistCredentials.classList.add('active');
         document.body.style.overflow = 'hidden';
         document.documentElement.style.overflow = 'hidden';
@@ -4066,7 +4808,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       });
     }
 
-    applyEntry(programs[currentIndex]);
+    // initial population only -- never visible yet at this point (even
+    // the edition that starts open hasn't been placed in the DOM's final
+    // state by the bootstrap loop yet), so the vine-reveal is skipped
+    // here and played for real once each edition is actually shown (see
+    // the bootstrap loop below for the initially-open one, and
+    // requestOpen for every other one, opened later by the user)
+    applyEntry(programs[currentIndex], { skipVineReveal: true });
 
     function playCurrentWav(){
       const audio = new Audio(currentWav);
@@ -4089,22 +4837,39 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // needed the first time a never-yet-opened card is about to open,
       // since simply measuring while still collapsed would lock in the
       // small tab-only height and clip the real content once it grows
+      // .spotlight-card-clip (the width/"roll out" side of the open
+      // animation) needs suppressing here too, not just wrap/card -- left
+      // alone, this synchronous collapsed->open->collapsed round trip is
+      // the very first style change it's ever seen for that property, and
+      // that one-off seems to be enough to confuse the browser's own
+      // transition tracking for it: the *next* removal of card-collapsed
+      // (the real one, in openCard right after this returns) then snaps
+      // straight to full width with no animation, while opacity (on
+      // card, already suppressed here) still fades in normally -- exactly
+      // "fades in but doesn't roll out", and only ever on a card's first
+      // ever open, since by the second time it's no longer this
+      // property's first transition and the browser tracks it correctly.
       const prevWrapT = wrap.style.transition;
       const prevCardT = card.style.transition;
+      const prevClipT = cardClip ? cardClip.style.transition : '';
       wrap.style.transition = 'none';
       card.style.transition = 'none';
+      if (cardClip) cardClip.style.transition = 'none';
       wrap.classList.remove('card-collapsed');
       const h = wrap.getBoundingClientRect().height;
       wrap.classList.add('card-collapsed');
       void wrap.offsetHeight; // force reflow so the re-added class is committed before transitions return
       wrap.style.transition = prevWrapT;
       card.style.transition = prevCardT;
+      if (cardClip) cardClip.style.transition = prevClipT;
       return h;
     }
     function lockHeight(){
-      const current = parseFloat(wrap.style.height) || 0;
+      // shared across every edition (see applySharedHeight) rather than
+      // just this one, so no edition's collapsed tab can ever end up
+      // shorter or taller than another's
       const natural = measureOpenHeight();
-      wrap.style.height = Math.max(natural, current) + 'px';
+      wrap.style.height = applySharedHeight(natural) + 'px';
     }
     lockHeight();
     window.addEventListener('load', lockHeight); // catches height changes from late-loading fonts/images
@@ -4128,11 +4893,29 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       clearTimeout(stageTimer);
       stageTimer = setTimeout(function(){
         wrap.classList.add('card-collapsed');
+        resetVineReveal();
         if (onDone) onDone();
       }, CARD_MS + 40);
     }
 
-    const instance = { wrap: wrap, sideBox: sideBox, openCard: openCard, closeCard: closeCard };
+    // jumps straight to a specific program within *this* edition, used
+    // both by its own program bar and by other editions' collab buttons
+    function selectProgram(programSlug, opts){
+      const idx = programs.findIndex(function(p){ return p.programSlug === programSlug; });
+      if (idx === -1) return;
+      currentIndex = idx;
+      applyEntry(programs[currentIndex], opts);
+    }
+
+    const instance = {
+      wrap: wrap,
+      sideBox: sideBox,
+      openCard: openCard,
+      closeCard: closeCard,
+      editionSlug: editionSlug,
+      selectProgram: selectProgram,
+      playVineReveal: triggerVineReveal
+    };
     instances.push(instance);
 
     function handleToggleClick(){
@@ -4172,6 +4955,25 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       });
     }));
   }).then(function(editions){
+    // build a site-wide registry of every artist's collaborations, in the
+    // order they appear (edition order, then program order within each
+    // edition) -- so a bio can offer a button to every program that
+    // artist has ever worked on, not just the one currently shown, even
+    // when those live in a different edition entirely
+    const collabsByArtist = {};
+    editions.forEach(function(edition){
+      edition.programs.forEach(function(entry){
+        entry.editionSlug = edition.slug;
+        const list = collabsByArtist[entry.artist] || (collabsByArtist[entry.artist] = []);
+        list.push({ editionSlug: edition.slug, programSlug: entry.programSlug, program: entry.program });
+      });
+    });
+    editions.forEach(function(edition){
+      edition.programs.forEach(function(entry){
+        entry.collabs = collabsByArtist[entry.artist];
+      });
+    });
+
     editions.forEach(function(edition, idx){
       const instance = mountEdition(edition.slug, edition.programs, edition.colors);
       if (idx === 0){
@@ -4179,7 +4981,9 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         // hidden siblings alongside it (no transition -- this is the
         // initial state, not a user-triggered toggle)
         activeInstance = instance;
+        container.classList.add('has-active');
         instance.wrap.classList.add('wrap-active');
+        instance.playVineReveal(); // visible immediately, no opening animation to wait out
       } else {
         instance.wrap.classList.add('card-collapsed', 'wrap-hidden-sibling');
       }
@@ -4301,6 +5105,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // if any modal is open, let the page (and its own scroll handling) be
     if (document.querySelector('.modal-overlay.active')) return;
 
+    // the blog entry's own content box has its own internal scrollbar --
+    // let the wheel scroll that instead of paging the whole section
+    if (e.target.closest && e.target.closest('.blog-item-content')) return;
+
     // block ALL native scrolling while paging is active -- only the
     // accumulated delta below decides *when* to jump, not whether the
     // browser is allowed to scroll natively in the meantime. Letting
@@ -4354,17 +5162,41 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   // keep currentPageIndex correct if the person clicks a link that jumps
   // to a specific section directly (syncPageIndex is called from those
-  // handlers elsewhere), and also resync after manual keyboard scrolling
+  // handlers elsewhere), and also resync after manual keyboard scrolling.
+  // Arrow keys snap a full section per press too, same as Page Up/Down.
   window.addEventListener('keydown', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
-    if (e.key !== 'PageDown' && e.key !== 'PageUp') return;
+    if (e.key !== 'PageDown' && e.key !== 'PageUp' && e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     if (isJumping || pageAnimationActive) { e.preventDefault(); return; }
-    const direction = e.key === 'PageDown' ? 1 : -1;
+    const direction = (e.key === 'PageDown' || e.key === 'ArrowDown') ? 1 : -1;
     const targetIdx = currentPageIndex + direction;
     if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
     e.preventDefault();
     isJumping = true;
     jumpToIndex(targetIdx);
+    setTimeout(function(){ isJumping = false; }, 550);
+  });
+
+  // scrollbar-thumb dragging doesn't fire wheel/touch/keydown events, just
+  // a plain native scroll -- so it free-scrolls (as it should, while
+  // being dragged) and only snaps to the nearest section once the mouse
+  // button is released. Detected via a mousedown that lands in the
+  // scrollbar's own strip (approximated as the rightmost ~20px of the
+  // viewport, wider than any real browser/OS scrollbar) followed by a
+  // mouseup, rather than trying to identify the native scrollbar thumb
+  // itself, which isn't a normal DOM event target.
+  const SCROLLBAR_HIT_WIDTH = 20;
+  let draggingScrollbar = false;
+  window.addEventListener('mousedown', function(e){
+    if (document.querySelector('.modal-overlay.active')) return;
+    if (e.clientX >= window.innerWidth - SCROLLBAR_HIT_WIDTH) draggingScrollbar = true;
+  });
+  window.addEventListener('mouseup', function(){
+    if (!draggingScrollbar) return;
+    draggingScrollbar = false;
+    if (isJumping || pageAnimationActive) return;
+    isJumping = true;
+    jumpToIndex(nearestSectionIndex());
     setTimeout(function(){ isJumping = false; }, 550);
   });
 })();
@@ -4378,15 +5210,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const navDown = document.getElementById('blogNavDown');
   if (!regionAbove || !titleBlock || !regionBelow || !navUp || !navDown) return;
 
-  // NOTE: browsers can't list a folder's contents on their own, so this
-  // list has to be kept in sync by hand -- add the filename here (without
-  // the .txt extension) every time a new post is dropped into /blog.
+  // NOTE: browsers can't list a folder's contents on their own, so the
+  // filenames still have to be kept in sync by hand -- but now in
+  // blog/blog.json (one JSON array of filenames, without the .txt
+  // extension) rather than here, so dropping a new post in /blog only
+  // means adding one line to that manifest instead of editing this file.
   // Expected filename format: YYYYMMDD_Title-Of-The-Post
-  const blogFiles = [
-    '20260718_Birth_of_a_Blog',
-    '20260719_Birthday_Celebration'
-  ];
-
   function parseFilename(filename){
     const underscoreIdx = filename.indexOf('_');
     const datePart = underscoreIdx === -1 ? filename : filename.slice(0, underscoreIdx);
@@ -4402,9 +5231,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     return { filename: filename, dateDisplay: dateDisplay, sortKey: sortKey, title: title };
   }
 
-  let entries = blogFiles.map(parseFilename);
-  entries.sort(function(a, b){ return b.sortKey.localeCompare(a.sortKey); }); // newest first
-
+  let entries = [];
   let currentIndex = 0;
   let loadedContent = {}; // cache so re-visiting an entry doesn't re-fetch
 
@@ -4508,7 +5335,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (currentIndex < entries.length - 1){ currentIndex++; renderEntry(); }
   });
 
-  renderEntry();
+  fetch('blog/blog.json')
+    .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+    .then(function(filenames){
+      entries = filenames.map(parseFilename);
+      entries.sort(function(a, b){ return b.sortKey.localeCompare(a.sortKey); }); // newest first
+    })
+    .catch(function(){ entries = []; })
+    .then(renderEntry);
 })();
 </script>
 
