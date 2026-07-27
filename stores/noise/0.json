@@ -1,0 +1,292 @@
+{
+  "0": {
+    "close": [],
+    "extra": {
+      "reset_to_zero": 1
+    },
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "nse_amp": 0.0
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "nse_amp": 1.0
+        }
+      }
+    },
+    "start": []
+  },
+  "1": {
+    "close": [],
+    "extra": {
+      "reset_to_zero": 1
+    },
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "comb_amp": 0.0
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "comb_amp": 1.0
+        }
+      }
+    },
+    "start": []
+  },
+  "2": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "verb_amp": 0.0
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "verb_amp": 0.642553191
+        }
+      }
+    },
+    "start": []
+  },
+  "3": {
+    "close": [],
+    "extra": {
+      "jsons_jump": [
+        0,
+        1
+      ]
+    },
+    "markers": {},
+    "start": []
+  },
+  "4": {
+    "close": [],
+    "extra": {
+      "toggle": 1
+    },
+    "markers": {},
+    "start": []
+  },
+  "5": {
+    "close": [],
+    "extra": {
+      "prgrm_change": 1,
+      "tap_bpm": 1
+    },
+    "markers": {},
+    "start": []
+  },
+  "6": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "nse_gain": 0.0
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "nse_gain": 1.0
+        }
+      }
+    },
+    "start": []
+  },
+  "7": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "hpf": 0.0,
+          "lpf": 0.178723404,
+          "post_gain": 0.570212766
+        }
+      },
+      "45": {
+        "diy_noise0": {
+          "hpf": 0.0,
+          "lpf": 0.999583343,
+          "post_gain": 0.5
+        }
+      },
+      "55": {
+        "diy_noise0": {
+          "hpf": 0.0,
+          "lpf": 1.0,
+          "post_gain": 0.5
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "hpf": 0.953191489,
+          "lpf": 1.0,
+          "post_gain": 0.5
+        }
+      }
+    },
+    "start": []
+  },
+  "8": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "comb_gain": 0.0
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "comb_gain": 1.0
+        }
+      }
+    },
+    "start": []
+  },
+  "9": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "comb_lfo_blend": 0.005851878,
+          "comb_lfo_del_free": 0.804255319,
+          "high_amp": 0.476595745,
+          "low_amp": 0.828126785,
+          "mid_amp": 0.480851064,
+          "nse_dec_blend": 0.0,
+          "sqz": 0.502447439,
+          "trem_a": 0.999408237,
+          "trem_e": 0.326954833,
+          "trem_ef": 0.666666667
+        }
+      },
+      "20": {
+        "diy_noise0": {
+          "comb_lfo_blend": 0.347861743,
+          "comb_lfo_del_free": 0.804255317,
+          "high_amp": 0.557446809,
+          "low_amp": 0.482382873,
+          "mid_amp": 0.70212766,
+          "nse_dec_blend": 0.0,
+          "sqz": 0.023737104,
+          "trem_a": 0.964822961,
+          "trem_e": 0.534466436,
+          "trem_ef": 0.333333333
+        }
+      },
+      "50": {
+        "diy_noise0": {
+          "comb_lfo_blend": 0.391500562,
+          "comb_lfo_del_free": 0.568930964,
+          "high_amp": 0.629787234,
+          "low_amp": 0.476595745,
+          "mid_amp": 0.646808511,
+          "nse_dec_blend": 0.007895225,
+          "sqz": 0.000208521,
+          "trem_a": 0.012786879,
+          "trem_e": 0.500503121,
+          "trem_ef": 0.5
+        }
+      },
+      "100": {
+        "diy_noise0": {
+          "comb_lfo_blend": 1.0,
+          "comb_lfo_del_free": 0.0,
+          "high_amp": 0.472340426,
+          "low_amp": 0.646808511,
+          "mid_amp": 0.557446809,
+          "nse_dec_blend": 0.612765957,
+          "sqz": 0.0,
+          "trem_a": 0.0,
+          "trem_e": 0.5,
+          "trem_ef": 0.5
+        }
+      }
+    },
+    "start": []
+  },
+  "10": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "fx_pedal": {
+          "clip_gain": 0.0
+        }
+      },
+      "100": {
+        "fx_pedal": {
+          "clip_gain": 1.0
+        }
+      }
+    },
+    "start": []
+  },
+  "11": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "pedal_passover": {
+          "clip_gain": 0.0
+        }
+      },
+      "100": {
+        "pedal_passover": {
+          "clip_gain": 1.0
+        }
+      }
+    },
+    "start": []
+  },
+  "closedown": {
+    "close": [
+      "fx_pedal",
+      "pedal_passover",
+      "recorder",
+      "diy_noise0"
+    ],
+    "extra": {},
+    "markers": {},
+    "start": []
+  },
+  "startup": {
+    "close": [],
+    "extra": {},
+    "markers": {
+      "0": {
+        "diy_noise0": {
+          "amp": 1.0,
+          "comb_lfo_amp": 0.595744681,
+          "comb_lfo_del_which": 1.0,
+          "comb_lfo_edel_timed": 0.5,
+          "comb_lfo_f": 0.663829787,
+          "delay0_amp": 0.0,
+          "delay0_mdec": 0.428571429,
+          "delay1_amp": 0.0,
+          "delay1_mdec": 0.428571429,
+          "delay_amp": 0.0,
+          "delay_gain": 0.0,
+          "pink_amp": 0.0,
+          "verb_gain": 0.69787234,
+          "white_amp": 1.0
+        }
+      }
+    },
+    "start": [
+      "fx_pedal",
+      "pedal_passover",
+      "recorder",
+      "diy_noise0"
+    ]
+  }
+}

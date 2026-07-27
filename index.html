@@ -823,7 +823,6 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    max-width:480px;
     width:100%;
   }
 
@@ -882,8 +881,7 @@
     align-items:center;
     justify-content:center;
     text-align:center;
-    width:400px; /* same fixed width as the title/content panels below */
-    max-width:100%;
+    width:100%; /* fills .blog-viewer's own width, same as the title/content panels below */
     height:58px;
     flex-shrink:0;
     box-sizing:border-box;
@@ -905,12 +903,14 @@
     width:100%;
     min-height:0;
   }
-  /* same fixed width as .blog-item-content, rounded only on top -- the
-     two sit with zero gap between them (see .blog-carousel/.blog-item-content)
-     so together they read as one continuous panel, not two separate ones */
+  /* same width as .blog-item-content (both just fill .blog-viewer), rounded
+     only on top -- the two sit with zero gap between them (see
+     .blog-carousel/.blog-item-content) so together they read as one
+     continuous panel, not two separate ones */
   .blog-highlight-titleblock{
-    width:400px;
+    width:100%;
     margin:0 auto;
+    box-sizing:border-box;
     text-align:center;
     background:var(--grey-1);
     border-radius:10px 10px 0 0;
@@ -969,22 +969,22 @@
   }
 
   /* the highlighted entry's own content, directly under its title --
-     same fixed width as the title, flush against it with zero gap and
-     rounded only on the bottom, so together they read as one connected
-     panel rather than two separate ones. Capped at a fixed height with
+     same width as the title, flush against it with zero gap and rounded
+     only on the bottom, so together they read as one connected panel
+     rather than two separate ones. Capped at a fixed height with
      its own (thin, minimal) scrollbar rather than growing, both so an
      unusually long entry can never nudge anything below it (including
      the whole above/below track split that keeps the title/arrows fixed)
      and so it's actually reachable instead of just quietly overflowing. */
   .blog-item-content{
-    width:400px;
+    width:100%;
     max-height:190px;
     margin:0 auto;
     font-size:0.92rem;
     line-height:1.75;
     color:var(--grey-3);
     white-space:pre-line;
-    text-align:center;
+    text-align:justify;
     background:var(--grey-1);
     border-radius:0 0 10px 10px;
     padding:0.9rem 1.2rem;
@@ -1466,6 +1466,7 @@
     margin-right:0.6rem;
   }
   .collab-button{
+    position:relative;
     width:22px;
     height:22px;
     flex-shrink:0;
@@ -1487,6 +1488,33 @@
   .collab-button:hover{
     border-color:var(--white);
     color:var(--white);
+  }
+  /* info box showing which program/edition this numbered button points
+     to -- reuses the aria-label already set in JS so there's only one
+     copy of the text to keep in sync */
+  .collab-button::after{
+    content:attr(aria-label);
+    position:absolute;
+    bottom:calc(100% + 0.6rem);
+    left:50%;
+    transform:translateX(-50%) translateY(4px);
+    background:var(--black);
+    border:1px solid var(--grey-2);
+    color:var(--grey-3);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem;
+    line-height:1.4;
+    white-space:nowrap;
+    padding:0.4rem 0.7rem;
+    border-radius:4px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.2s ease, transform 0.2s ease;
+    z-index:20;
+  }
+  .collab-button:hover::after{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
   }
   .collab-button.active{
     background:var(--edition-fg, var(--white));
@@ -1574,7 +1602,7 @@
     font-family:'Anton', sans-serif;
     font-size:0.95rem;
     letter-spacing:0.02em;
-    color:var(--white);
+    color:var(--edition-fg, var(--white));
   }
   .artist-nav-row{
     margin-top:0.35rem;
@@ -1692,6 +1720,142 @@
   }
   .bio-panel-object.expanded .object-info-inner{
     opacity:1;
+  }
+
+  /* per-control synth info (see computeControlGroups/renderControlGroups):
+     one .control-info-group per synth this control touches, laid out side
+     by side when there's more than one (a thin divider between them, like
+     the site's other hairline separators). The synth name is the
+     headline -- large, and hoverable (reusing .spotlight-title-hoverable,
+     the same cursor:help/underline treatment as "Synthesizer Pedal:")
+     with its own tooltip explaining what a synth even is, sourced from
+     texts/synth_info.txt exactly like that title's own tooltip pulls from
+     texts/synth_explanation.txt. Its parameters are listed underneath as
+     a plain name/value list, paged a few rows at a time rather than
+     scrolled when there are a lot of them (a poti touching 9+ params) --
+     see PARAM_PAGE_SIZE/.control-info-page-nav below. */
+  .control-info-box{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    align-content:flex-start;
+    gap:1.4rem;
+  }
+  .control-info-empty{
+    margin:0;
+    font-size:0.85rem;
+    line-height:1.65;
+    color:var(--grey-3);
+    font-style:italic;
+  }
+  .control-info-group{
+    flex:0 1 auto;
+    padding:0 1.4rem 0 0;
+  }
+  .control-info-group + .control-info-group{
+    border-left:1px solid var(--grey-1);
+    padding-left:1.4rem;
+  }
+  .control-info-synth-name{
+    margin:0 0 0.5rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:1.02rem;
+    font-weight:600;
+    letter-spacing:0.02em;
+    color:var(--white); /* Mod 0's own bar color, see .bio-panel-object::before -- overridden to rose for Mod 1 below */
+    white-space:nowrap;
+  }
+  /* matches .bio-panel-object-mod1::before's own rose accent bar, same as
+     the emphasize-flash color scoping right above (.label-emphasize) */
+  .bio-panel-object-mod1 .control-info-synth-name{
+    color:#e6a9b0;
+  }
+  .control-info-synth-tooltip{
+    width:200px;
+    white-space:normal; /* override the nameEl ancestor's nowrap -- without this
+      the tooltip text renders as one unbroken line and overflows past its
+      own box instead of wrapping inside it */
+  }
+  /* a fixed-size window of params (see PARAM_PAGE_SIZE in
+     renderControlGroups) rather than a scrollbar -- .control-info-page-nav
+     (up/down, only rendered once there's more than one page) pages it by
+     one row at a time, same as the Up/Down arrow keys do while hovering
+     this list (see the window "keydown" handler further down) */
+  .control-info-params-row{
+    display:flex;
+    align-items:stretch;
+    gap:0.5rem;
+  }
+  .control-info-params{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:0.35rem;
+  }
+  .control-info-page-nav{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    flex-shrink:0;
+  }
+  .control-info-page-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:1rem;
+    height:1rem;
+    padding:0;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    color:var(--white); /* Mod 0's own bar color -- rose for Mod 1 below */
+    font-size:0.55rem;
+    line-height:1;
+    cursor:pointer;
+    transition:border-color 0.2s ease, opacity 0.2s ease;
+  }
+  .control-info-page-btn:hover{
+    border-color:var(--white);
+  }
+  .control-info-page-btn:disabled{
+    opacity:0.3;
+    cursor:default;
+  }
+  .control-info-page-btn:disabled:hover{
+    border-color:var(--grey-2);
+  }
+  .bio-panel-object-mod1 .control-info-page-btn{
+    color:#e6a9b0;
+  }
+  .bio-panel-object-mod1 .control-info-page-btn:hover{
+    border-color:#e6a9b0;
+  }
+  .bio-panel-object-mod1 .control-info-page-btn:disabled:hover{
+    border-color:var(--grey-2);
+  }
+  .control-info-param{
+    display:flex;
+    align-items:baseline;
+    gap:1rem;
+    margin:0;
+    white-space:nowrap;
+  }
+  .control-info-param-name{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.02em;
+    color:var(--grey-3);
+  }
+  .control-info-param-value{
+    margin-left:auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.82rem;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    color:var(--white); /* Mod 0's own bar color -- rose for Mod 1 below */
+  }
+  .bio-panel-object-mod1 .control-info-param-value{
+    color:#e6a9b0;
   }
 
   .spotlight-title{
@@ -2504,13 +2668,13 @@
           <div class="bio-panel-object" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
             <div class="object-info-inner">
               <p class="spotlight-title"><span class="object-info-title"></span> <span class="mod-tag mod-tag-0">(Mod 0)</span></p>
-              <p class="spotlight-desc-text object-info-detail-0">Weitere Informationen folgen.</p>
+              <div class="control-info-box object-info-detail-0"></div>
             </div>
           </div>
           <div class="bio-panel-object bio-panel-object-mod1" role="button" tabindex="0" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
             <div class="object-info-inner">
               <p class="spotlight-title"><span class="object-info-title-mod1"></span> <span class="mod-tag mod-tag-1">(Mod 1)</span></p>
-              <p class="spotlight-desc-text object-info-detail-1">Weitere Informationen folgen.</p>
+              <div class="control-info-box object-info-detail-1"></div>
             </div>
           </div>
         </div>
@@ -3860,6 +4024,283 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     });
   }
 
+  // stores/<programSlug>/0.json + 1.json (mod 0 / mod 1) describe what
+  // each pedal control actually does, keyed by a numeric string ("6",
+  // "7", ... -- see STORE_KEY mapping at each control's call site). Each
+  // key's "markers" dict maps a fader position ("0", "45", "100", ...) to
+  // {synthName: {param: value, ...}}, where that value is itself a
+  // *spec-space* value (0-1, or 0-100 for a couple of odd ones) -- not
+  // the real synth parameter. Turning the physical control interpolates
+  // between the two nearest markers (see boundaryMarkers/linlin below,
+  // a direct port of send_obj_fun in funs.py), and the result is then
+  // run through specMap using that parameter's real min/max/warp (parsed
+  // from the synth's own stores/<slug>/<synth>.txarcmeta file -- see
+  // parseSCArchive, a port of funs.py's parse_sc_archive) to get the
+  // actual value the synth now has.
+  const NO_STORE_INFO_TEXT = 'Weitere Informationen folgen.';
+
+  // ---- port of funs.py: extract_blocks / parse_sc_archive ----
+  function extractSCBlocks(text, typeName){
+    const results = [];
+    const re = new RegExp('//\\s*' + typeName + '\\s*\\n\\s*(\\d+),\\s*\\[', 'g');
+    let m;
+    while ((m = re.exec(text)) !== null){
+      const idx = m[1];
+      const start = re.lastIndex;
+      let depth = 1;
+      let i = start;
+      while (i < text.length && depth > 0){
+        if (text[i] === '[') depth++;
+        else if (text[i] === ']') depth--;
+        i++;
+      }
+      results.push([idx, text.slice(start, i - 1)]);
+    }
+    return results;
+  }
+  function parseSCArchive(text){
+    const warpLookup = {};
+    ['ExponentialWarp', 'LinearWarp', 'CurveWarp'].forEach(function(warpType){
+      extractSCBlocks(text, warpType).forEach(function(pair){
+        const idx = pair[0], content = pair[1];
+        if (warpType === 'ExponentialWarp') warpLookup[idx] = 'exp';
+        else if (warpType === 'LinearWarp') warpLookup[idx] = 0;
+        else {
+          const m = content.match(/curve:\s*([\d.e-]+)/);
+          warpLookup[idx] = m ? parseFloat(m[1]) : 'curve';
+        }
+      });
+    });
+
+    const nameToIdx = {};
+    const nameRe = /'([\w_]+)',\s*o\[(\d+)\]/g;
+    let nm;
+    while ((nm = nameRe.exec(text)) !== null) nameToIdx[nm[1]] = nm[2];
+
+    const specsByIdx = {};
+    extractSCBlocks(text, 'ControlSpec').forEach(function(pair){
+      const idx = pair[0], content = pair[1];
+      function getFloat(key){
+        const m = content.match(new RegExp(key + ':\\s*([\\d.e-]+)'));
+        return m ? parseFloat(m[1]) : null;
+      }
+      function getRef(key){
+        const m = content.match(new RegExp(key + ':\\s*o\\[(\\d+)\\]'));
+        return m ? m[1] : null;
+      }
+      specsByIdx[idx] = {
+        min: getFloat('minval'),
+        max: getFloat('maxval'),
+        step: getFloat('step'),
+        default: getFloat('default'),
+        warpIdx: getRef('warp')
+      };
+    });
+
+    const result = {};
+    Object.keys(nameToIdx).forEach(function(name){
+      const spec = specsByIdx[nameToIdx[name]];
+      if (!spec) return;
+      const warpVal = warpLookup.hasOwnProperty(spec.warpIdx) ? warpLookup[spec.warpIdx] : 'unknown';
+      result[name.slice(0, -5)] = { min: spec.min, max: spec.max, step: spec.step, default: spec.default, warp: warpVal };
+    });
+    return result;
+  }
+
+  // ---- port of funs.py: spec_map / boundary_markers / linlin ----
+  function specMap(val, spec){
+    const minn = spec.min, maxx = spec.max, warp = spec.warp;
+    const step = spec.step || 0;
+    let value;
+    if (warp === 'exp') value = minn * Math.pow(maxx / minn, val);
+    else if (warp === 0) value = minn + (maxx - minn) * val;
+    else value = minn + (maxx - minn) * ((1 - Math.exp(val * warp)) / (1 - Math.exp(warp)));
+    if (step){
+      value = Math.round((value - minn) / step) * step + minn;
+      value = Math.max(minn, Math.min(maxx, value));
+    }
+    return value;
+  }
+  function boundaryMarkers(markers, val100){
+    const keys = Object.keys(markers).map(Number).sort(function(a, b){ return a - b; });
+    const lowerKeys = keys.filter(function(k){ return k <= val100; });
+    const upperKeys = keys.filter(function(k){ return k >= val100; });
+    const lower = lowerKeys.length ? Math.max.apply(null, lowerKeys) : null;
+    const upper = upperKeys.length ? Math.min.apply(null, upperKeys) : null;
+    const arr = [];
+    if (lower !== null) arr.push(String(lower));
+    if (upper !== null) arr.push(String(upper));
+    return arr.length === 1 ? [arr[0], arr[0]] : arr;
+  }
+  function linlin(val, inMin, inMax, outMin, outMax){
+    if (inMin === inMax) return outMin;
+    return (val - inMin) / (inMax - inMin) * (outMax - outMin) + outMin;
+  }
+  function formatSynthValue(n){
+    if (!isFinite(n)) return String(n);
+    const abs = Math.abs(n);
+    if (abs === 0) return '0';
+    if (abs >= 100) return n.toFixed(0);
+    if (abs >= 1) return n.toFixed(2);
+    return n.toFixed(3);
+  }
+
+  // val: this control's current position, normalized 0-1 (potis: knob
+  // angle; switches/buttons: 0 or 1, see each call site) -- mirrors the
+  // "update args" half of funs.py's send_obj_fun. Returns one group per
+  // synth this control touches: [{ synth, params: [{name, value}] }],
+  // or null if there's nothing to show (see renderControlGroups).
+  function computeControlGroups(storeData, metaBySynth, key, val){
+    if (!storeData || key === null || key === undefined || val === null || val === undefined) return null;
+    const dictObj = storeData[key];
+    if (!dictObj || !dictObj.markers) return null;
+    const markers = dictObj.markers;
+    if (!Object.keys(markers).length) return null;
+    const val100 = val * 100;
+    const boundaries = boundaryMarkers(markers, val100);
+    const valSpecs = linlin(val100, parseFloat(boundaries[0]), parseFloat(boundaries[1]), 0, 1);
+    const lowerMarker = markers[boundaries[0]];
+    const upperMarker = markers[boundaries[1]];
+    const groups = [];
+    Object.keys(lowerMarker).forEach(function(synth){
+      const params = Object.keys(lowerMarker[synth]);
+      if (!params.length) return;
+      const spec = metaBySynth[synth];
+      const paramList = params.map(function(param){
+        const lowVal = lowerMarker[synth][param];
+        const highMarkerSynth = upperMarker[synth];
+        const highVal = (highMarkerSynth && highMarkerSynth[param] !== undefined) ? highMarkerSynth[param] : lowVal;
+        const argVal = linlin(valSpecs, 0, 1, lowVal, highVal);
+        const paramSpec = spec && spec[param];
+        const finalVal = paramSpec ? specMap(argVal, paramSpec) : argVal;
+        return { name: param, value: formatSynthValue(finalVal) };
+      });
+      groups.push({ synth: synth, params: paramList });
+    });
+    return groups.length ? groups : null;
+  }
+
+  // renders computeControlGroups' output into a .control-info-box
+  // container: synth name highlighted as a pill up top, its parameters
+  // listed below, one such group per synth, side by side
+  // texts/synth_info.txt: a general "what is a synth" blurb, shown in a
+  // tooltip when hovering any synth name (see renderControlGroups) --
+  // same one-shot fetch-and-cache pattern as the "Synthesizer Pedal:"
+  // title's own tooltip (texts/synth_explanation.txt, see loadExplanation
+  // in mountEdition), just shared across every card instead of per-type
+  let synthInfoCache = null;
+  let synthInfoPromise = null;
+  function ensureSynthInfoLoaded(tooltipEl){
+    if (synthInfoCache !== null){
+      tooltipEl.textContent = synthInfoCache;
+      return;
+    }
+    tooltipEl.textContent = 'Lädt…';
+    if (!synthInfoPromise){
+      synthInfoPromise = fetch('texts/synth_info.txt')
+        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
+        .then(function(text){ synthInfoCache = text.trim(); return synthInfoCache; })
+        .catch(function(){ synthInfoCache = 'Erklärung nicht gefunden'; return synthInfoCache; });
+    }
+    synthInfoPromise.then(function(text){ tooltipEl.textContent = text; });
+  }
+
+  // how many parameter rows are visible at once per synth group -- beyond
+  // this, .control-info-page-nav's up/down buttons (and the Up/Down arrow
+  // keys while hovering the list, see the "keydown" section-paging
+  // handler) page through them one row at a time instead of scrolling
+  const PARAM_PAGE_SIZE = 4;
+
+  function renderControlGroups(container, groups){
+    // offsets persist on the container element itself across re-renders
+    // (e.g. every frame while dragging a poti rebuilds this whole thing),
+    // keyed by synth name, so paging position survives a live value update
+    const pageOffsets = container.__controlInfoPageOffsets || (container.__controlInfoPageOffsets = {});
+    container.innerHTML = '';
+    if (!groups){
+      const empty = document.createElement('p');
+      empty.className = 'control-info-empty';
+      empty.textContent = NO_STORE_INFO_TEXT;
+      container.appendChild(empty);
+      return;
+    }
+    groups.forEach(function(group){
+      const groupEl = document.createElement('div');
+      groupEl.className = 'control-info-group';
+      const nameEl = document.createElement('p');
+      nameEl.className = 'control-info-synth-name spotlight-title-hoverable';
+      nameEl.textContent = group.synth;
+      const tooltipEl = document.createElement('span');
+      tooltipEl.className = 'pedal-type-tooltip control-info-synth-tooltip';
+      nameEl.appendChild(tooltipEl);
+      nameEl.addEventListener('mouseenter', function(){
+        ensureSynthInfoLoaded(tooltipEl);
+        tooltipEl.classList.add('visible');
+      });
+      nameEl.addEventListener('mouseleave', function(){
+        tooltipEl.classList.remove('visible');
+      });
+      groupEl.appendChild(nameEl);
+
+      const total = group.params.length;
+      const maxOffset = Math.max(0, total - PARAM_PAGE_SIZE);
+      const offset = Math.min(pageOffsets[group.synth] || 0, maxOffset);
+      pageOffsets[group.synth] = offset;
+
+      const rowEl = document.createElement('div');
+      rowEl.className = 'control-info-params-row';
+      const paramsEl = document.createElement('div');
+      paramsEl.className = 'control-info-params';
+      group.params.slice(offset, offset + PARAM_PAGE_SIZE).forEach(function(param){
+        const row = document.createElement('p');
+        row.className = 'control-info-param';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'control-info-param-name';
+        nameSpan.textContent = param.name;
+        const valSpan = document.createElement('span');
+        valSpan.className = 'control-info-param-value';
+        valSpan.textContent = param.value;
+        row.appendChild(nameSpan);
+        row.appendChild(valSpan);
+        paramsEl.appendChild(row);
+      });
+      rowEl.appendChild(paramsEl);
+
+      if (maxOffset > 0){
+        function pageBy(delta){
+          pageOffsets[group.synth] = Math.max(0, Math.min(maxOffset, pageOffsets[group.synth] + delta));
+          renderControlGroups(container, groups);
+        }
+        const navEl = document.createElement('div');
+        navEl.className = 'control-info-page-nav';
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.className = 'control-info-page-btn';
+        upBtn.textContent = '▲';
+        upBtn.setAttribute('aria-label', 'Vorherige Parameter');
+        upBtn.disabled = offset <= 0;
+        upBtn.addEventListener('click', function(){ pageBy(-1); });
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.className = 'control-info-page-btn';
+        downBtn.textContent = '▼';
+        downBtn.setAttribute('aria-label', 'Weitere Parameter');
+        downBtn.disabled = offset >= maxOffset;
+        downBtn.addEventListener('click', function(){ pageBy(1); });
+        navEl.appendChild(upBtn);
+        navEl.appendChild(downBtn);
+        rowEl.appendChild(navEl);
+        // exposed for the Up/Down arrow-key handler (see the "keydown"
+        // section-paging listener), which pages whichever params list is
+        // actually hovered instead of jumping the whole page section
+        paramsEl.__pageBy = pageBy;
+      }
+
+      groupEl.appendChild(rowEl);
+      container.appendChild(groupEl);
+    });
+  }
+
   // hand-drawn, thin-outline icons (matching the pedal diagram's own
   // fill:none/stroke aesthetic) for the artist credentials modal -- inner
   // shapes only, wrapped in a viewBox="0 0 24 24" <svg> when rendered.
@@ -4097,8 +4538,17 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const bioPanelObjectMod1 = wrap.querySelector('.bio-panel-object-mod1');
     let currentHighlighted = null; // the element actually showing the shadow right now
     let pendingLabel = null; // the last real control label (null until something is actually clicked)
+    let pendingStoreKey = null; // the store.json key (see computeControlGroups) for whatever's pending, if any
+    let pendingVal = null; // that control's current normalized 0-1 position, refreshed live while dragging a poti
     const NO_SELECTION_TEXT = 'Please select a button to obtain some information.';
     let roseModActive = false; // tracks the middle switch's global "rose mod" state
+    // parsed stores/<programSlug>/0.json + 1.json, and this program's
+    // synths' parsed .txarcmeta specs, for the currently shown program,
+    // if that folder exists (see applyEntry) -- declared this early
+    // because renderBoxTitles() below reads them and is itself called
+    // synchronously during the pedal diagram setup, before applyEntry ever runs
+    let currentStoreMods = [null, null];
+    let currentStoreMeta = {};
 
     function applyHighlight(targetEl){
       if (currentHighlighted && currentHighlighted !== targetEl){
@@ -4138,6 +4588,16 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     function isOpen(box){
       return !!box && box.classList.contains('expanded');
     }
+    // just refreshes the two detail lines' text from the current
+    // pendingStoreKey/pendingVal -- kept separate from renderBoxTitles so
+    // a poti drag can call it on every mousemove without redoing the
+    // (heavier, only-needed-once) title/display-toggle work below
+    function updateDetailValues(){
+      const detail0 = wrap.querySelector('.object-info-detail-0');
+      const detail1 = wrap.querySelector('.object-info-detail-1');
+      if (detail0) renderControlGroups(detail0, computeControlGroups(currentStoreMods[0], currentStoreMeta, pendingStoreKey, pendingVal));
+      if (detail1) renderControlGroups(detail1, computeControlGroups(currentStoreMods[1], currentStoreMeta, pendingStoreKey, pendingVal));
+    }
     function renderBoxTitles(){
       const modTag0 = wrap.querySelector('.mod-tag-0');
       const modTag1 = wrap.querySelector('.mod-tag-1');
@@ -4150,6 +4610,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (modTag1) modTag1.style.display = '';
         if (detail0) detail0.style.display = '';
         if (detail1) detail1.style.display = '';
+        updateDetailValues();
       } else {
         if (objectInfoTitle) objectInfoTitle.textContent = NO_SELECTION_TEXT;
         if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = NO_SELECTION_TEXT;
@@ -4171,11 +4632,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         el.classList.add('label-emphasize');
       });
     }
-    function showPedalObjectInfo(label, targetEl){
+    function showPedalObjectInfo(label, targetEl, storeKey, val){
       // only emphasize when the panel was already open showing a
       // *different* control -- not on the very first selection
       const isChange = pendingLabel !== null && pendingLabel !== label;
       pendingLabel = label;
+      pendingStoreKey = storeKey === undefined ? null : storeKey;
+      pendingVal = val === undefined ? null : val;
       renderBoxTitles();
       openMatchingBox();
       applyHighlight(targetEl);
@@ -4185,6 +4648,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       closeBox(bioPanelObject, true);
       closeBox(bioPanelObjectMod1, true);
       pendingLabel = null;
+      pendingStoreKey = null;
+      pendingVal = null;
       renderBoxTitles();
       clearHighlight();
       syncBoxLayout();
@@ -4239,6 +4704,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (diagram){
       try{
       const POTI_LABELS = ['Potentiometer 1', 'Potentiometer 2', 'Potentiometer 3', 'Potentiometer 4'];
+      const POTI_STORE_KEYS = ['6', '7', '8', '9'];
 
       // the middle switch (index 1) is special: it drives this card's
       // own "rose mod" that recolors every switch, poti, and button --
@@ -4331,7 +4797,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
             // stuck lit from whatever toggle state it was left in
             if (!buttonsToggleMode) buttonEls.forEach(function(b){ b.classList.remove('pressed'); });
           }
-          showPedalObjectInfo('Switch ' + switchNumber, sw);
+          // only switch 1 (index 0) has a known store mapping (key "2") for
+          // now -- switch 3 (index 2) picks button mode and switch 2 is
+          // handled separately via applyMiddleSwitchState, neither mapped yet
+          showPedalObjectInfo('Switch ' + switchNumber, sw, switchIndex === 0 ? '2' : null, switchIndex === 0 ? (newState === 'left' ? 0 : 1) : null);
         });
         switchResets.push(function(){
           sw.setAttribute('data-state', switchIndex === 2 ? 'right' : 'left');
@@ -4359,8 +4828,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         const cx = parseFloat(poti.getAttribute('data-cx'));
         const cy = parseFloat(poti.getAttribute('data-cy'));
         const potiIndex = parseInt(poti.getAttribute('data-index'), 10);
+        const potiStoreKey = POTI_STORE_KEYS[potiIndex];
         let angleDeg = 0;
         let dragging = false;
+        // 0 at the bottom-left rest position, 1 at the bottom-right --
+        // the same normalized position the pedal's own store.json markers
+        // are indexed by (see computeControlGroups)
+        function potiVal(){
+          return (angleDeg - POTI_MIN_DEG) / (POTI_MAX_DEG - POTI_MIN_DEG);
+        }
         function render(){
           const rad = angleDeg * Math.PI / 180;
           const x2 = cx + POTI_LINE_LEN * Math.sin(rad);
@@ -4388,13 +4864,21 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           poti.classList.add('poti-active');
           angleDeg = angleFromPointer(evt);
           render();
-          showPedalObjectInfo(POTI_LABELS[potiIndex] || 'Potentiometer', poti);
+          showPedalObjectInfo(POTI_LABELS[potiIndex] || 'Potentiometer', poti, potiStoreKey, potiVal());
           evt.preventDefault();
         }
         function moveDrag(evt){
           if (!dragging) return;
           angleDeg = angleFromPointer(evt);
           render();
+          // live-update the displayed synth value while turning the knob --
+          // guarded since this only makes sense while this poti's own box
+          // is actually the one currently shown (always true here, since
+          // dragging can only start after startDrag already made it so)
+          if (pendingStoreKey === potiStoreKey){
+            pendingVal = potiVal();
+            updateDetailValues();
+          }
         }
         function endDrag(){
           dragging = false;
@@ -4422,19 +4906,26 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // for as long as the button is actually held down
       diagram.querySelectorAll('.pedal-button').forEach(function(btn){
         const buttonNumber = parseInt(btn.getAttribute('data-index'), 10) + 1;
+        const buttonStoreKey = String(buttonNumber - 1); // button 1/2 -> store key "0"/"1"
         btn.addEventListener('click', function(){
           if (!buttonsToggleMode) return; // momentary mode is driven by press/release below instead
           btn.classList.toggle('pressed');
-          showPedalObjectInfo('Button ' + buttonNumber, btn);
+          // the pink light is the button's "1" state, off is "0" -- same
+          // toggled/latched value either way (see computeControlGroups)
+          showPedalObjectInfo('Button ' + buttonNumber, btn, buttonStoreKey, btn.classList.contains('pressed') ? 1 : 0);
         });
         function press(){
           if (buttonsToggleMode) return;
           btn.classList.add('pressed');
-          showPedalObjectInfo('Button ' + buttonNumber, btn);
+          showPedalObjectInfo('Button ' + buttonNumber, btn, buttonStoreKey, 1);
         }
         function release(){
           if (buttonsToggleMode) return;
           btn.classList.remove('pressed');
+          if (pendingStoreKey === buttonStoreKey){
+            pendingVal = 0;
+            updateDetailValues();
+          }
         }
         btn.addEventListener('mousedown', press);
         btn.addEventListener('mouseup', release);
@@ -4672,6 +5163,53 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // manifest entry (editions/<edition>/descriptions/<program>.json)
       programDesc.textContent = entry.text || 'Beschreibung nicht gefunden';
 
+      // per-control info: stores/<programSlug>/0.json + 1.json, if that
+      // folder exists at all -- most programs don't have one yet, so a
+      // missing file is expected and just leaves the panel showing its
+      // normal "no info" fallback (see computeControlGroups)
+      currentStoreMods = [null, null];
+      currentStoreMeta = {};
+      Promise.all([
+        fetchJSON('stores/' + entry.programSlug + '/0.json').catch(function(){ return null; }),
+        fetchJSON('stores/' + entry.programSlug + '/1.json').catch(function(){ return null; })
+      ]).then(function(results){
+        if (myToken !== requestToken) return;
+        currentStoreMods = results;
+        renderBoxTitles(); // refresh in case a control's box is already open
+
+        // now find every synth these markers actually reference, and load
+        // + parse each one's own stores/<slug>/<synth>.txarcmeta (real
+        // min/max/warp per parameter -- see parseSCArchive/specMap) so the
+        // spec-space values above can be converted to real synth values
+        const synthNames = {};
+        results.forEach(function(storeData){
+          if (!storeData) return;
+          Object.keys(storeData).forEach(function(objKey){
+            const obj = storeData[objKey];
+            if (!obj || !obj.markers) return;
+            Object.keys(obj.markers).forEach(function(markerKey){
+              Object.keys(obj.markers[markerKey]).forEach(function(synth){ synthNames[synth] = true; });
+            });
+          });
+        });
+        Promise.all(Object.keys(synthNames).map(function(synth){
+          return fetch('stores/' + entry.programSlug + '/' + synth + '.txarcmeta')
+            .then(function(res){ return res.ok ? res.text() : null; })
+            .catch(function(){ return null; })
+            .then(function(text){ return [synth, text]; });
+        })).then(function(pairs){
+          if (myToken !== requestToken) return;
+          const meta = {};
+          pairs.forEach(function(pair){
+            const synth = pair[0], text = pair[1];
+            if (!text) return;
+            try { meta[synth] = parseSCArchive(text); } catch (e) { /* leave this synth unmapped */ }
+          });
+          currentStoreMeta = meta;
+          renderBoxTitles(); // refresh again once real values are available
+        });
+      });
+
       // one button per program this artist has ever collaborated on,
       // across every edition, in the order they appear on the site --
       // always at least one (this program itself). Whichever one matches
@@ -4699,7 +5237,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
     // hover on "Synthesizer Pedal:" / "Effects Pedal:" -- shows a small
     // explanation box for whichever type is currently selected. Text comes
-    // from texts/synth_explanation.txt or texts/fx_explanaition.txt
+    // from texts/synth_explanation.txt or texts/fx_explanation.txt
     // (filenames exactly as specified), fetched once per type and cached
     // across every card on the page (the explanation text is the same
     // regardless of which edition you're looking at).
@@ -4712,7 +5250,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         return;
       }
       pedalTypeTooltip.textContent = 'Lädt…';
-      const filename = type === 'fx' ? 'fx_explanaition.txt' : 'synth_explanation.txt';
+      const filename = type === 'fx' ? 'fx_explanation.txt' : 'synth_explanation.txt';
       fetch('texts/' + filename)
         .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
         .then(function(text){
@@ -5166,6 +5704,17 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // Arrow keys snap a full section per press too, same as Page Up/Down.
   window.addEventListener('keydown', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
+    // a pedal control's own parameter list pages itself with Up/Down while
+    // it's hovered (see PARAM_PAGE_SIZE/__pageBy in renderControlGroups),
+    // instead of snapping the whole page section
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      const hoveredParams = document.querySelector('.control-info-params:hover');
+      if (hoveredParams && hoveredParams.__pageBy){
+        e.preventDefault();
+        hoveredParams.__pageBy(e.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
+    }
     if (e.key !== 'PageDown' && e.key !== 'PageUp' && e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     if (isJumping || pageAnimationActive) { e.preventDefault(); return; }
     const direction = (e.key === 'PageDown' || e.key === 'ArrowDown') ? 1 : -1;

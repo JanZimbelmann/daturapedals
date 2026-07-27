@@ -1,0 +1,24 @@
+{
+  "info": {
+    "compatibility": 0,
+    "edition": 1,
+    "fx_key": "m",
+    "ordering": "a",
+    "prgrm": "noise0",
+    "line": "synth"
+  },
+  "synths": {
+    "diy_noise0": {
+      "out": 200
+    },
+    "fx_pedal": {
+      "out": 0
+    },
+    "recorder":{
+	"out": 28
+    },
+    "pedal_passover": {
+      "out": 200
+    }
+  }
+}
