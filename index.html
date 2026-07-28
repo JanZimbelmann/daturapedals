@@ -2162,6 +2162,49 @@
   }
 
   @media (max-width:640px){
+    /* editions/programs list vertically as full-width horizontal bars
+       instead of narrow vertical-text tabs side by side -- frees up the
+       card's whole width for its actual content on a narrow screen. Only
+       .spotlight-wrap's own internal arrangement changes (side box above
+       its card instead of beside it); the FLIP/slide transform machinery
+       (--side-translate/--box-slide) is untouched and still just plays,
+       it's simply moving things around a column layout now instead of a
+       row -- the hidden-sibling collapse is simplified to a plain
+       display:none here rather than trying to also adapt its width-based
+       shrink animation to a vertical list. */
+    .spotlight-wraps{
+      flex-direction:column;
+      align-items:stretch;
+    }
+    .spotlight-wrap{
+      flex-direction:column;
+      margin-right:0;
+      margin-bottom:12px;
+    }
+    .spotlight-wrap:last-child{
+      margin-bottom:0;
+    }
+    .spotlight-wrap.wrap-hidden-sibling{
+      display:none;
+    }
+    .spotlight-side-box,
+    .spotlight-side-box:hover,
+    .spotlight-wrap.wrap-active .spotlight-side-box{
+      width:100%;
+      min-width:0;
+      max-width:none;
+      height:auto;
+      padding:0.6rem 1rem;
+    }
+    .spotlight-side-title{
+      transform:none;
+      letter-spacing:0.25em;
+    }
+    .spotlight-wrap.card-collapsed .spotlight-card-clip{
+      width:auto;
+      height:0;
+    }
+
     .spotlight-top-row,
     .spotlight-bottom-row{
       flex-direction:column;
@@ -2178,7 +2221,7 @@
     }
     .card-page{
       display:none;
-      padding-top:8.5rem; /* whichever page is active is always the one right below the bar here */
+      padding-top:1rem; /* the sound-preview button used to need much more room reserved here to clear it (see the template comment near .card-page-nav) -- now just a normal gap under the tabs */
     }
     .card-page.active{
       display:block;
@@ -2713,25 +2756,11 @@
     <div class="card-page card-page-artist" data-page="artist"></div>
     <div class="card-page card-page-controls" data-page="controls"></div>
 
-    <button class="spotlight-center-play" aria-label="Sound abspielen">
-      <span class="play-emblem"></span>
-    </button>
-    <!-- decorative only: vine-like tendrils that draw themselves in from
-         below the program bar and curl into the circle whenever a
-         program is selected, before the real button above fades in --
-         see triggerVineReveal() -->
-    <svg class="vine-reveal" viewBox="0 0 100 125" width="100" height="125" aria-hidden="true">
-      <path class="vine vine-left" d="M50,0 L58,18 L18,36 L60,53 L44,67"/>
-      <path class="vine vine-right" d="M50,0 L42,18 L82,36 L40,53 L56,67"/>
-      <path class="vine vine-center" d="M50,0 L22,24 L78,44 L50,67"/>
-      <path class="vine vine-fourth" d="M50,0 L78,24 L22,44 L50,67"/>
-      <circle class="vine-circle" cx="50" cy="96" r="29"/>
-      <!-- straight line from the program bar down to the button, faded in
-           right as the zig-zag vines above fade out (see showHangLine/
-           hideHangLine in mountEdition) -- makes the button read as hanging
-           from the bar. opacity is set purely via inline style, no CSS class -->
-      <path class="vine-hang-line" d="M50,0 L50,67"/>
-    </svg>
+    <!-- the sound-preview button (+ its vine-reveal decoration leading
+         down to it) has been removed for now -- it didn't make sense yet
+         functionally, see mountEdition: playBtn/vineReveal-related code
+         is all still there, just guarded to no-op when these don't exist,
+         so it's a quick re-add later if wanted (just restore this markup) -->
 
     <div class="spotlight-top-row">
       <div class="spotlight-desc-block">
@@ -5832,7 +5861,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       const audio = new Audio(currentWav);
       audio.play().catch(function(){ /* ignored -- e.g. file missing or autoplay blocked */ });
     }
-    playBtn.addEventListener('click', playCurrentWav);
+    if (playBtn) playBtn.addEventListener('click', playCurrentWav);
 
     /* ---- this card's own open/close animation ----
        Closing: the whole card (border + content together, as one unit)
