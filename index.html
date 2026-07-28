@@ -100,6 +100,7 @@
     position:relative;
     display:inline-block;
     cursor:pointer;
+    user-select:none;
   }
 
   .wordmark{
@@ -109,7 +110,8 @@
     letter-spacing:0.03em;
     color:var(--white);
     line-height:1;
-    filter: url(#distort);
+    /* no filter at rest -- clean/undistorted until hovered or an idle
+       flash (see the hover-chaos IIFE below) applies one via inline style */
     user-select:none;
     transition: opacity 0.35s ease;
   }
@@ -296,6 +298,7 @@
     color:var(--white);
     opacity:0;
     cursor:pointer;
+    user-select:none;
     transform-origin:center;
     transition:opacity 0.5s ease, transform 0.55s cubic-bezier(.22,1,.36,1);
   }
@@ -310,6 +313,7 @@
     color:var(--grey-3);
     opacity:0;
     cursor:pointer;
+    user-select:none;
     transform-origin:center;
     transition:opacity 0.5s ease, transform 0.5s cubic-bezier(.22,1,.36,1);
   }
@@ -370,6 +374,7 @@
     position:relative;
     display:inline-block;
     cursor:pointer;
+    user-select:none;
   }
   #subPartAnfang{
     margin-right:0.32em;
@@ -526,6 +531,7 @@
     color:var(--grey-3);
     opacity:0;
     cursor:pointer;
+    user-select:none;
     transition:opacity 0.5s ease, color 0.25s ease;
   }
   .summe-text:hover{
@@ -643,6 +649,7 @@
     border:none;
     padding:0.9rem;
     cursor:pointer;
+    user-select:none;
     transition:color 0.25s ease, background 0.25s ease;
   }
   .video-tab + .video-tab{
@@ -697,6 +704,7 @@
     z-index:1;
     background:transparent;
     cursor:pointer;
+    user-select:none;
   }
   .video-script-panel{
     height:100%;
@@ -764,6 +772,7 @@
     border:1px solid var(--white);
     padding:0.95rem 2.4rem;
     cursor:pointer;
+    user-select:none;
     transition:background 0.25s ease, color 0.25s ease;
   }
   .preorder-btn:hover{
@@ -889,6 +898,7 @@
     border-radius:8px;
     padding:0 1rem;
     cursor:pointer;
+    user-select:none;
     transition:opacity 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
   /* fixed-width side columns for the arrows -- unlike a centered flex
@@ -1015,6 +1025,7 @@
     width:1.8rem;
     height:2.4rem;
     cursor:pointer;
+    user-select:none;
     font-size:1rem;
     transition:border-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
   }
@@ -1133,6 +1144,7 @@
     align-items:center;
     justify-content:center;
     cursor:pointer;
+    user-select:none;
     position:relative;
     z-index:2; /* stays above the card always, so the card sliding under/over
                   its footprint during collapse/expand never covers it */
@@ -1244,6 +1256,7 @@
     overflow:hidden;
     text-overflow:ellipsis;
     cursor:pointer;
+    user-select:none;
     font-family:'IBM Plex Mono', monospace;
     font-size:0.7rem;
     letter-spacing:0.08em;
@@ -1285,6 +1298,7 @@
     align-items:center;
     justify-content:center;
     cursor:pointer;
+    user-select:none;
     padding:0;
     opacity:0;
     pointer-events:none;
@@ -1337,10 +1351,14 @@
     z-index:4;
     pointer-events:none;
     overflow:visible;
-    opacity:1;
-    transition:opacity 0.35s ease;
   }
-  .vine-reveal.vine-hidden{
+  /* vine-hidden used to fade the whole svg out; now it only fades the
+     zig-zag vines + circle -- the hang-line below (.vine-hang-line) fades
+     in independently, driven purely by inline style in JS (see
+     showHangLine/hideHangLine), so the button ends up connected to the
+     bar by a plain line instead of being left floating with nothing above it */
+  .vine-reveal.vine-hidden .vine,
+  .vine-reveal.vine-hidden .vine-circle{
     opacity:0;
   }
   .vine-reveal .vine{
@@ -1350,7 +1368,7 @@
     stroke-linecap:butt;
     stroke-linejoin:miter;
     opacity:0.9;
-    transition:stroke-dashoffset 0.55s ease;
+    transition:stroke-dashoffset 0.55s ease, opacity 0.35s ease;
   }
   .vine-reveal .vine-center{
     transition-delay:0.12s;
@@ -1363,7 +1381,18 @@
     stroke:var(--grey-2);
     stroke-width:1.4;
     stroke-linejoin:miter;
-    transition:stroke-dashoffset 0.4s ease 0.4s;
+    transition:stroke-dashoffset 0.4s ease 0.4s, opacity 0.35s ease;
+  }
+  /* the straight "hanging" line -- same grey as the vines it replaces.
+     Its opacity is controlled entirely via inline style in JS (see
+     triggerVineReveal/resetVineReveal), not a CSS class, so there is no
+     class/specificity/cascade involved at all -- opacity:0 here is only
+     the very first paint before JS has run once. */
+  .vine-reveal .vine-hang-line{
+    fill:none;
+    stroke:var(--grey-2);
+    stroke-width:1.3;
+    opacity:0;
   }
   @keyframes vineCircleSpark{
     0%{ stroke:var(--grey-2); filter:brightness(1); }
@@ -1478,6 +1507,7 @@
     font-size:0.7rem;
     line-height:1;
     cursor:pointer;
+    user-select:none;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1545,6 +1575,7 @@
                      bottom portion off flush, like a sunset horizon */
     overflow:visible;
     cursor:pointer;
+    user-select:none;
   }
   .artist-circle-clip{
     position:relative;
@@ -1620,8 +1651,8 @@
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-    user-select:none;
     cursor:pointer;
+    user-select:none;
     color:var(--grey-3);
     transition:color 0.25s ease;
   }
@@ -1653,6 +1684,7 @@
     overflow:hidden;
     background:var(--grey-1);
     cursor:pointer;
+    user-select:none;
     z-index:3; /* closed boxes sit in front, so they stay clickable even
                   while the other one is expanded underneath them */
     transition:width 0.35s cubic-bezier(.22,1,.36,1), right 0.35s cubic-bezier(.22,1,.36,1), background 0.2s ease;
@@ -1747,6 +1779,7 @@
     line-height:1.65;
     color:var(--grey-3);
     font-style:italic;
+    white-space:pre-line;
   }
   .control-info-group{
     flex:0 1 auto;
@@ -1796,13 +1829,15 @@
   .control-info-page-nav{
     display:flex;
     flex-direction:column;
-    justify-content:space-between;
+    align-items:center;
+    gap:0.4rem;
     flex-shrink:0;
   }
   .control-info-page-btn{
     display:flex;
     align-items:center;
     justify-content:center;
+    flex-shrink:0;
     width:1rem;
     height:1rem;
     padding:0;
@@ -1812,6 +1847,7 @@
     font-size:0.55rem;
     line-height:1;
     cursor:pointer;
+    user-select:none;
     transition:border-color 0.2s ease, opacity 0.2s ease;
   }
   .control-info-page-btn:hover{
@@ -1832,6 +1868,31 @@
   }
   .bio-panel-object-mod1 .control-info-page-btn:disabled:hover{
     border-color:var(--grey-2);
+  }
+  /* the vertical position slider sitting between the two page buttons --
+     click anywhere on it to jump straight there, or drag the thumb */
+  .control-info-page-slider{
+    position:relative;
+    flex:1;
+    min-height:1.4rem;
+    width:0.3rem;
+    background:var(--grey-1);
+    border-radius:0.15rem;
+    cursor:pointer;
+  }
+  .control-info-page-slider-thumb{
+    position:absolute;
+    left:50%;
+    top:0;
+    width:0.6rem;
+    height:0.6rem;
+    border-radius:50%;
+    background:var(--white); /* Mod 0's own bar color -- rose for Mod 1 below */
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+  }
+  .bio-panel-object-mod1 .control-info-page-slider-thumb{
+    background:#e6a9b0;
   }
   .control-info-param{
     display:flex;
@@ -1971,6 +2032,7 @@
   .pedal-poti,
   .pedal-button{
     cursor:pointer;
+    user-select:none;
   }
 
   /* switches: thumb slides between the left/right resting positions */
@@ -2199,6 +2261,7 @@
     justify-content:center;
     font-size:1.1rem;
     cursor:pointer;
+    user-select:none;
     transition:background 0.25s ease, color 0.25s ease;
   }
   .modal-close:hover{
@@ -2397,6 +2460,7 @@
     border:1px solid var(--white);
     padding:0.9rem 1.6rem;
     cursor:pointer;
+    user-select:none;
     text-decoration:none;
     transition:background 0.25s ease, color 0.25s ease;
   }
@@ -2433,6 +2497,7 @@
     border:1px solid var(--white);
     padding:0.85rem 1.5rem;
     cursor:pointer;
+    user-select:none;
     transition:background 0.25s ease, color 0.25s ease;
   }
   .newsletter-form button:hover{
@@ -2562,6 +2627,11 @@
       <path class="vine vine-center" d="M50,0 L22,24 L78,44 L50,67"/>
       <path class="vine vine-fourth" d="M50,0 L78,24 L22,44 L50,67"/>
       <circle class="vine-circle" cx="50" cy="96" r="29"/>
+      <!-- straight line from the program bar down to the button, faded in
+           right as the zig-zag vines above fade out (see showHangLine/
+           hideHangLine in mountEdition) -- makes the button read as hanging
+           from the bar. opacity is set purely via inline style, no CSS class -->
+      <path class="vine-hang-line" d="M50,0 L50,67"/>
     </svg>
 
     <div class="spotlight-top-row">
@@ -2911,18 +2981,18 @@ runIntro();
 const wordmarkEl = document.querySelector('.wordmark');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// idle wordmark glitch burst (previously a setInterval firing every
-// ~4.2s) is off for now -- the title should just look clean/static
-// while not hovered; hover keeps its own separate chaotic effect below
-
 /* ---------- Datura hover: chaotic, non-repeating glitch ----------
    driven directly by JS (rather than a looping CSS animation) so it
-   never reads as a clean repeating pattern. Two things move at once:
+   never reads as a clean repeating pattern. Three things move at once:
    1) constant jumping/jitter (position, skew, scale)
    2) a separate, randomly-timed toggle between a "glitched" look
       (heavier distortion filter) and a "clean" look (plain distort),
       so the glitch itself pulses on and off rather than staying
-      at one constant intensity the whole time */
+      at one constant intensity the whole time
+   3) on top of that, randomly-timed lulls where it settles back to
+      completely clean/still for a moment before bursting again -- without
+      this, the jitter alone still reads as "the same shake nonstop" even
+      though every individual frame is randomized */
 (function(){
   const logoBoxLocal = document.querySelector('.logo-box');
   if (!wordmarkEl || !logoBoxLocal || reduceMotion) return;
@@ -2930,6 +3000,9 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
   let glitchModeOn = true;
   let modeTimer = 0;
   let modeThreshold = 200;
+  let inBurst = true;
+  let burstTimer = 0;
+  let burstThreshold = 300;
 
   function chaosTick(){
     modeTimer += 16; // ~1 frame
@@ -2938,8 +3011,18 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
       modeTimer = 0;
       modeThreshold = 140 + Math.random() * 260;
     }
+    burstTimer += 16;
+    if (burstTimer > burstThreshold){
+      inBurst = !inBurst;
+      burstTimer = 0;
+      // bursts run longer than the calm lulls in between them
+      burstThreshold = inBurst ? (250 + Math.random() * 500) : (90 + Math.random() * 220);
+    }
 
-    if (Math.random() < 0.75){
+    if (!inBurst){
+      wordmarkEl.style.transform = '';
+      wordmarkEl.style.filter = '';
+    } else if (Math.random() < 0.75){
       const jumpScale = glitchModeOn ? 1 : 0.6;
       const tx = (Math.random() - 0.5) * 12 * jumpScale;
       const ty = (Math.random() - 0.5) * 9 * jumpScale;
@@ -2959,7 +3042,7 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
       }
     }
     // occasional bigger spike for a jolt, on top of the regular jitter
-    if (glitchModeOn && Math.random() < 0.04){
+    if (inBurst && glitchModeOn && Math.random() < 0.04){
       const jx = (Math.random() - 0.5) * 22;
       const jy = (Math.random() - 0.5) * 14;
       wordmarkEl.style.transform += ' translate(' + jx + 'px,' + jy + 'px)';
@@ -2969,18 +3052,37 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 
   function startChaos(){
     if (chaosRaf) return;
+    clearTimeout(idleFlashTimer); // pause idle flashes while actively hovering
+    wordmarkEl.classList.remove('glitching-idle');
     glitchModeOn = true;
     modeTimer = 0;
+    inBurst = true;
+    burstTimer = 0;
     chaosTick();
   }
   function stopChaos(){
     if (chaosRaf){ cancelAnimationFrame(chaosRaf); chaosRaf = null; }
     wordmarkEl.style.transform = '';
     wordmarkEl.style.filter = '';
+    scheduleIdleFlash(); // resume idle flashes now that hover has ended
   }
 
   logoBoxLocal.addEventListener('mouseenter', startChaos);
   logoBoxLocal.addEventListener('mouseleave', stopChaos);
+
+  // idle flash: a brief, subtle glitch burst every so often while nobody's
+  // hovering -- reuses the existing .glitching-idle shake+ghost-color
+  // animation (see CSS), randomly timed so it never reads as a metronome
+  let idleFlashTimer = null;
+  function scheduleIdleFlash(){
+    clearTimeout(idleFlashTimer);
+    idleFlashTimer = setTimeout(function(){
+      wordmarkEl.classList.add('glitching-idle');
+      setTimeout(function(){ wordmarkEl.classList.remove('glitching-idle'); }, 320);
+      scheduleIdleFlash();
+    }, 4000 + Math.random() * 6000); // every ~4-10s
+  }
+  scheduleIdleFlash();
 })();
 
 /* ---------- pedals section: rotates through real photos in ./images/ ---------- */
@@ -4205,11 +4307,90 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     synthInfoPromise.then(function(text){ tooltipEl.textContent = text; });
   }
 
+  // texts/switch_2.json / texts/switch_3.json: static explanations of what
+  // the mod-toggle switch and the button-mode switch do -- the same
+  // regardless of which program is loaded (they describe the physical
+  // switch, not a synth mapping), so shown in place of the normal
+  // per-control breakdown whenever the pending control is one of these two
+  // (see updateDetailValues). Each file has a short "left"/"right" text --
+  // whichever side the switch is currently on -- so flipping it shows a
+  // different, shorter explanation instead of one blob describing both.
+  const switchInfoCache = {};
+  const switchInfoPromises = {};
+  function renderStaticControlInfo(container, text){
+    container.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'control-info-empty';
+    p.textContent = text;
+    container.appendChild(p);
+  }
+  function ensureSwitchInfoLoaded(switchNum, val, container){
+    const side = val === 1 ? 'right' : 'left';
+    if (switchInfoCache[switchNum]){
+      renderStaticControlInfo(container, switchInfoCache[switchNum][side] || '');
+      return;
+    }
+    renderStaticControlInfo(container, 'Lädt…');
+    if (!switchInfoPromises[switchNum]){
+      switchInfoPromises[switchNum] = fetch('texts/switch_' + switchNum + '.json')
+        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+        .then(function(data){ switchInfoCache[switchNum] = data; return data; })
+        .catch(function(){
+          switchInfoCache[switchNum] = { left: 'Erklärung nicht gefunden', right: 'Erklärung nicht gefunden' };
+          return switchInfoCache[switchNum];
+        });
+    }
+    switchInfoPromises[switchNum].then(function(data){ renderStaticControlInfo(container, data[side] || ''); });
+  }
+
   // how many parameter rows are visible at once per synth group -- beyond
-  // this, .control-info-page-nav's up/down buttons (and the Up/Down arrow
-  // keys while hovering the list, see the "keydown" section-paging
-  // handler) page through them one row at a time instead of scrolling
+  // this, .control-info-page-nav's up/down buttons and slider (and the
+  // Up/Down arrow keys / mouse wheel while hovering the list, see the
+  // "keydown"/"wheel" section-paging handlers) page through them one row
+  // at a time instead of scrolling
   const PARAM_PAGE_SIZE = 4;
+
+  // (re)builds just the visible window of param rows inside an already-
+  // mounted .control-info-params element -- kept separate from the rest of
+  // the nav (buttons/slider) so paging/dragging never has to tear down and
+  // recreate those, which would otherwise interrupt an in-progress drag
+  function renderParamRows(paramsEl, params, offset){
+    paramsEl.innerHTML = '';
+    params.slice(offset, offset + PARAM_PAGE_SIZE).forEach(function(param){
+      const row = document.createElement('p');
+      row.className = 'control-info-param';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'control-info-param-name';
+      nameSpan.textContent = param.name;
+      const valSpan = document.createElement('span');
+      valSpan.className = 'control-info-param-value';
+      valSpan.textContent = param.value;
+      row.appendChild(nameSpan);
+      row.appendChild(valSpan);
+      paramsEl.appendChild(row);
+    });
+  }
+
+  // shared by every rendered slider -- only one can ever be dragged at a
+  // time, and since applyOffset (set on mousedown) closes over everything
+  // it needs, this just has to remember which track to read positions from
+  // and which applyOffset to call, no matter which group/container it's for
+  let sliderDrag = null;
+  function sliderFracFromEvent(track, evt){
+    const rect = track.getBoundingClientRect();
+    if (rect.height <= 0) return 0;
+    return Math.max(0, Math.min(1, (evt.clientY - rect.top) / rect.height));
+  }
+  window.addEventListener('mousemove', function(evt){
+    if (!sliderDrag) return;
+    sliderDrag.applyOffset(Math.round(sliderFracFromEvent(sliderDrag.track, evt) * sliderDrag.maxOffset));
+  });
+  window.addEventListener('mouseup', function(){ sliderDrag = null; });
+  window.addEventListener('touchmove', function(evt){
+    if (!sliderDrag || !evt.touches[0]) return;
+    sliderDrag.applyOffset(Math.round(sliderFracFromEvent(sliderDrag.track, evt.touches[0]) * sliderDrag.maxOffset));
+  }, { passive:true });
+  window.addEventListener('touchend', function(){ sliderDrag = null; });
 
   function renderControlGroups(container, groups){
     // offsets persist on the container element itself across re-renders
@@ -4251,48 +4432,80 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       rowEl.className = 'control-info-params-row';
       const paramsEl = document.createElement('div');
       paramsEl.className = 'control-info-params';
-      group.params.slice(offset, offset + PARAM_PAGE_SIZE).forEach(function(param){
-        const row = document.createElement('p');
-        row.className = 'control-info-param';
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'control-info-param-name';
-        nameSpan.textContent = param.name;
-        const valSpan = document.createElement('span');
-        valSpan.className = 'control-info-param-value';
-        valSpan.textContent = param.value;
-        row.appendChild(nameSpan);
-        row.appendChild(valSpan);
-        paramsEl.appendChild(row);
-      });
+      renderParamRows(paramsEl, group.params, offset);
       rowEl.appendChild(paramsEl);
 
       if (maxOffset > 0){
-        function pageBy(delta){
-          pageOffsets[group.synth] = Math.max(0, Math.min(maxOffset, pageOffsets[group.synth] + delta));
-          renderControlGroups(container, groups);
-        }
         const navEl = document.createElement('div');
         navEl.className = 'control-info-page-nav';
+        // a click anywhere in here (button or slider) is part of paging,
+        // not "toggle this box open/closed" -- stop it right here so it
+        // never reaches the box's own click-to-toggle listener above
+        navEl.addEventListener('click', function(e){ e.stopPropagation(); });
+
         const upBtn = document.createElement('button');
         upBtn.type = 'button';
         upBtn.className = 'control-info-page-btn';
         upBtn.textContent = '▲';
         upBtn.setAttribute('aria-label', 'Vorherige Parameter');
-        upBtn.disabled = offset <= 0;
-        upBtn.addEventListener('click', function(){ pageBy(-1); });
+
+        const sliderEl = document.createElement('div');
+        sliderEl.className = 'control-info-page-slider';
+        sliderEl.setAttribute('role', 'slider');
+        sliderEl.setAttribute('aria-label', 'Parameter-Position');
+        sliderEl.setAttribute('aria-valuemin', '0');
+        sliderEl.setAttribute('aria-valuemax', String(maxOffset));
+        const thumbEl = document.createElement('div');
+        thumbEl.className = 'control-info-page-slider-thumb';
+        sliderEl.appendChild(thumbEl);
+
         const downBtn = document.createElement('button');
         downBtn.type = 'button';
         downBtn.className = 'control-info-page-btn';
         downBtn.textContent = '▼';
         downBtn.setAttribute('aria-label', 'Weitere Parameter');
+
+        // applies a new offset in place: updates the visible rows, the
+        // buttons' disabled state and the slider thumb, without rebuilding
+        // any of this nav itself (so an in-progress drag is never disturbed)
+        function applyOffset(newOffset){
+          newOffset = Math.max(0, Math.min(maxOffset, newOffset));
+          pageOffsets[group.synth] = newOffset;
+          renderParamRows(paramsEl, group.params, newOffset);
+          upBtn.disabled = newOffset <= 0;
+          downBtn.disabled = newOffset >= maxOffset;
+          const pct = (newOffset / maxOffset * 100).toFixed(2) + '%';
+          thumbEl.style.top = pct;
+          sliderEl.setAttribute('aria-valuenow', String(newOffset));
+        }
+        function pageBy(delta){ applyOffset((pageOffsets[group.synth] || 0) + delta); }
+
+        upBtn.disabled = offset <= 0;
+        upBtn.addEventListener('click', function(){ pageBy(-1); });
         downBtn.disabled = offset >= maxOffset;
         downBtn.addEventListener('click', function(){ pageBy(1); });
+
+        function startSliderDrag(evt){
+          applyOffset(Math.round(sliderFracFromEvent(sliderEl, evt) * maxOffset));
+          sliderDrag = { track: sliderEl, applyOffset: applyOffset, maxOffset: maxOffset };
+        }
+        sliderEl.addEventListener('mousedown', function(evt){ evt.preventDefault(); startSliderDrag(evt); });
+        sliderEl.addEventListener('touchstart', function(evt){
+          if (!evt.touches[0]) return;
+          evt.preventDefault();
+          startSliderDrag(evt.touches[0]);
+        }, { passive:false });
+
+        thumbEl.style.top = (offset / maxOffset * 100).toFixed(2) + '%';
+        sliderEl.setAttribute('aria-valuenow', String(offset));
+
         navEl.appendChild(upBtn);
+        navEl.appendChild(sliderEl);
         navEl.appendChild(downBtn);
         rowEl.appendChild(navEl);
-        // exposed for the Up/Down arrow-key handler (see the "keydown"
-        // section-paging listener), which pages whichever params list is
-        // actually hovered instead of jumping the whole page section
+        // exposed for the Up/Down arrow-key and wheel handlers (see the
+        // "keydown"/"wheel" section-paging listeners), which page whichever
+        // params list is actually hovered instead of affecting the whole page
         paramsEl.__pageBy = pageBy;
       }
 
@@ -4595,6 +4808,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     function updateDetailValues(){
       const detail0 = wrap.querySelector('.object-info-detail-0');
       const detail1 = wrap.querySelector('.object-info-detail-1');
+      // switch 2 (mod toggle) and switch 3 (button mode) have no store.json
+      // mapping -- they get a static explanation instead, the same in
+      // every program, in both Mod boxes (see texts/switch_2.txt/switch_3.txt)
+      const switchNum = pendingLabel === 'Switch 2' ? '2' : pendingLabel === 'Switch 3' ? '3' : null;
+      if (switchNum){
+        if (detail0) ensureSwitchInfoLoaded(switchNum, pendingVal, detail0);
+        if (detail1) ensureSwitchInfoLoaded(switchNum, pendingVal, detail1);
+        return;
+      }
       if (detail0) renderControlGroups(detail0, computeControlGroups(currentStoreMods[0], currentStoreMeta, pendingStoreKey, pendingVal));
       if (detail1) renderControlGroups(detail1, computeControlGroups(currentStoreMods[1], currentStoreMeta, pendingStoreKey, pendingVal));
     }
@@ -4721,7 +4943,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (diagramPanel) diagramPanel.classList.toggle('mod-rose-active', newState === 'right');
         setPedalRoseMod(newState === 'right');
         if (announce){
-          showPedalObjectInfo('Switch 2', middleSwitchEl);
+          showPedalObjectInfo('Switch 2', middleSwitchEl, null, newState === 'left' ? 0 : 1);
         } else {
           openMatchingBox();
         }
@@ -4797,10 +5019,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
             // stuck lit from whatever toggle state it was left in
             if (!buttonsToggleMode) buttonEls.forEach(function(b){ b.classList.remove('pressed'); });
           }
-          // only switch 1 (index 0) has a known store mapping (key "2") for
-          // now -- switch 3 (index 2) picks button mode and switch 2 is
-          // handled separately via applyMiddleSwitchState, neither mapped yet
-          showPedalObjectInfo('Switch ' + switchNumber, sw, switchIndex === 0 ? '2' : null, switchIndex === 0 ? (newState === 'left' ? 0 : 1) : null);
+          // only switch 1 (index 0) has a known store mapping (key "2") --
+          // switch 3 (index 2) picks button mode (val still passed through
+          // so its left/right static text resolves, see texts/switch_3.json)
+          // and switch 2 is handled separately via applyMiddleSwitchState
+          showPedalObjectInfo('Switch ' + switchNumber, sw, switchIndex === 0 ? '2' : null, newState === 'left' ? 0 : 1);
         });
         switchResets.push(function(){
           sw.setAttribute('data-state', switchIndex === 2 ? 'right' : 'left');
@@ -4955,6 +5178,22 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const playBtn = wrap.querySelector('.spotlight-center-play');
     const vineReveal = wrap.querySelector('.vine-reveal');
     const vineCircleEl = vineReveal ? vineReveal.querySelector('.vine-circle') : null;
+    const vineHangLineEl = vineReveal ? vineReveal.querySelector('.vine-hang-line') : null;
+    // the hang-line's visibility is driven entirely by these two inline
+    // style writes -- no CSS class involved at all, so there is nothing
+    // for specificity/cascade to get wrong. hideHangLine() is a hard,
+    // untransitioned cut to invisible; showHangLine() is the one and only
+    // place its fade-in transition gets set, right before fading it in.
+    function hideHangLine(){
+      if (!vineHangLineEl) return;
+      vineHangLineEl.style.transition = 'none';
+      vineHangLineEl.style.opacity = '0';
+    }
+    function showHangLine(){
+      if (!vineHangLineEl) return;
+      vineHangLineEl.style.transition = 'opacity 0.35s ease';
+      vineHangLineEl.style.opacity = '1';
+    }
     // only 2 vines are actually randomized (vine-left, vine-center) --
     // vine-right and vine-fourth are just those two, copied and flipped
     // across the vertical center axis, so they're always an exact mirror
@@ -5015,14 +5254,28 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       vineReveal.style.top = lineY + 'px';
       playBtn.style.top = (lineY + 96) + 'px'; // 96 = the circle's cy in the SVG above
     }
-    let vineRevealTimer = null;
+    // the reveal is a chain of 3 nested setTimeouts (sparked+revealed, then
+    // vine-hidden, then showHangLine). Switching to another program calls
+    // this again well before that chain finishes (it's ~1.3s long), so
+    // every step below checks "am I still the reveal that's currently
+    // wanted" via this generation counter before touching anything --
+    // bumping it here immediately invalidates every step still in flight
+    // from whatever reveal was previously running, so it can never show
+    // the hang-line on top of the new one
+    let vineRevealGen = 0;
     // vines grow in and curl together into the circle; once that's done,
     // the real button fades in over it and the vines fade away
     function triggerVineReveal(){
       if (!vineReveal) return;
-      clearTimeout(vineRevealTimer);
+      const gen = ++vineRevealGen;
       playBtn.classList.remove('revealed');
       vineReveal.classList.remove('vine-hidden', 'sparked');
+      // hidden here, not just in resetVineReveal -- switching straight to
+      // another program (without the card ever closing) calls this
+      // directly, and the hang-line being left visible from the previous
+      // reveal would otherwise show all through the new animation instead
+      // of only appearing once it's done and the button/logo is back
+      hideHangLine();
       reshuffleVines();
       const els = vineDrawEls();
       els.forEach(function(el){
@@ -5036,10 +5289,18 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         el.style.transition = '';
         el.style.strokeDashoffset = '0';
       });
-      vineRevealTimer = setTimeout(function(){
+      setTimeout(function(){
+        if (gen !== vineRevealGen) return; // superseded by a newer reveal -- do nothing
         vineReveal.classList.add('sparked');
         playBtn.classList.add('revealed');
-        setTimeout(function(){ vineReveal.classList.add('vine-hidden'); }, 150);
+        // starts fading in right alongside the button/spark, ahead of the
+        // vines' own fade-out (which still waits another 150ms below) --
+        // so it's already on its way in well before the vines are gone
+        showHangLine();
+        setTimeout(function(){
+          if (gen !== vineRevealGen) return;
+          vineReveal.classList.add('vine-hidden');
+        }, 150);
       }, 820); // just past the circle's own delay+duration (0.4s + 0.4s)
     }
     // undoes triggerVineReveal's end state -- called when the card
@@ -5053,10 +5314,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // then the animation played" instead of just playing cleanly.
     function resetVineReveal(){
       if (!vineReveal) return;
-      clearTimeout(vineRevealTimer);
+      vineRevealGen++; // invalidate any reveal chain still in flight
       playBtn.classList.remove('revealed');
       vineReveal.classList.remove('sparked');
       vineReveal.classList.add('vine-hidden');
+      hideHangLine();
     }
     const artistCurrentEl = wrap.querySelector('.artist-name-current');
     const artistNextEl = wrap.querySelector('.artist-name-next');
@@ -5639,9 +5901,30 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const WHEEL_THRESHOLD = 55; // how far you need to scroll past the edge before it jumps
   let wheelResetTimer = null;
 
+  // a pedal control's own parameter list pages itself with the mouse
+  // wheel while hovered (same one-row-at-a-time step as the up/down
+  // buttons and Up/Down arrow keys), instead of paging the whole section
+  let paramsWheelAccum = 0;
+  const PARAMS_WHEEL_THRESHOLD = 40;
+  let paramsWheelResetTimer = null;
+
   window.addEventListener('wheel', function(e){
     // if any modal is open, let the page (and its own scroll handling) be
     if (document.querySelector('.modal-overlay.active')) return;
+
+    const hoveredParams = e.target.closest && e.target.closest('.control-info-params');
+    if (hoveredParams){
+      e.preventDefault();
+      if (!hoveredParams.__pageBy) return; // only one page -- nothing to do, but still swallow the scroll
+      paramsWheelAccum += e.deltaY;
+      clearTimeout(paramsWheelResetTimer);
+      paramsWheelResetTimer = setTimeout(function(){ paramsWheelAccum = 0; }, 220);
+      if (Math.abs(paramsWheelAccum) < PARAMS_WHEEL_THRESHOLD) return;
+      const dir = paramsWheelAccum > 0 ? 1 : -1;
+      paramsWheelAccum = 0;
+      hoveredParams.__pageBy(dir);
+      return;
+    }
 
     // the blog entry's own content box has its own internal scrollbar --
     // let the wheel scroll that instead of paging the whole section
