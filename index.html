@@ -1111,7 +1111,7 @@
     margin-right:16px; /* space between idle tabs -- collapsed to 0 by
       .wrap-hidden-sibling below so a hidden tab never leaves a gap-sized
       gap behind it */
-    transition:flex-basis 0.45s ease, width 0.45s ease, opacity 0.45s ease, height 0.45s ease, margin-right 0.45s ease;
+    transition:flex-basis 0.45s ease, width 0.45s ease, opacity 0.45s ease, height 0.45s ease, margin-right 0.45s ease, margin-bottom 0.45s ease;
   }
   .spotlight-wrap:last-child{
     margin-right:0;
@@ -1193,7 +1193,7 @@
     flex:1 1 auto;
     min-width:0;
     overflow:hidden;
-    transition:flex-basis 0.45s ease, width 0.45s ease;
+    transition:flex-basis 0.45s ease, width 0.45s ease, height 0.45s ease;
   }
   .spotlight-wrap.card-collapsed .spotlight-card-clip{
     flex:0 0 0;
@@ -2169,9 +2169,10 @@
        its card instead of beside it); the FLIP/slide transform machinery
        (--side-translate/--box-slide) is untouched and still just plays,
        it's simply moving things around a column layout now instead of a
-       row -- the hidden-sibling collapse is simplified to a plain
-       display:none here rather than trying to also adapt its width-based
-       shrink animation to a vertical list. */
+       row -- and the hidden-sibling collapse mirrors the desktop one
+       (flex-basis/height/opacity, same transition, see .spotlight-wrap
+       above) just shrinking vertically instead of horizontally, so
+       opening/closing an edition animates the same way on both. */
     .spotlight-wraps{
       flex-direction:column;
       align-items:stretch;
@@ -2179,13 +2180,19 @@
     .spotlight-wrap{
       flex-direction:column;
       margin-right:0;
-      margin-bottom:12px;
+      margin-bottom:4px; /* tight stack when idle -- much less breathing room needed between full-width bars than between side-by-side tabs */
     }
     .spotlight-wrap:last-child{
       margin-bottom:0;
     }
     .spotlight-wrap.wrap-hidden-sibling{
-      display:none;
+      flex:0 0 0;
+      height:0;
+      min-height:0;
+      margin-bottom:0;
+      opacity:0;
+      overflow:hidden;
+      pointer-events:none;
     }
     .spotlight-side-box,
     .spotlight-side-box:hover,
@@ -4706,19 +4713,34 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // regardless of how choppy the underlying reflow actually is.
   // returns true if any side box actually had to move (so callers can wait
   // out the move before doing anything that assumes the tabs have settled)
+  // FLIP-repositions every side box after mutate() changes which
+  // edition is open/hidden: measures left+top before, lets the mutation
+  // snap the layout to its final state, then corrects each box back to
+  // its old spot via transform and releases it, so it visually slides
+  // into place instead of jumping -- needed because flex-basis (what
+  // actually collapses a hidden sibling) can't itself be transitioned
+  // between 'auto' and '0', so this is what makes the *other*, still-
+  // visible boxes appear to glide smoothly into the space that opened up.
+  // Tracks both axes (not just left) so the exact same function covers
+  // both the desktop row (tabs move horizontally) and the phone column
+  // (tabs move vertically, see max-width:640px) without needing a
+  // separate vertical-specific version.
   function flipSideBoxes(mutate){
     const before = instances.map(function(inst){
-      return inst.sideBox.getBoundingClientRect().left;
+      const r = inst.sideBox.getBoundingClientRect();
+      return { left: r.left, top: r.top };
     });
     mutate();
     let animated = false;
     instances.forEach(function(inst, i){
       const sideBox = inst.sideBox;
-      const dx = before[i] - sideBox.getBoundingClientRect().left;
-      if (Math.abs(dx) < 0.5) return;
+      const r = sideBox.getBoundingClientRect();
+      const dx = before[i].left - r.left;
+      const dy = before[i].top - r.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
       animated = true;
       sideBox.style.transition = 'none';
-      sideBox.style.transform = 'translateX(' + dx + 'px)';
+      sideBox.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
       void sideBox.offsetHeight; // commit the jump before releasing it
       sideBox.style.transition = '';
       sideBox.style.transform = '';
