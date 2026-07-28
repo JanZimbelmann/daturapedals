@@ -1240,6 +1240,43 @@
     overflow:hidden;
     min-width:0;
   }
+  /* the 3 page tabs (Overview/Artist/Controls) are a phone-only affordance
+     (see max-width:640px below) -- hidden by default so desktop's original
+     layout (two-column top row, bio-slider mod tabs) is completely
+     untouched; z-index above the hanging button/vine decoration, which
+     visually passes behind this row on its way down to the play button */
+  .card-page-nav{
+    display:none;
+    position:relative;
+    z-index:6;
+    justify-content:center;
+    gap:0.5rem;
+    padding:0.9rem 1.75rem 0;
+  }
+  .card-page-btn{
+    flex:0 1 auto;
+    padding:0.5rem 1.1rem;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    border-radius:999px;
+    color:var(--grey-3);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    cursor:pointer;
+    user-select:none;
+    transition:border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .card-page-btn:hover{
+    border-color:var(--edition-fg, var(--white));
+    color:var(--edition-fg, var(--white));
+  }
+  .card-page-btn.active{
+    background:var(--edition-fg, var(--white));
+    border-color:var(--edition-fg, var(--white));
+    color:var(--edition-bg, var(--black));
+  }
   .program-bar{
     position:relative;
     height:32px;
@@ -1403,6 +1440,13 @@
     animation:vineCircleSpark 0.5s ease-out;
   }
 
+  /* the 3 phone-only pages (see max-width:640px below for how they're
+     shown/hidden there) -- inert on desktop, where they sit empty the
+     whole time since syncMobileLayout only ever moves real content into
+     them once the phone breakpoint is actually active */
+  .card-page{
+    display:none;
+  }
   .spotlight-top-row{
     display:flex;
     min-width:0;
@@ -2125,30 +2169,43 @@
     .spotlight-bio-block{
       padding-left:1.75rem;
     }
-    /* less outer breathing room, so the pedal diagram (and everything
-       else) gets meaningfully more width to work with on a narrow screen */
-    .spotlight{
-      padding:2rem 0.75rem;
+    /* phone-only: the 3 tabs + one page at a time, built by moving the
+       real elements into these slots (see syncMobileLayout) -- see the
+       template comment for why this is safe to leave completely alone on
+       desktop (the card-page-nav/card-page display:none defaults above) */
+    .card-page-nav{
+      display:flex;
     }
-    /* the diagram's own controls (potis/switches/buttons) are drawn at a
-       fixed SVG viewBox size and scale purely with however much width
-       this block gives them -- cutting its padding down is what actually
-       makes them bigger touch targets, not a change to the diagram itself */
-    .spotlight-diagram-block{
-      padding:0.85rem;
+    .card-page{
+      display:none;
+      padding-top:8.5rem; /* whichever page is active is always the one right below the bar here */
     }
-    .spotlight-desc-block{
-      padding:1.25rem;
+    .card-page.active{
+      display:block;
     }
-    /* the diagram is an SVG scaling off its own viewBox, so there's no
-       quality cost to letting it grow past its "native" 220px on a small
-       screen -- this is what actually turns the switches/potis/buttons
-       into comfortable touch targets instead of tiny mouse-sized ones */
-    .pedal-diagram{
-      max-width:340px;
+    /* Mod 0 / Mod 1 once relocated here: the collapsed-strip/expand-to-
+       overlay design (see .bio-panel-object above) only makes sense
+       sharing space with the bio text in the desktop bio-slider -- here
+       there's no bio text to reveal, so both are just always shown,
+       stacked. Clicking either still flips the pedal's own switch 2 to
+       match (unchanged JS), it just has no visual expand to animate here. */
+    .card-page-controls.active{
+      display:flex;
+      flex-direction:column;
+      gap:1px;
+      background:var(--grey-2);
     }
-    .pedal-diagram-panel{
-      padding:0.4rem;
+    .card-page-controls .spotlight-diagram-block{
+      background:var(--black);
+    }
+    .card-page-controls .bio-panel-object{
+      position:static !important;
+      width:auto !important;
+      flex:1;
+      background:var(--grey-1);
+    }
+    .card-page-controls .bio-panel-object .object-info-inner{
+      opacity:1 !important;
     }
   }
   .contact-canvas{
@@ -2641,6 +2698,20 @@
     <div class="program-bar-wrap">
       <div class="program-bar"></div>
     </div>
+
+    <!-- phone-only: 3 tabs jumping to general info / artist / controls,
+         built by moving the real elements below into these 3 slots (see
+         syncMobileLayout in mountEdition) -- completely inert on desktop,
+         where display:none keeps this whole block (and the moving) off,
+         and everything below just renders in its normal original place. -->
+    <div class="card-page-nav">
+      <button class="card-page-btn active" type="button" data-page="info" aria-label="Allgemeine Infos zu diesem Pedal anzeigen">Overview</button>
+      <button class="card-page-btn" type="button" data-page="artist" aria-label="Künstler-Bio, Foto und Kooperationen anzeigen">Artist</button>
+      <button class="card-page-btn" type="button" data-page="controls" aria-label="Bedienelemente und Mod-Infos des Pedals anzeigen">Controls</button>
+    </div>
+    <div class="card-page card-page-info active" data-page="info"></div>
+    <div class="card-page card-page-artist" data-page="artist"></div>
+    <div class="card-page card-page-controls" data-page="controls"></div>
 
     <button class="spotlight-center-play" aria-label="Sound abspielen">
       <span class="play-emblem"></span>
@@ -4760,6 +4831,27 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const sideTitle = wrap.querySelector('.spotlight-side-title');
     const card = wrap.querySelector('.spotlight-box');
     const cardClip = wrap.querySelector('.spotlight-card-clip');
+    // re-measures this card's true natural height and re-locks it (see
+    // applySharedHeight/lockHeight further down) -- needed anywhere
+    // content can change height *after* the card is already open, since
+    // lockHeight()'s own measureOpenHeight() has a fast path that just
+    // returns getBoundingClientRect().height unchanged in that case
+    // (correct for everything it was originally written for, where an
+    // already-open card's height never changes on its own -- wrong here).
+    // Clearing the locked height first lets the box size itself to
+    // whatever's actually showing right now before re-measuring.
+    function remeasureCardHeight(){
+      // nothing meaningful to measure while collapsed (content this asks
+      // about happens to update for every edition, not just the visible
+      // one) -- lockHeight()'s own measureOpenHeight already handles
+      // getting the right height once this instance actually opens
+      if (wrap.classList.contains('card-collapsed')) return;
+      const prevHeight = wrap.style.height;
+      wrap.style.height = '';
+      const natural = wrap.getBoundingClientRect().height;
+      wrap.style.height = prevHeight;
+      wrap.style.height = applySharedHeight(natural) + 'px';
+    }
     sideTitle.textContent = folderNameToTitle(editionSlug);
     if (colors){
       if (colors.color_bg) wrap.style.setProperty('--edition-bg', colors.color_bg);
@@ -4942,6 +5034,83 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     function setPedalRoseMod(active){
       roseModActive = active;
     }
+
+    // phone-only: 3 tabs (Overview/Artist/Controls), one page shown at a
+    // time -- completely inert on desktop (see syncMobileLayout below,
+    // which only moves real content into these slots once the phone
+    // breakpoint is actually active; the buttons/pages themselves are
+    // display:none there regardless of this active-class bookkeeping)
+    const cardPageBtns = Array.from(wrap.querySelectorAll('.card-page-btn'));
+    const cardPages = Array.from(wrap.querySelectorAll('.card-page'));
+    function setActivePage(pageName){
+      cardPageBtns.forEach(function(btn){ btn.classList.toggle('active', btn.dataset.page === pageName); });
+      cardPages.forEach(function(page){ page.classList.toggle('active', page.dataset.page === pageName); });
+      // the just-shown page can be taller or shorter than the one before
+      // it (e.g. Controls, with the diagram + both mod boxes stacked, vs
+      // the shorter Overview)
+      remeasureCardHeight();
+    }
+    cardPageBtns.forEach(function(btn){
+      btn.addEventListener('click', function(){ setActivePage(btn.dataset.page); });
+    });
+
+    // moves the real desc/diagram/collab/bottom-row/mod-info elements into
+    // the 3 card-page slots above so the phone tabs can show one at a time
+    // -- and moves them straight back to their original desktop spots
+    // (restoring the exact original order) once the viewport widens back
+    // past the phone breakpoint. Only ever relocates existing elements
+    // (never clones/re-renders them), so everything about them -- click
+    // listeners, live control-info state, DOM identity -- stays intact;
+    // completely inert on desktop, where this runs once, finds it's
+    // already in desktop mode, and does nothing.
+    const MOBILE_BREAKPOINT = '(max-width:640px)';
+    let mobileLayoutIsPhone = null; // null so the very first call always runs
+    function syncMobileLayout(){
+      const phone = window.matchMedia(MOBILE_BREAKPOINT).matches;
+      if (phone === mobileLayoutIsPhone) return;
+      // skip on the very first (setup-time) call -- the card/wrap aren't
+      // necessarily fully ready to measure yet, and the setup code further
+      // down calls lockHeight() itself once everything actually is. A real
+      // resize crossing the breakpoint (relocating a bunch of content, so
+      // the card's natural height can change) happens well after that, so
+      // re-measuring there is safe and necessary.
+      const isFirstRun = mobileLayoutIsPhone === null;
+      mobileLayoutIsPhone = phone;
+
+      const infoPage = wrap.querySelector('.card-page-info');
+      const artistPage = wrap.querySelector('.card-page-artist');
+      const controlsPage = wrap.querySelector('.card-page-controls');
+      const topRowEl = wrap.querySelector('.spotlight-top-row');
+      const descBlockEl = wrap.querySelector('.spotlight-desc-block');
+      const diagramBlockEl = wrap.querySelector('.spotlight-diagram-block');
+      const collabDividerEl = wrap.querySelector('.collab-divider');
+      const bottomRowEl = wrap.querySelector('.spotlight-bottom-row');
+      const bioSliderEl = wrap.querySelector('.bio-slider');
+      if (!infoPage || !artistPage || !controlsPage) return;
+
+      if (phone){
+        if (descBlockEl) infoPage.appendChild(descBlockEl);
+        if (collabDividerEl) artistPage.appendChild(collabDividerEl);
+        if (bottomRowEl) artistPage.appendChild(bottomRowEl);
+        if (diagramBlockEl) controlsPage.appendChild(diagramBlockEl);
+        if (bioPanelObject) controlsPage.appendChild(bioPanelObject);
+        if (bioPanelObjectMod1) controlsPage.appendChild(bioPanelObjectMod1);
+      } else if (topRowEl){
+        if (descBlockEl) topRowEl.insertBefore(descBlockEl, topRowEl.firstChild);
+        if (diagramBlockEl) topRowEl.appendChild(diagramBlockEl);
+        if (collabDividerEl) topRowEl.insertAdjacentElement('afterend', collabDividerEl);
+        if (bottomRowEl && collabDividerEl) collabDividerEl.insertAdjacentElement('afterend', bottomRowEl);
+        if (bioSliderEl){
+          if (bioPanelObject) bioSliderEl.appendChild(bioPanelObject);
+          if (bioPanelObjectMod1) bioSliderEl.appendChild(bioPanelObjectMod1);
+        }
+      }
+      // same reasoning as setActivePage's own re-measure: the box needing
+      // more/less room while already open is exactly what just happened here
+      if (!isFirstRun) remeasureCardHeight();
+    }
+    syncMobileLayout();
+    window.addEventListener('resize', syncMobileLayout);
 
     // reassigned below once the diagram's controls are actually wired up
     // (real body needs the per-control render()/state closures) -- calling
@@ -5275,25 +5444,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // pin the vines' start to the program bar's own separator line, and
     // the button to the circle's center below it (both in real px, since
     // the line sits a fixed distance from the top regardless of the
-    // card's own height, unlike a %-based position). On narrow viewports
-    // the description/diagram columns stack instead of sitting side by
-    // side (see the max-width:640px rule on .spotlight-top-row), so
-    // anchoring to the bar's own position would land the button/vines on
-    // top of the description text instead of the gap between the two
-    // stacked blocks -- anchor to the description block's own (variable,
-    // re-measured) bottom edge there instead. Re-run whenever the
-    // description text changes (see applyEntry) or the viewport is
-    // resized across the stacking breakpoint.
+    // card's own height, unlike a %-based position). Every page's content
+    // reserves a fixed padding-top to clear this same footprint (see
+    // .card-page), so this can just always anchor to the bar itself
+    // regardless of which page is currently showing.
     const barWrapEl = wrap.querySelector('.program-bar-wrap');
-    const descBlockEl = wrap.querySelector('.spotlight-desc-block');
-    const STACK_BREAKPOINT = '(max-width:640px)';
     function positionVineReveal(){
       if (!vineReveal || !barWrapEl) return;
-      const stacked = descBlockEl && window.matchMedia(STACK_BREAKPOINT).matches;
-      const refBottom = stacked
-        ? descBlockEl.getBoundingClientRect().bottom
-        : barWrapEl.getBoundingClientRect().bottom;
-      const lineY = refBottom - card.getBoundingClientRect().top;
+      const lineY = barWrapEl.getBoundingClientRect().bottom - card.getBoundingClientRect().top;
       vineReveal.style.top = lineY + 'px';
       playBtn.style.top = (lineY + 96) + 'px'; // 96 = the circle's cy in the SVG above
     }
@@ -5411,6 +5569,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       currentWav = 'examples/' + entry.programSlug + '.wav';
       resetPedalControls();
       resetPedalObjectInfo();
+      setActivePage('info');
       // skipped when pre-populating a card that isn't visible yet (e.g. a
       // collab-button jump to another edition, still mid-swap) -- firing
       // it there would run the whole draw-in-and-reveal animation while
@@ -5461,18 +5620,22 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (myToken !== requestToken) return;
         artistBio.textContent = data.text;
         currentArtistLinks = extractArtistLinks(data);
+        // the real bio text almost never matches "Lädt…"'s length, so the
+        // card's locked-in height (measured back when this was still the
+        // placeholder -- see remeasureCardHeight/lockHeight) is usually
+        // stale the instant this replaces it; most noticeable right after
+        // a fresh page load, before anything's ever been clicked to
+        // trigger a re-measure some other way
+        remeasureCardHeight();
       }).catch(function(){
         if (myToken !== requestToken) return;
         artistBio.textContent = 'Bio nicht gefunden';
+        remeasureCardHeight();
       });
 
       // program description: bundled directly in this program's own
       // manifest entry (editions/<edition>/descriptions/<program>.json)
       programDesc.textContent = entry.text || 'Beschreibung nicht gefunden';
-      // description length (hence its wrapped height) just changed -- on a
-      // stacked mobile layout the vine/button position depends on that
-      // height, so it has to be re-measured every time, not just at setup
-      positionVineReveal();
 
       // per-control info: stores/<programSlug>/0.json + 1.json, if that
       // folder exists at all -- most programs don't have one yet, so a
