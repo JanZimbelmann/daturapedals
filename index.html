@@ -3651,7 +3651,7 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
     // same overall duration as the Datura door before it moves on
     setTimeout(function(){
       syncPageIndex(spotlightSection);
-      spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' }); // see jumpToIndex for why this one section is centered, not top-aligned
       pageAnimationUnlock();
     }, 650);
   };
@@ -6380,14 +6380,20 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   function jumpToIndex(idx){
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
     currentPageIndex = idx;
-    // block:'start' (not 'center') -- desktop's sections are exactly one
-    // viewport tall so the two would look identical there, but on phone a
-    // section can now be genuinely taller than the viewport (e.g. the
-    // spotlight section with an edition open), and centering a section
-    // taller than the viewport crops it from *both* ends -- aligning its
-    // top to the viewport's top instead guarantees the top (title, header
-    // bar) is always reachable, with the rest just a normal scroll away.
-    pageSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = pageSections[idx];
+    // block:'start' (not 'center') everywhere except the spotlight/
+    // edition section -- desktop's sections are exactly one viewport
+    // tall so 'start' vs 'center' looks identical there, and on phone a
+    // section can in principle grow taller than the viewport, where
+    // centering crops it from *both* ends. The spotlight section is
+    // requested centered specifically though (min-height:100vh with its
+    // own internal flex centering, so its card sits in the middle of
+    // that space already -- scrolling it to 'start' left that centered
+    // card looking oddly pinned toward the top of the viewport instead
+    // of centered in it, now that its height is usually close to one
+    // viewport anyway thanks to the shared/fixed card height work).
+    const block = (target === spotlightSection) ? 'center' : 'start';
+    target.scrollIntoView({ behavior: 'smooth', block: block });
   }
 
   let isJumping = false;
