@@ -2162,56 +2162,51 @@
   }
 
   @media (max-width:640px){
-    /* idle (nothing open yet): editions sit side by side, same row
-       layout as desktop, each just wide enough for its own label -- like
-       small pill buttons, not full-width bars, since there's no reason to
-       claim the whole row's width until one is actually opened. Only once
-       an edition becomes .wrap-active does IT switch to a full-width
-       column (its side box turned into a horizontal header bar above the
-       card, instead of the narrow rotated-text strip beside it) -- that's
-       the only per-edition layout that actually changes here; the idle
-       ones keep behaving exactly like the desktop row (including the
-       normal width-based hidden-sibling collapse, unchanged below). */
+    /* every edition always stacks in one column, one full-width row each
+       -- idle or open, doesn't matter. Idle editions used to be narrow
+       pill buttons sized to their own label, which made the row wrap
+       unpredictably: two side by side if their labels happened to be
+       short enough to fit, stacked otherwise, purely depending on label
+       length and which edition was currently open -- sometimes reading
+       as "next to each other", sometimes "below/above", for no reason a
+       visitor could predict. Forcing a plain column with every wrap at
+       100% width, all the time, makes the arrangement deterministic and
+       gives every edition the same width regardless of state. The side
+       box (the narrow rotated-text strip beside the card on desktop)
+       becomes a plain full-width horizontal header bar above the card
+       here -- open or idle alike, since there's no "idle, narrower"
+       version of it anymore either. */
     .spotlight-wraps{
-      flex-wrap:wrap;
-      row-gap:6px;
-      align-items:flex-start; /* not stretch -- idle wraps shouldn't be forced to match each other's (or the active one's) height, see below */
+      flex-direction:column;
+      align-items:stretch;
     }
     .spotlight-wrap{
-      margin-right:6px; /* tighter than desktop's 16px -- these read as small pill buttons, not spaced-out tabs */
+      flex-direction:column;
+      width:100%;
+      margin-right:0;
+      margin-bottom:6px;
+    }
+    .spotlight-wrap:last-child{
+      margin-bottom:0;
     }
     /* the shared-height mechanism (see applySharedHeight/lockHeight) sets
        an explicit inline height matching the *open* card's own height on
        every wrap, idle ones included -- necessary on desktop, where idle
        tabs sit right next to the open card and need to visually match its
-       height, but here idle tabs are small standalone pill buttons with
-       nothing beside them to match, so that inline height needs to be
+       height, but here every idle wrap is just its own header bar with
+       nothing beside it to match, so that inline height needs to be
        cancelled out (the only way plain CSS can beat an inline style).
-       On its own this wouldn't be enough either -- align-items:stretch
-       above would just re-stretch an "auto" height right back out to
-       match its tallest sibling, which is exactly why that's flex-start
-       instead now. .wrap-active is excluded from both since that one
-       genuinely needs the real height. */
+       .wrap-active is excluded since that one genuinely needs the real
+       height. */
     .spotlight-wrap:not(.wrap-active){
       height:auto !important;
     }
-    .spotlight-wrap.wrap-active{
-      flex-direction:column;
-      width:100%;
-      margin-right:0;
-      align-self:stretch;
-    }
     .spotlight-side-box{
-      width:auto;
+      width:100%;
       min-width:0;
       max-width:none;
       height:auto;
       padding:0.6rem 1rem;
-    }
-    .spotlight-wrap.wrap-active .spotlight-side-box{
-      width:100%;
-      min-width:0;
-      max-width:none;
     }
     .spotlight-side-title{
       transform:none;
@@ -2226,10 +2221,23 @@
        just invisible) reflows into that near-zero-width column and its
        text wraps line-by-line into a tall stack, which then sets the
        card-clip's own auto height right back to ~400px and blows up the
-       idle pill's height along with it. Forcing height:0 too is what
-       actually keeps an idle pill down at just its side-box's height. */
+       idle bar's height along with it. Forcing height:0 too is what
+       actually keeps an idle bar down at just its side-box's height. */
     .spotlight-wrap.card-collapsed .spotlight-card-clip{
       height:0;
+    }
+    /* the card's own open/close slide (.spotlight-box, driven by
+       --box-slide -- see openCard/closeCard) travels left-right on
+       desktop, matching its side box sitting beside it there. Here the
+       side box sits above the card instead, so the same slide needs to
+       sweep vertically -- up, into that header bar -- to still read as
+       "collapsing into its own tab" instead of sliding off sideways for
+       no on-screen reason. --box-slide is still just a plain px distance
+       set from JS; only the axis it travels on changes here (closeCard
+       measures whichever dimension -- width or height -- actually
+       matches the viewport's current slide direction). */
+    .spotlight-box{
+      transform:translateY(var(--box-slide));
     }
 
     .spotlight-top-row,
@@ -5967,11 +5975,17 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     function closeCard(onDone){
       lockHeight();
       resetPedalObjectInfo();
-      // measured now, while the box is still at its natural width -- a
+      // measured now, while the box is still at its natural size -- a
       // fixed pixel value so the slide distance stays constant even
-      // though the layout width collapses afterward
-      const fullCardWidth = card.getBoundingClientRect().width;
-      card.style.setProperty('--box-slide', (-fullCardWidth).toFixed(1) + 'px');
+      // though the layout collapses afterward. Desktop slides the card
+      // left into its side box (which sits beside it there); phone
+      // slides it up into its side box instead (a header bar stacked
+      // above the card there, see the max-width:640px .spotlight-box
+      // override), so the distance has to be measured along whichever
+      // axis it's actually about to travel on.
+      const isPhone = window.matchMedia('(max-width:640px)').matches;
+      const fullCardSize = isPhone ? card.getBoundingClientRect().height : card.getBoundingClientRect().width;
+      card.style.setProperty('--box-slide', (-fullCardSize).toFixed(1) + 'px');
       card.classList.add('sliding-out');
       clearTimeout(stageTimer);
       stageTimer = setTimeout(function(){
@@ -6242,20 +6256,32 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }, { passive:false });
 
   // touch: same "each section is its own room" feel as the mouse-wheel/
-  // scrollbar-drag paths above, but for a thumb drag. touchmove is
-  // deliberately never hooked here, so the browser's native scroll just
-  // free-scrolls the page under the finger the entire time -- exactly like
-  // the scrollbar-thumb drag below -- and only once the finger actually
-  // lifts do we snap, to whichever section the free-scroll actually left
-  // nearest to (nearestSectionIndex(), same helper the scrollbar-drag
-  // mouseup uses), not a fixed one-section step guessed from the swipe's
-  // direction. Stepping by a fixed direction used to read the release
-  // position as always exactly one section away from wherever it was
-  // before the drag started, which desyncs badly the moment a section is
-  // taller than the viewport (any mobile section stacked with real
-  // content) -- a single swipe could freely scroll two sections down and
-  // then snap back up to just one, i.e. appear to "snap" mid-gesture
-  // against what the thumb had just scrolled to.
+  // scrollbar-drag paths above, but for a thumb drag -- phone only (see
+  // PHONE_QUERY below; desktop, including a desktop touchscreen, keeps
+  // the plain swipe-to-next-room behavior in the `!wasPhone` branch
+  // below, untouched).
+  //
+  // Two problems turned out to be the same root cause. Handing the drag
+  // to the browser's native scroll (as a first version of this did) free-
+  // scrolls smoothly while the finger is down, but native touch-scrolling
+  // carries momentum: it keeps coasting for a while *after* the finger
+  // has already lifted, which (a) reads as "the page moving on its own"
+  // once our own release-triggered snap also starts animating on top of
+  // that still-coasting scroll, and (b) means the resting position by the
+  // time of release depends on exactly how hard the momentum carried it
+  // rather than just how far the finger actually moved -- so even a
+  // light, deliberate swipe could coast back near its starting section
+  // and get snapped straight back to it instead of moving on, which reads
+  // as the swipe being ignored.
+  //
+  // Fixed by not handing the gesture to native scrolling at all: touchmove
+  // is prevented and the scroll position is set by hand instead, 1:1 with
+  // the finger, every frame. With no native momentum left to coast on,
+  // release can go back to a plain "any real swipe (past a small dead
+  // zone) commits exactly one section, in that direction" rule -- it can
+  // no longer disagree with where the drag visually ended, since nothing
+  // moves the page except the finger itself.
+  const PHONE_QUERY = '(max-width:640px)';
   // anything that owns its own touch gesture (dragging a poti/switch/button,
   // the param-list slider, the particle-count slider, the blog carousel's
   // own scrollable content) must NOT also count as a page-swipe here --
@@ -6269,15 +6295,36 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider';
   let touchStartY = null;
+  let touchStartScrollY = 0;
+  let touchMaxScrollY = 0;
   let touchSwipeExempt = false;
+  let touchIsPhone = false;
   window.addEventListener('touchstart', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
     touchSwipeExempt = !!(e.target.closest && e.target.closest(TOUCH_SWIPE_EXEMPT_SELECTOR));
+    touchIsPhone = window.matchMedia(PHONE_QUERY).matches;
     touchStartY = e.touches[0].clientY;
+    touchStartScrollY = window.scrollY;
+    touchMaxScrollY = document.documentElement.scrollHeight - window.innerHeight;
   }, { passive:true });
+
+  // phone only: hand-track the scroll 1:1 with the finger instead of
+  // letting native touch-scroll (and its momentum) run -- see the block
+  // comment above for why. No-ops entirely for an exempt target (a poti/
+  // slider/etc that owns its own gesture) or on desktop.
+  window.addEventListener('touchmove', function(e){
+    if (!touchIsPhone || touchSwipeExempt || touchStartY === null) return;
+    if (document.querySelector('.modal-overlay.active') || isJumping || pageAnimationActive) return;
+    if (!e.touches[0]) return;
+    e.preventDefault();
+    const dy = touchStartY - e.touches[0].clientY;
+    const target = Math.max(0, Math.min(touchMaxScrollY, touchStartScrollY + dy));
+    window.scrollTo(window.scrollX, target);
+  }, { passive:false });
 
   window.addEventListener('touchend', function(e){
     const exempt = touchSwipeExempt;
+    const wasPhone = touchIsPhone;
     touchSwipeExempt = false;
     if (document.querySelector('.modal-overlay.active') || touchStartY === null || isJumping || pageAnimationActive || exempt){
       touchStartY = null;
@@ -6286,10 +6333,30 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const touchEndY = e.changedTouches[0].clientY;
     const delta = touchStartY - touchEndY;
     touchStartY = null;
-    if (Math.abs(delta) < 20) return; // barely moved -- a tap, not a scroll
 
+    if (!wasPhone){
+      // desktop (e.g. a touchscreen laptop): unchanged plain swipe --
+      // nothing above hand-tracked this drag, so native momentum is
+      // still a live concern here same as it always was, but desktop's
+      // sections are exactly one viewport tall, so there's no tall-
+      // content case for it to actually desync against in practice
+      if (Math.abs(delta) < 60) return;
+      const targetIdx = currentPageIndex + (delta > 0 ? 1 : -1);
+      if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
+      isJumping = true;
+      jumpToIndex(targetIdx);
+      setTimeout(function(){ isJumping = false; }, 550);
+      return;
+    }
+
+    // phone: any real swipe commits a full one-section step in that
+    // direction -- safe now that the drag was hand-tracked above with no
+    // native momentum to have carried it any further than the finger did
+    if (Math.abs(delta) < 15) return; // barely moved -- a tap, not a swipe
+    const direction = delta > 0 ? 1 : -1;
+    const targetIdx = Math.max(0, Math.min(pageSections.length - 1, currentPageIndex + direction));
     isJumping = true;
-    jumpToIndex(nearestSectionIndex());
+    jumpToIndex(targetIdx);
     setTimeout(function(){ isJumping = false; }, 550);
   }, { passive:true });
 
