@@ -2197,8 +2197,9 @@
        nothing beside it to match, so that inline height needs to be
        cancelled out (the only way plain CSS can beat an inline style).
        .wrap-active is excluded since that one genuinely needs the real
-       height. */
-    .spotlight-wrap:not(.wrap-active){
+       height, and .wrap-hidden-sibling is excluded too -- that one needs
+       to collapse to 0, not fall back to auto (see its own rule below). */
+    .spotlight-wrap:not(.wrap-active):not(.wrap-hidden-sibling){
       height:auto !important;
     }
     .spotlight-side-box{
@@ -2241,6 +2242,35 @@
     .spotlight-side-title{
       transform:none;
       letter-spacing:0.25em;
+    }
+    /* the universal (desktop) rule collapses a hidden sibling's WIDTH to
+       0 -- correct there, since desktop tabs sit side by side and a
+       hidden one needs to vanish horizontally without leaving a gap in
+       the row. Here every wrap is already a fixed full-width row, so
+       collapsing width too made the reappearing/disappearing siblings
+       visibly shrink sideways (toward the left) on top of the vertical
+       stacking -- keeping width at 100% here undoes that.
+       The universal rule's flex:0 0 0 is the part that actually needs
+       overriding here, and for a completely different reason than width:
+       flex-basis, whenever it's a definite length (0, here) rather than
+       'auto', is used INSTEAD of the height property to size a flex
+       item along the main axis -- not a specificity/cascade question at
+       all, just how the flexbox algorithm resolves sizing, so it doesn't
+       matter whether height:0 comes from this class or a plain inline
+       style (see syncMobileWrapHeight): flex-basis:0 overrides it either
+       way, the instant this class is added, with no way to sequence a
+       "from" frame first. Forcing flex-basis back to auto here (flex:0 0
+       auto, matching the plain idle state's own flex value) is what
+       actually fixes it -- auto defders back to the height property, so
+       syncMobileWrapHeight's JS-driven height is finally the one and only
+       thing that changes value between idle and hidden-sibling, which is
+       what a transition can actually animate. */
+    .spotlight-wrap.wrap-hidden-sibling{
+      width:100%;
+      min-width:0;
+      flex:0 0 auto;
+      height:0;
+      min-height:0;
     }
     .spotlight-wrap.wrap-active .spotlight-card-clip{
       width:100%;
@@ -4790,8 +4820,21 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const frozenWraps = new Set();
   function applySharedHeight(natural){
     sharedCardHeight = Math.max(sharedCardHeight, natural);
+    // phone only: a wrap-hidden-sibling's height is 0, driven separately
+    // by syncMobileWrapHeight -- writing sharedCardHeight (a real,
+    // "content is open" height) into it here would silently overwrite
+    // that 0 with a large number the instant *any* other instance opens
+    // or resizes, since this runs unconditionally on every instance. The
+    // !important-based version of that CSS used to paper over exactly
+    // this, at the cost of the class always winning over JS -- which is
+    // what was breaking the collapse animation (see the CSS comment on
+    // .wrap-hidden-sibling); without !important this stomping has to be
+    // avoided here directly instead.
+    const isPhone = window.matchMedia('(max-width:640px)').matches;
     instances.forEach(function(inst){
-      if (!frozenWraps.has(inst.wrap)) inst.wrap.style.height = sharedCardHeight + 'px';
+      if (frozenWraps.has(inst.wrap)) return;
+      if (isPhone && inst.wrap.classList.contains('wrap-hidden-sibling')) return;
+      inst.wrap.style.height = sharedCardHeight + 'px';
     });
     return sharedCardHeight;
   }
@@ -4847,9 +4890,31 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     return animated;
   }
 
+  // phone only: a non-active wrap's own height (idle-visible vs fully
+  // hidden-sibling) needs to be an explicit JS px value for the same
+  // reason applySharedHeight/lockHeight already drives the *active*
+  // height that way -- transitioning to/from height:auto (all flex-
+  // basis:auto amounts to, see the .wrap-hidden-sibling CSS) just doesn't
+  // animate in this browser. Without this, toggling wrap-hidden-sibling
+  // snapped the height instantly instead of growing/shrinking it, which
+  // is what actually made reappearing/disappearing siblings read as
+  // sliding in from the left (the desktop-inherited width collapse,
+  // fixed separately in CSS) rather than growing from the top -- with
+  // width now fixed, height is the only thing left to animate, so it
+  // actually has to. Called once *before* and once *after* the class
+  // toggle at each call site below, so there's a real "from" value on
+  // record for the transition to animate away from, not just a "to".
+  function syncMobileWrapHeight(inst){
+    if (!window.matchMedia('(max-width:640px)').matches) return;
+    const wrap = inst.wrap;
+    if (wrap.classList.contains('wrap-active')) return; // handled by lockHeight already
+    const target = wrap.classList.contains('wrap-hidden-sibling') ? 0 : inst.sideBox.getBoundingClientRect().height;
+    wrap.style.height = target + 'px';
+  }
   function requestOpen(instance){
     if (activeInstance) return; // inactive siblings are unclickable while one is open, shouldn't normally reach here
     activeInstance = instance;
+    instances.forEach(syncMobileWrapHeight);
     // toggled inside the same mutate() as the wrap classes (not before
     // calling flipSideBoxes) so its "before" measurement still reflects
     // the true, currently-centered idle layout, not this new state
@@ -4859,6 +4924,19 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (other === instance) other.wrap.classList.add('wrap-active');
         else other.wrap.classList.add('wrap-hidden-sibling');
       });
+    });
+    // double rAF, not called synchronously right here -- unlike requestClose
+    // (whose whole close-then-resync sequence already runs inside a
+    // setTimeout, i.e. a separate task well after the browser has already
+    // painted the "from" state), this is still the same synchronous click
+    // handler that just set the "from" height above. A *single* rAF fires
+    // before this frame's own paint too, so the browser still never
+    // actually renders "from" before jumping to "to" -- one requestAnimationFrame
+    // nested inside another reliably waits for that paint to actually
+    // happen first, giving the transition a genuine starting frame to
+    // animate away from instead of snapping straight to the target.
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){ instances.forEach(syncMobileWrapHeight); });
     });
     // the card sliding out from behind its side box while that side box is
     // still visibly sliding into place reads as the card popping out of
@@ -4879,6 +4957,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (activeInstance !== instance) return;
     instance.closeCard(function(){
       activeInstance = null;
+      instances.forEach(syncMobileWrapHeight);
       flipSideBoxes(function(){
         container.classList.remove('has-active');
         instances.forEach(function(other){
@@ -4886,6 +4965,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           else other.wrap.classList.remove('wrap-hidden-sibling');
         });
       });
+      instances.forEach(syncMobileWrapHeight);
       if (onClosed) onClosed();
     });
   }
