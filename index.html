@@ -2162,53 +2162,73 @@
   }
 
   @media (max-width:640px){
-    /* editions/programs list vertically as full-width horizontal bars
-       instead of narrow vertical-text tabs side by side -- frees up the
-       card's whole width for its actual content on a narrow screen. Only
-       .spotlight-wrap's own internal arrangement changes (side box above
-       its card instead of beside it); the FLIP/slide transform machinery
-       (--side-translate/--box-slide) is untouched and still just plays,
-       it's simply moving things around a column layout now instead of a
-       row -- and the hidden-sibling collapse mirrors the desktop one
-       (flex-basis/height/opacity, same transition, see .spotlight-wrap
-       above) just shrinking vertically instead of horizontally, so
-       opening/closing an edition animates the same way on both. */
+    /* idle (nothing open yet): editions sit side by side, same row
+       layout as desktop, each just wide enough for its own label -- like
+       small pill buttons, not full-width bars, since there's no reason to
+       claim the whole row's width until one is actually opened. Only once
+       an edition becomes .wrap-active does IT switch to a full-width
+       column (its side box turned into a horizontal header bar above the
+       card, instead of the narrow rotated-text strip beside it) -- that's
+       the only per-edition layout that actually changes here; the idle
+       ones keep behaving exactly like the desktop row (including the
+       normal width-based hidden-sibling collapse, unchanged below). */
     .spotlight-wraps{
-      flex-direction:column;
-      align-items:stretch;
+      flex-wrap:wrap;
+      row-gap:6px;
+      align-items:flex-start; /* not stretch -- idle wraps shouldn't be forced to match each other's (or the active one's) height, see below */
     }
     .spotlight-wrap{
+      margin-right:6px; /* tighter than desktop's 16px -- these read as small pill buttons, not spaced-out tabs */
+    }
+    /* the shared-height mechanism (see applySharedHeight/lockHeight) sets
+       an explicit inline height matching the *open* card's own height on
+       every wrap, idle ones included -- necessary on desktop, where idle
+       tabs sit right next to the open card and need to visually match its
+       height, but here idle tabs are small standalone pill buttons with
+       nothing beside them to match, so that inline height needs to be
+       cancelled out (the only way plain CSS can beat an inline style).
+       On its own this wouldn't be enough either -- align-items:stretch
+       above would just re-stretch an "auto" height right back out to
+       match its tallest sibling, which is exactly why that's flex-start
+       instead now. .wrap-active is excluded from both since that one
+       genuinely needs the real height. */
+    .spotlight-wrap:not(.wrap-active){
+      height:auto !important;
+    }
+    .spotlight-wrap.wrap-active{
       flex-direction:column;
-      margin-right:0;
-      margin-bottom:4px; /* tight stack when idle -- much less breathing room needed between full-width bars than between side-by-side tabs */
-    }
-    .spotlight-wrap:last-child{
-      margin-bottom:0;
-    }
-    .spotlight-wrap.wrap-hidden-sibling{
-      flex:0 0 0;
-      height:0;
-      min-height:0;
-      margin-bottom:0;
-      opacity:0;
-      overflow:hidden;
-      pointer-events:none;
-    }
-    .spotlight-side-box,
-    .spotlight-side-box:hover,
-    .spotlight-wrap.wrap-active .spotlight-side-box{
       width:100%;
+      margin-right:0;
+      align-self:stretch;
+    }
+    .spotlight-side-box{
+      width:auto;
       min-width:0;
       max-width:none;
       height:auto;
       padding:0.6rem 1rem;
     }
+    .spotlight-wrap.wrap-active .spotlight-side-box{
+      width:100%;
+      min-width:0;
+      max-width:none;
+    }
     .spotlight-side-title{
       transform:none;
       letter-spacing:0.25em;
     }
+    .spotlight-wrap.wrap-active .spotlight-card-clip{
+      width:100%;
+    }
+    /* idle wraps are width-collapsed to 0 by the universal card-collapsed
+       rule above, but that alone isn't enough here: with height left on
+       auto, the card's real content (title/desc/tabs -- still laid out,
+       just invisible) reflows into that near-zero-width column and its
+       text wraps line-by-line into a tall stack, which then sets the
+       card-clip's own auto height right back to ~400px and blows up the
+       idle pill's height along with it. Forcing height:0 too is what
+       actually keeps an idle pill down at just its side-box's height. */
     .spotlight-wrap.card-collapsed .spotlight-card-clip{
-      width:auto;
       height:0;
     }
 
@@ -6221,7 +6241,21 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     setTimeout(function(){ isJumping = false; }, 550);
   }, { passive:false });
 
-  // basic touch-swipe support for the same "jump to next/previous room" feel.
+  // touch: same "each section is its own room" feel as the mouse-wheel/
+  // scrollbar-drag paths above, but for a thumb drag. touchmove is
+  // deliberately never hooked here, so the browser's native scroll just
+  // free-scrolls the page under the finger the entire time -- exactly like
+  // the scrollbar-thumb drag below -- and only once the finger actually
+  // lifts do we snap, to whichever section the free-scroll actually left
+  // nearest to (nearestSectionIndex(), same helper the scrollbar-drag
+  // mouseup uses), not a fixed one-section step guessed from the swipe's
+  // direction. Stepping by a fixed direction used to read the release
+  // position as always exactly one section away from wherever it was
+  // before the drag started, which desyncs badly the moment a section is
+  // taller than the viewport (any mobile section stacked with real
+  // content) -- a single swipe could freely scroll two sections down and
+  // then snap back up to just one, i.e. appear to "snap" mid-gesture
+  // against what the thumb had just scrolled to.
   // anything that owns its own touch gesture (dragging a poti/switch/button,
   // the param-list slider, the particle-count slider, the blog carousel's
   // own scrollable content) must NOT also count as a page-swipe here --
@@ -6252,14 +6286,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const touchEndY = e.changedTouches[0].clientY;
     const delta = touchStartY - touchEndY;
     touchStartY = null;
-    if (Math.abs(delta) < 60) return; // swipe too short to count
-
-    const direction = delta > 0 ? 1 : -1;
-    const targetIdx = currentPageIndex + direction;
-    if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
+    if (Math.abs(delta) < 20) return; // barely moved -- a tap, not a scroll
 
     isJumping = true;
-    jumpToIndex(targetIdx);
+    jumpToIndex(nearestSectionIndex());
     setTimeout(function(){ isJumping = false; }, 550);
   }, { passive:true });
 
