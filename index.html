@@ -2244,16 +2244,28 @@
     }
     .spotlight-wrap.wrap-active .spotlight-card-clip{
       width:100%;
+      /* the base rule's flex:1 1 auto has a nonzero flex-grow, which
+         redistributes the wrap's leftover space onto this item itself --
+         so even with an explicit JS-measured px height set (see
+         lockHeight), flex-grow was still what actually decided its final
+         rendered size, silently overriding that height and along with it
+         any transition on it. flex:0 0 auto turns flex-grow off so the
+         explicit height is what actually sizes (and animates) the clip. */
+      flex:0 0 auto;
     }
-    /* idle wraps are width-collapsed to 0 by the universal card-collapsed
-       rule above, but that alone isn't enough here: with height left on
-       auto, the card's real content (title/desc/tabs -- still laid out,
-       just invisible) reflows into that near-zero-width column and its
-       text wraps line-by-line into a tall stack, which then sets the
-       card-clip's own auto height right back to ~400px and blows up the
-       idle bar's height along with it. Forcing height:0 too is what
-       actually keeps an idle bar down at just its side-box's height. */
+    /* the universal (desktop) .card-collapsed rule collapses the clip's
+       WIDTH to 0 -- correct there, since desktop's reveal is a width
+       roll-out beside a side box that never moves. Here the card stacks
+       below a header bar instead, so width has to stay put at 100% the
+       entire time (undoing that universal width:0) and it's HEIGHT that
+       collapses/expands instead -- otherwise the real content (still
+       laid out even while "hidden") reflows into that near-zero-width
+       column and wraps line-by-line into a tall stack, which blows the
+       idle bar's height right back up to ~400px, AND the open reveal
+       plays as a left-to-right width roll-out same as desktop instead of
+       the intended top-to-bottom one. */
     .spotlight-wrap.card-collapsed .spotlight-card-clip{
+      width:100%;
       height:0;
     }
     /* the card's own open/close slide (.spotlight-box, driven by
@@ -2268,6 +2280,15 @@
        matches the viewport's current slide direction). */
     .spotlight-box{
       transform:translateY(var(--box-slide));
+    }
+
+    /* desktop only, by request -- the sound-preview button hangs off the
+       program bar's separator line (see positionVineReveal), which the
+       mobile card-page layout doesn't have in the same shape, so it's
+       switched off here rather than adapted */
+    .spotlight-center-play,
+    .vine-reveal{
+      display:none;
     }
 
     .spotlight-top-row,
@@ -2821,11 +2842,27 @@
     <div class="card-page card-page-artist" data-page="artist"></div>
     <div class="card-page card-page-controls" data-page="controls"></div>
 
-    <!-- the sound-preview button (+ its vine-reveal decoration leading
-         down to it) has been removed for now -- it didn't make sense yet
-         functionally, see mountEdition: playBtn/vineReveal-related code
-         is all still there, just guarded to no-op when these don't exist,
-         so it's a quick re-add later if wanted (just restore this markup) -->
+    <button class="spotlight-center-play" aria-label="Sound abspielen">
+      <span class="play-emblem"></span>
+    </button>
+    <!-- decorative only: vine-like tendrils that draw themselves in from
+         below the program bar and curl into the circle whenever a
+         program is selected, before the real button above fades in --
+         see triggerVineReveal(). Desktop only -- see max-width:640px,
+         it never made sense in the mobile card-page layout, which has
+         no program bar for it to hang from. -->
+    <svg class="vine-reveal" viewBox="0 0 100 125" width="100" height="125" aria-hidden="true">
+      <path class="vine vine-left" d="M50,0 L58,18 L18,36 L60,53 L44,67"/>
+      <path class="vine vine-right" d="M50,0 L42,18 L82,36 L40,53 L56,67"/>
+      <path class="vine vine-center" d="M50,0 L22,24 L78,44 L50,67"/>
+      <path class="vine vine-fourth" d="M50,0 L78,24 L22,44 L50,67"/>
+      <circle class="vine-circle" cx="50" cy="96" r="29"/>
+      <!-- straight line from the program bar down to the button, faded in
+           right as the zig-zag vines above fade out (see showHangLine/
+           hideHangLine in mountEdition) -- makes the button read as hanging
+           from the bar. opacity is set purely via inline style, no CSS class -->
+      <path class="vine-hang-line" d="M50,0 L50,67"/>
+    </svg>
 
     <div class="spotlight-top-row">
       <div class="spotlight-desc-block">
@@ -3498,7 +3535,7 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
     // let the door swing open first, then move to the video section
     setTimeout(function(){
       syncPageIndex(videoSection);
-      videoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       pageAnimationUnlock();
     }, 650);
   };
@@ -3584,7 +3621,7 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
     // same overall duration as the Datura door before it moves on
     setTimeout(function(){
       syncPageIndex(spotlightSection);
-      spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       pageAnimationUnlock();
     }, 650);
   };
@@ -3666,7 +3703,7 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
     // once the cradle has settled, move to the pre-order section
     setTimeout(function(){
       syncPageIndex(pedalsSection);
-      pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       pageAnimationUnlock();
     }, 1000);
   };
@@ -3723,7 +3760,7 @@ if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
           wordmarkWrap.classList.remove('subslogan-open');
           if (whySection){
             syncPageIndex(whySection);
-            whySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            whySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
           pageAnimationUnlock();
         }, 100);
@@ -3843,7 +3880,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       dissolveTextIntoNoise(summeLabelEl, summeCanvasEl, 550, function(){
         setTimeout(function(){
           syncPageIndex(contactSection);
-          contactSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
           pageAnimationUnlock();
         }, 300);
       });
@@ -5990,17 +6027,38 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // just this one, so no edition's collapsed tab can ever end up
       // shorter or taller than another's
       const natural = measureOpenHeight();
-      wrap.style.height = applySharedHeight(natural) + 'px';
+      const shared = applySharedHeight(natural);
+      wrap.style.height = shared + 'px';
+      // phone only: card-clip's own height (collapsed 0 <-> open) also
+      // needs an explicit, JS-measured px value here, same as the wrap's
+      // height just above -- transitioning to/from height:auto (which is
+      // all flex-basis:auto amounts to on the clip's own "open" side) just
+      // doesn't animate in practice, unlike width:auto in desktop's row
+      // layout, so it was snapping open instantly instead of growing.
+      // Driven explicitly like this, it's a plain px-to-px transition,
+      // which always animates reliably. Pinned to the *shared* height
+      // (minus the side box) rather than this edition's own natural
+      // content height, so every edition's card also ends up the same
+      // height as every other one, not just the same width.
+      if (cardClip && window.matchMedia('(max-width:640px)').matches){
+        if (wrap.classList.contains('card-collapsed')){
+          cardClip.style.height = '0px';
+        } else {
+          const sideH = sideBox.getBoundingClientRect().height;
+          cardClip.style.height = Math.max(0, shared - sideH) + 'px';
+        }
+      }
     }
     lockHeight();
     window.addEventListener('load', lockHeight); // catches height changes from late-loading fonts/images
 
     let stageTimer = null;
     function openCard(){
-      lockHeight();
+      lockHeight(); // still collapsed here -- locks in the shared wrap height and the clip's 0px starting point
       wrap.classList.remove('card-collapsed');
       card.style.setProperty('--box-slide', '0px');
       card.classList.remove('sliding-out');
+      lockHeight(); // now open -- sets the clip's real target height, which is what actually animates the grow
     }
     function closeCard(onDone){
       lockHeight();
@@ -6020,6 +6078,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       clearTimeout(stageTimer);
       stageTimer = setTimeout(function(){
         wrap.classList.add('card-collapsed');
+        // reset the clip's explicit height back to its 0px baseline (see
+        // lockHeight) now that it's genuinely collapsed again -- otherwise
+        // it'd stay pinned inline at its last open height forever, since
+        // an inline style always beats the .card-collapsed CSS rule
+        if (cardClip && window.matchMedia('(max-width:640px)').matches) cardClip.style.height = '0px';
         resetVineReveal();
         if (onDone) onDone();
       }, CARD_MS + 40);
@@ -6220,7 +6283,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   function jumpToIndex(idx){
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
     currentPageIndex = idx;
-    pageSections[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // block:'start' (not 'center') -- desktop's sections are exactly one
+    // viewport tall so the two would look identical there, but on phone a
+    // section can now be genuinely taller than the viewport (e.g. the
+    // spotlight section with an edition open), and centering a section
+    // taller than the viewport crops it from *both* ends -- aligning its
+    // top to the viewport's top instead guarantees the top (title, header
+    // bar) is always reachable, with the rest just a normal scroll away.
+    pageSections[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   let isJumping = false;
