@@ -1722,6 +1722,106 @@
   .bio-panel-bio{
     position:relative;
   }
+  .bio-text-row{
+    display:flex;
+    align-items:stretch;
+    gap:0.5rem;
+    /* the two closed Mod boxes (.bio-panel-object, .bio-panel-object-mod1)
+       float on top of this whole panel at right:14px/right:0, 14px wide
+       each -- 28px of the slider's right edge reserved for them either
+       way, so this row (bio text + its own scrollbar/buttons together)
+       needs the same reserved space past its own right end, or the
+       scrollbar's own down button ends up sitting right underneath them
+       instead of clearing them (the extra bit beyond 28px is just
+       breathing room). Desktop only -- see max-width:640px, where the
+       Mod boxes are relocated elsewhere and don't overlap this at all. */
+    margin-right:2rem;
+  }
+  .bio-text-clip{
+    flex:1;
+    min-width:0;
+    /* fixed, same reasoning as .control-info-params -- a longer bio
+       scrolls inside this instead of growing the whole card. Sized for
+       roughly the same handful of lines most bios actually need; only
+       the noticeably longer ones now need the scrollbar at all (see
+       initBioScroll, which hides .bio-text-nav entirely when a bio's
+       natural height already fits without it). */
+    height:10rem;
+    overflow-y:auto;
+    scrollbar-width:none; /* Firefox -- .bio-text-nav draws the one visible scrollbar, not the browser's own */
+  }
+  .bio-text-clip::-webkit-scrollbar{
+    display:none; /* Chrome/Safari equivalent of scrollbar-width:none above */
+  }
+  .bio-text-nav{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0.4rem;
+    flex-shrink:0;
+  }
+  .bio-text-nav.bio-text-nav-hidden{
+    display:none; /* bio fits without scrolling -- nothing to page through */
+  }
+  .bio-text-nav-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    width:1rem;
+    height:1rem;
+    padding:0;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    color:var(--white);
+    font-size:0.55rem;
+    line-height:1;
+    cursor:pointer;
+    user-select:none;
+    transition:border-color 0.2s ease, opacity 0.2s ease;
+  }
+  .bio-text-nav-btn:hover{
+    border-color:var(--white);
+  }
+  .bio-text-nav-btn:disabled{
+    opacity:0.3;
+    cursor:default;
+  }
+  .bio-text-nav-btn:disabled:hover{
+    border-color:var(--grey-2);
+  }
+  /* same look as .control-info-page-slider/-thumb (params paging), kept
+     as its own set of classes rather than reused directly since this one
+     isn't tied to the Mod 0/Mod 1 rose-color scoping those are */
+  .bio-text-slider{
+    position:relative;
+    flex:1;
+    min-height:1.4rem;
+    width:0.3rem;
+    background:var(--grey-1);
+    border-radius:0.15rem;
+    cursor:pointer;
+  }
+  .bio-text-slider-thumb{
+    position:absolute;
+    left:50%;
+    top:0;
+    width:0.6rem;
+    height:0.6rem;
+    border-radius:50%;
+    background:var(--white);
+    transform:translate(-50%, -50%);
+    pointer-events:none;
+  }
+  /* a Mod box (pedal info) expanding covers this whole area anyway
+     (z-index, see .bio-panel-object.expanded), so real clicks/wheel
+     already can't reach the bio scrollbar underneath it -- this is just
+     making that explicit/robust rather than relying only on the
+     stacking order incidentally preventing it. */
+  .bio-slider:has(.bio-panel-object.expanded) .bio-text-nav,
+  .bio-slider:has(.bio-panel-object.expanded) .bio-text-clip{
+    pointer-events:none;
+  }
   .bio-panel-object{
     position:absolute;
     top:0;
@@ -1872,6 +1972,14 @@
     display:flex;
     flex-direction:column;
     gap:0.35rem;
+    /* fixed to exactly PARAM_PAGE_SIZE (4) rows' worth of height, not just
+       however many rows the current page happens to render -- .control-
+       info-page-nav sits beside this with align-items:stretch above, so
+       without a fixed height here its slider/buttons would (in principle)
+       shift position along with any height change of this box as you
+       page through; the page you're on should never affect where they sit. */
+    height:5.4rem;
+    overflow:hidden;
   }
   .control-info-page-nav{
     display:flex;
@@ -2044,6 +2152,14 @@
     color:var(--grey-3);
     text-align:left;
     margin:0;
+  }
+  /* the artist bio specifically (not the program description above, which
+     stays left-aligned) -- justified so every full line stretches edge to
+     edge instead of ragging short on the right, now that .bio-panel-bio
+     reserves real room on that edge for the Mod boxes to actually wrap
+     against */
+  .artist-bio{
+    text-align:justify;
   }
   .spotlight-fallback{
     font-size:0.8rem;
@@ -2327,6 +2443,23 @@
     }
     .spotlight-bio-block{
       padding-left:1.75rem;
+    }
+    /* undoes .bio-text-row's desktop-only reserved margin -- the Mod
+       boxes it's clearing room for there get relocated into their own
+       card-page-controls page here (see syncMobileLayout), so nothing
+       ever floats over this bio text on phone. The fixed-height
+       scrollbar (see initBioScroll) is desktop only too -- phone just
+       shows the whole bio, same as scrolling the rest of the page. */
+    .bio-text-row{
+      margin-right:0;
+      display:block;
+    }
+    .bio-text-clip{
+      height:auto;
+      overflow:visible;
+    }
+    .bio-text-nav{
+      display:none;
     }
     /* phone-only: the 3 tabs + one page at a time, built by moving the
        real elements into these slots (see syncMobileLayout) -- see the
@@ -2993,7 +3126,18 @@
         <div class="bio-slider">
           <div class="bio-panel bio-panel-bio">
             <p class="spotlight-title">Bio:</p>
-            <p class="spotlight-desc-text artist-bio">Lädt…</p>
+            <div class="bio-text-row">
+              <div class="bio-text-clip">
+                <p class="spotlight-desc-text artist-bio">Lädt…</p>
+              </div>
+              <div class="bio-text-nav">
+                <button type="button" class="bio-text-nav-btn bio-text-nav-up" aria-label="Bio nach oben scrollen">▲</button>
+                <div class="bio-text-slider" role="slider" aria-label="Bio-Scrollposition" aria-valuemin="0" aria-valuemax="100">
+                  <div class="bio-text-slider-thumb"></div>
+                </div>
+                <button type="button" class="bio-text-nav-btn bio-text-nav-down" aria-label="Bio nach unten scrollen">▼</button>
+              </div>
+            </div>
           </div>
           <div class="bio-panel-object" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
             <div class="object-info-inner">
@@ -4632,9 +4776,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }
 
   // shared by every rendered slider -- only one can ever be dragged at a
-  // time, and since applyOffset (set on mousedown) closes over everything
-  // it needs, this just has to remember which track to read positions from
-  // and which applyOffset to call, no matter which group/container it's for
+  // time, and since applyFrac (set on mousedown) closes over everything it
+  // needs, this just has to remember which track to read positions from
+  // and which applyFrac to call, no matter which slider it's for. Generic
+  // over "what a 0..1 fraction along the track actually means" -- the
+  // params page-nav below turns it into an integer row offset, the bio
+  // text scrollbar (see initBioScroll) turns it into a scrollTop -- so one
+  // shared drag mechanism covers both instead of two near-identical ones.
   let sliderDrag = null;
   function sliderFracFromEvent(track, evt){
     const rect = track.getBoundingClientRect();
@@ -4643,12 +4791,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }
   window.addEventListener('mousemove', function(evt){
     if (!sliderDrag) return;
-    sliderDrag.applyOffset(Math.round(sliderFracFromEvent(sliderDrag.track, evt) * sliderDrag.maxOffset));
+    sliderDrag.applyFrac(sliderFracFromEvent(sliderDrag.track, evt));
   });
   window.addEventListener('mouseup', function(){ sliderDrag = null; });
   window.addEventListener('touchmove', function(evt){
     if (!sliderDrag || !evt.touches[0]) return;
-    sliderDrag.applyOffset(Math.round(sliderFracFromEvent(sliderDrag.track, evt.touches[0]) * sliderDrag.maxOffset));
+    sliderDrag.applyFrac(sliderFracFromEvent(sliderDrag.track, evt.touches[0]));
   }, { passive:true });
   window.addEventListener('touchend', function(){ sliderDrag = null; });
 
@@ -4740,14 +4888,29 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         }
         function pageBy(delta){ applyOffset((pageOffsets[group.synth] || 0) + delta); }
 
+        // mousedown, not click: a plain click already focuses the button
+        // by the time this box's own height is genuinely fixed (see
+        // .control-info-params), so nothing here should ever need to
+        // scroll -- but a focused button near the bottom of a long page
+        // is exactly what the browser's own default "scroll the newly
+        // focused element into view" behavior reacts to, and that
+        // native page-scroll is what actually read as "the box moves"
+        // when repeatedly paging. Suppressing focus on mousedown (not
+        // preventing the click itself) stops that native scroll at the
+        // source instead of trying to chase it after the fact.
+        function suppressFocusScroll(evt){ evt.preventDefault(); }
+        upBtn.addEventListener('mousedown', suppressFocusScroll);
+        downBtn.addEventListener('mousedown', suppressFocusScroll);
+
         upBtn.disabled = offset <= 0;
         upBtn.addEventListener('click', function(){ pageBy(-1); });
         downBtn.disabled = offset >= maxOffset;
         downBtn.addEventListener('click', function(){ pageBy(1); });
 
+        function applyFrac(frac){ applyOffset(Math.round(frac * maxOffset)); }
         function startSliderDrag(evt){
-          applyOffset(Math.round(sliderFracFromEvent(sliderEl, evt) * maxOffset));
-          sliderDrag = { track: sliderEl, applyOffset: applyOffset, maxOffset: maxOffset };
+          applyFrac(sliderFracFromEvent(sliderEl, evt));
+          sliderDrag = { track: sliderEl, applyFrac: applyFrac };
         }
         sliderEl.addEventListener('mousedown', function(evt){ evt.preventDefault(); startSliderDrag(evt); });
         sliderEl.addEventListener('touchstart', function(evt){
@@ -4818,6 +4981,28 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // the frozen wrap's height mid-dissolve, reading as a small unwanted
   // vertical jump right as the swap plays
   const frozenWraps = new Set();
+  // phone, open only: fills (most of) the actual phone screen instead of
+  // shrinking to the shared/natural content height -- a fixed height
+  // across editions was the right call (that's the whole point of
+  // sharedCardHeight above), it just wasn't using nearly enough of the
+  // screen. Grows up to whatever the section's own padding leaves
+  // available in the viewport, but never shrinks *below* shared, so a
+  // bio ever long enough to need more than a screenful still gets it.
+  // Pulled out into its own function (rather than living inline in
+  // lockHeight) because applySharedHeight's own forEach below needs the
+  // exact same number for every OTHER instance it touches too, not just
+  // whichever instance's own lockHeight() happened to trigger this --
+  // computing it ad hoc per-instance was exactly what let a *different*
+  // edition's applySharedHeight call silently stomp the active one's
+  // screen-filling height back down to the plain shared value a moment
+  // later, since that generic forEach didn't know to special-case it.
+  function phoneActiveHeight(wrap, shared){
+    const sectionEl = wrap.closest('.spotlight');
+    if (!sectionEl) return shared;
+    const cs = getComputedStyle(sectionEl);
+    const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    return Math.max(shared, window.innerHeight - padY);
+  }
   function applySharedHeight(natural){
     sharedCardHeight = Math.max(sharedCardHeight, natural);
     // phone only: a wrap-hidden-sibling's height is 0, driven separately
@@ -4834,7 +5019,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     instances.forEach(function(inst){
       if (frozenWraps.has(inst.wrap)) return;
       if (isPhone && inst.wrap.classList.contains('wrap-hidden-sibling')) return;
-      inst.wrap.style.height = sharedCardHeight + 'px';
+      const isActiveOnPhone = isPhone && inst.wrap.classList.contains('wrap-active');
+      inst.wrap.style.height = (isActiveOnPhone ? phoneActiveHeight(inst.wrap, sharedCardHeight) : sharedCardHeight) + 'px';
     });
     return sharedCardHeight;
   }
@@ -5594,6 +5780,69 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const bar = wrap.querySelector('.program-bar');
     const artistImage = wrap.querySelector('.artist-circle-img');
     const artistBio = wrap.querySelector('.artist-bio');
+    // bio text scrollbar: fixed-height .bio-text-clip (see its CSS) with
+    // its own up/down buttons + slider instead of letting a long bio grow
+    // the whole card -- reuses the same drag mechanism as the params
+    // page-nav slider (see sliderDrag/sliderFracFromEvent), just with a
+    // real scrollTop instead of an integer row offset. Desktop only --
+    // see max-width:640px, where .bio-text-nav is just hidden and the
+    // clip's own fixed height/overflow are undone, so phone still shows
+    // the whole bio plainly.
+    const bioTextClip = wrap.querySelector('.bio-text-clip');
+    const bioTextNav = wrap.querySelector('.bio-text-nav');
+    const bioTextUpBtn = wrap.querySelector('.bio-text-nav-up');
+    const bioTextDownBtn = wrap.querySelector('.bio-text-nav-down');
+    const bioTextSlider = wrap.querySelector('.bio-text-slider');
+    const bioTextSliderThumb = wrap.querySelector('.bio-text-slider-thumb');
+    let refreshBioScrollVisibility = function(){};
+    if (bioTextClip && bioTextNav && bioTextUpBtn && bioTextDownBtn && bioTextSlider && bioTextSliderThumb){
+      const BIO_SCROLL_STEP = 40; // px per button click -- roughly a line and a bit
+      function bioScrollMax(){
+        return Math.max(0, bioTextClip.scrollHeight - bioTextClip.clientHeight);
+      }
+      function refreshBioScrollThumb(){
+        const max = bioScrollMax();
+        const frac = max > 0 ? bioTextClip.scrollTop / max : 0;
+        bioTextSliderThumb.style.top = (frac * 100).toFixed(2) + '%';
+        bioTextUpBtn.disabled = bioTextClip.scrollTop <= 0;
+        bioTextDownBtn.disabled = bioTextClip.scrollTop >= max;
+        bioTextSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
+      }
+      // called after every bio text swap -- a short bio needs no
+      // scrollbar at all (same "only render the nav if it's actually
+      // needed" principle as the params page-nav), and switching artists
+      // shouldn't leave the new bio scrolled to wherever the previous
+      // one happened to be
+      refreshBioScrollVisibility = function(){
+        bioTextClip.scrollTop = 0;
+        bioTextNav.classList.toggle('bio-text-nav-hidden', bioScrollMax() <= 0);
+        refreshBioScrollThumb();
+      };
+      bioTextClip.addEventListener('scroll', refreshBioScrollThumb);
+      // mousedown, not click -- see the identical comment on the params
+      // page-nav's own up/down buttons (suppressFocusScroll): stops the
+      // browser's native "scroll the newly focused button into view"
+      // behavior from fighting the local scroll this button is actually
+      // trying to do.
+      function suppressBioFocusScroll(evt){ evt.preventDefault(); }
+      bioTextUpBtn.addEventListener('mousedown', suppressBioFocusScroll);
+      bioTextDownBtn.addEventListener('mousedown', suppressBioFocusScroll);
+      bioTextUpBtn.addEventListener('click', function(){ bioTextClip.scrollTop -= BIO_SCROLL_STEP; });
+      bioTextDownBtn.addEventListener('click', function(){ bioTextClip.scrollTop += BIO_SCROLL_STEP; });
+      function applyBioFrac(frac){
+        bioTextClip.scrollTop = frac * bioScrollMax();
+      }
+      function startBioSliderDrag(evt){
+        applyBioFrac(sliderFracFromEvent(bioTextSlider, evt));
+        sliderDrag = { track: bioTextSlider, applyFrac: applyBioFrac };
+      }
+      bioTextSlider.addEventListener('mousedown', function(evt){ evt.preventDefault(); startBioSliderDrag(evt); });
+      bioTextSlider.addEventListener('touchstart', function(evt){
+        if (!evt.touches[0]) return;
+        evt.preventDefault();
+        startBioSliderDrag(evt.touches[0]);
+      }, { passive:false });
+    }
     const programDesc = wrap.querySelector('.program-desc');
     const programTypeTitle = wrap.querySelector('.program-type-title');
     const programTypeLabel = wrap.querySelector('.program-type-label');
@@ -5841,10 +6090,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // artist bio (+ whatever credential links this artist has, shown
       // later in the modal opened from the photo -- see openCredentials)
       artistBio.textContent = 'Lädt…';
+      refreshBioScrollVisibility();
       currentArtistLinks = {};
       fetchJSON('bios/' + entry.artistSlug + '.json').then(function(data){
         if (myToken !== requestToken) return;
         artistBio.textContent = data.text;
+        refreshBioScrollVisibility(); // a long bio now scrolls inside its own fixed-height box instead of growing the card, see bioTextClip above
         currentArtistLinks = extractArtistLinks(data);
         // the real bio text almost never matches "Lädt…"'s length, so the
         // card's locked-in height (measured back when this was still the
@@ -5856,6 +6107,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       }).catch(function(){
         if (myToken !== requestToken) return;
         artistBio.textContent = 'Bio nicht gefunden';
+        refreshBioScrollVisibility();
         remeasureCardHeight();
       });
 
@@ -6105,37 +6357,33 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     function lockHeight(){
       // shared across every edition (see applySharedHeight) rather than
       // just this one, so no edition's collapsed tab can ever end up
-      // shorter or taller than another's
+      // shorter or taller than another's -- applySharedHeight also
+      // already sets *this* wrap's own height correctly (phone-filling
+      // when active, 0 when a hidden sibling, plain shared otherwise, see
+      // phoneActiveHeight), so there's nothing left to do with `shared`
+      // here except hand the same number to the card-clip below.
       const natural = measureOpenHeight();
       const shared = applySharedHeight(natural);
-      // phone only: a hidden-sibling's height is driven separately (0,
-      // see syncMobileWrapHeight) -- applySharedHeight already knows to
-      // skip writing to *other* instances' wraps when they're a hidden
-      // sibling, but this line is this same instance writing to its OWN
-      // wrap unconditionally, bypassing that guard entirely (lockHeight
-      // runs for every instance regardless of state -- at mount time, on
-      // window load, etc.) -- without this check a hidden sibling kept
-      // getting silently reset to the shared "open" height instead of 0
-      // every single time any instance's lockHeight() happened to run.
-      const isHiddenSiblingOnPhone = window.matchMedia('(max-width:640px)').matches && wrap.classList.contains('wrap-hidden-sibling');
-      if (!isHiddenSiblingOnPhone) wrap.style.height = shared + 'px';
+      const isPhone = window.matchMedia('(max-width:640px)').matches;
       // phone only: card-clip's own height (collapsed 0 <-> open) also
       // needs an explicit, JS-measured px value here, same as the wrap's
-      // height just above -- transitioning to/from height:auto (which is
-      // all flex-basis:auto amounts to on the clip's own "open" side) just
+      // height above -- transitioning to/from height:auto (which is all
+      // flex-basis:auto amounts to on the clip's own "open" side) just
       // doesn't animate in practice, unlike width:auto in desktop's row
       // layout, so it was snapping open instantly instead of growing.
       // Driven explicitly like this, it's a plain px-to-px transition,
-      // which always animates reliably. Pinned to the *shared* height
-      // (minus the side box) rather than this edition's own natural
-      // content height, so every edition's card also ends up the same
-      // height as every other one, not just the same width.
-      if (cardClip && window.matchMedia('(max-width:640px)').matches){
+      // which always animates reliably. Pinned to phoneActiveHeight (the
+      // shared height, grown to fill the screen when active -- minus the
+      // side box) rather than this edition's own natural content height,
+      // so every edition's card also ends up the same height as every
+      // other one, not just the same width.
+      if (cardClip && isPhone){
         if (wrap.classList.contains('card-collapsed')){
           cardClip.style.height = '0px';
         } else {
           const sideH = sideBox.getBoundingClientRect().height;
-          cardClip.style.height = Math.max(0, shared - sideH) + 'px';
+          const targetHeight = wrap.classList.contains('wrap-active') ? phoneActiveHeight(wrap, shared) : shared;
+          cardClip.style.height = Math.max(0, targetHeight - sideH) + 'px';
         }
       }
     }
@@ -6192,6 +6440,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       sideBox: sideBox,
       openCard: openCard,
       closeCard: closeCard,
+      lockHeight: lockHeight,
       editionSlug: editionSlug,
       selectProgram: selectProgram,
       playVineReveal: triggerVineReveal
@@ -6263,6 +6512,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         activeInstance = instance;
         container.classList.add('has-active');
         instance.wrap.classList.add('wrap-active');
+        // mountEdition's own lockHeight() call already ran (inside
+        // mountEdition, before wrap-active existed yet), same ordering
+        // gap as the hidden-sibling one below -- re-run it now that the
+        // class is actually set, so the phone-only "fill the screen"
+        // height (see lockHeight) is computed for the edition that
+        // starts open too, not just ones opened later by a real click
+        instance.lockHeight();
         instance.playVineReveal(); // visible immediately, no opening animation to wait out
       } else {
         instance.wrap.classList.add('card-collapsed', 'wrap-hidden-sibling');
@@ -6429,6 +6685,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // the blog entry's own content box has its own internal scrollbar --
     // let the wheel scroll that instead of paging the whole section
     if (e.target.closest && e.target.closest('.blog-item-content')) return;
+    // same for the bio text box (see .bio-text-clip/initBioScroll) -- real
+    // native overflow-y:auto scrolling in there, so this just has to get
+    // out of its way rather than hijacking the wheel into a page-jump
+    if (e.target.closest && e.target.closest('.bio-text-clip')) return;
 
     // block ALL native scrolling while paging is active -- only the
     // accumulated delta below decides *when* to jump, not whether the
