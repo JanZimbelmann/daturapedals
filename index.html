@@ -2208,6 +2208,36 @@
       height:auto;
       padding:0.6rem 1rem;
     }
+    /* the desktop-only ".wrap-active locks the side box back to 56px"
+       rule (it undoes the :hover 64px-wide enlarge once a tab becomes
+       the open one) has two classes on it, so it outranks the plain
+       .spotlight-side-box rule above by specificity alone regardless of
+       source order -- without restating it here at matching specificity,
+       an *opened* edition's header bar was quietly stuck at 56px, i.e. a
+       tiny square instead of the full-width bar every other state here
+       already gets. */
+    .spotlight-wrap.wrap-active .spotlight-side-box{
+      width:100%;
+      min-width:0;
+      max-width:none;
+    }
+    /* :hover doesn't mean anything on a touch device -- worse, a tap on
+       an element that still has real :hover styles is exactly the
+       situation where mobile browsers make the first tap only trigger
+       the hover state and require a second tap to actually register the
+       click, which is why closing an edition here could take more than
+       one press. Resetting hover back to the plain resting look removes
+       both the pointless highlight and that double-tap requirement. */
+    .spotlight-side-box:hover{
+      background:var(--edition-bg, var(--black));
+      border-color:var(--edition-fg, var(--white));
+      width:100%;
+      min-width:0;
+      max-width:none;
+    }
+    .spotlight-side-box:hover .spotlight-side-title{
+      color:var(--edition-fg, var(--white));
+    }
     .spotlight-side-title{
       transform:none;
       letter-spacing:0.25em;
