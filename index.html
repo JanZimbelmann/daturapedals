@@ -2396,9 +2396,13 @@
        being deliberately grown to fill the visible screen (see
        phoneActiveHeight in mountEdition, which reads this same padding
        back out via getComputedStyle -- shrinking it here directly grows
-       the card, no JS change needed on that side). */
+       the card, no JS change needed on that side). Kept a real top/bottom
+       value rather than shrinking to near-zero though -- a phone browser's
+       own chrome (address/search bar up top, its gesture/option bar down
+       the bottom) sits right at those screen edges too, and a card with
+       no clearance there reads as running underneath it. */
     .spotlight{
-      padding:0.75rem 0.5rem;
+      padding:1.5rem 0.5rem;
     }
     /* every edition always stacks in one column, one full-width row each
        -- idle or open, doesn't matter. Idle editions used to be narrow
@@ -2589,13 +2593,51 @@
        desktop (the card-page-nav/card-page display:none defaults above) */
     .card-page-nav{
       display:flex;
+      flex-shrink:0;
+    }
+    /* the card itself is now deliberately grown to fill most of the
+       phone screen (see phoneActiveHeight in mountEdition) -- a plain
+       block .card-page just top-aligns whatever content it has under
+       the tabs, though, so a short page (Overview, usually just a title
+       + a couple lines) was left stranded at the top with a large dead
+       gap of empty card below it instead of actually using the room
+       that height work made available. Centering the active page's own
+       content vertically within that space fixes it for every page at
+       once, short or already-tall (Controls, with the full diagram, was
+       filling it anyway, so centering there is a no-op in practice).
+       .spotlight-box-inner (not .spotlight-box itself) is the actual
+       direct parent of .program-bar-wrap/.card-page-nav/.card-page here
+       -- card-page-nav is already flex-shrink:0 above, program-bar-wrap
+       needs the same so it stays its own natural size instead of also
+       competing for the grown space. */
+    .spotlight-box-inner{
+      display:flex;
+      flex-direction:column;
+      height:100%;
+    }
+    .program-bar-wrap{
+      flex-shrink:0;
     }
     .card-page{
       display:none;
       padding-top:1rem; /* the sound-preview button used to need much more room reserved here to clear it (see the template comment near .card-page-nav) -- now just a normal gap under the tabs */
     }
     .card-page.active{
-      display:block;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      flex:1;
+      min-height:0;
+    }
+    /* .spotlight-desc-block still carries its desktop flex:1 1 50% (see
+       the universal rule -- it's built for sitting side by side with the
+       diagram in a *row*), which inside this now-column .card-page.active
+       just grows it to fill nearly the whole page again, leaving barely
+       any slack for the centering right above to actually center within.
+       Sizing it back to its own content here is what actually lets that
+       centering show. */
+    .card-page-info .spotlight-desc-block{
+      flex:0 0 auto;
     }
     /* Mod 0 / Mod 1 once relocated here: the collapsed-strip/expand-to-
        overlay design (see .bio-panel-object above) only makes sense
