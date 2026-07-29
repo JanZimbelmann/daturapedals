@@ -806,11 +806,124 @@
     color:var(--white);
     margin-bottom:1.2rem;
   }
+  .why-text-row{
+    display:flex;
+    align-items:stretch;
+    gap:0.6rem;
+  }
   .why-text{
     font-size:0.95rem;
     line-height:1.8;
     color:var(--grey-3);
-    max-width:480px;
+    text-align:justify;
+    flex:1;
+    min-width:0;
+    /* explicit px, set from JS (see updateWhyTextHeight) to exactly
+       whatever's left below this row down to the bottom of the *visible
+       screen* -- not "however tall why-left/the section end up", which
+       depends on why-right's own content (the blog carousel) and could
+       be taller than one screen, letting the text grow to fit all of it
+       and the scrollbar disappear entirely. Capping to the viewport
+       instead means anything that doesn't fit on screen is reachable by
+       scrolling this box (.why-text-nav) rather than by scrolling the
+       page past it. 50vh here is only the pre-JS fallback. */
+    height:50vh;
+    overflow-y:auto;
+    scrollbar-width:none; /* Firefox -- .why-text-nav draws the one visible scrollbar */
+    /* setting overflow-y alone implicitly makes overflow-x compute to
+       auto too, clipping anything that renders left of this box's own
+       edge -- the ordered list's numbers do exactly that (list markers
+       sit outside the li's own padding box), so without breathing room
+       here specifically (not just on .why-text-list) they were getting
+       cut off by that new horizontal clip boundary */
+    padding-left:0.3rem;
+  }
+  .why-text::-webkit-scrollbar{
+    display:none; /* Chrome/Safari equivalent of scrollbar-width:none above */
+  }
+  /* see renderWhyMarkdown -- the small subset of texts/why.txt this
+     actually produces: a heading, an ordered list, or a plain paragraph */
+  .why-text-heading{
+    margin:1.6rem 0 0.4rem;
+    color:var(--white);
+    font-size:1rem;
+    font-weight:600;
+    text-align:left; /* headings read oddly justified -- only the prose/list text above needs it */
+  }
+  .why-text-heading:first-child{
+    margin-top:0;
+  }
+  .why-text-para{
+    margin:0 0 1rem;
+  }
+  .why-text-list{
+    margin:0 0 1rem;
+    padding-left:1.3rem;
+  }
+  .why-text-list li{
+    margin-bottom:0.4rem;
+  }
+  .why-text-para:last-child,
+  .why-text-list:last-child,
+  .why-text-list li:last-child{
+    margin-bottom:0;
+  }
+  .why-text-nav{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0.4rem;
+    flex-shrink:0;
+  }
+  .why-text-nav.why-text-nav-hidden{
+    display:none; /* text fits without scrolling -- nothing to page through */
+  }
+  .why-text-nav-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    width:1rem;
+    height:1rem;
+    padding:0;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    color:var(--white);
+    font-size:0.55rem;
+    line-height:1;
+    cursor:pointer;
+    user-select:none;
+    transition:border-color 0.2s ease, opacity 0.2s ease;
+  }
+  .why-text-nav-btn:hover{
+    border-color:var(--white);
+  }
+  .why-text-nav-btn:disabled{
+    opacity:0.3;
+    cursor:default;
+  }
+  .why-text-nav-btn:disabled:hover{
+    border-color:var(--grey-2);
+  }
+  .why-text-slider{
+    position:relative;
+    flex:1;
+    min-height:1.4rem;
+    width:0.3rem;
+    background:var(--grey-1);
+    border-radius:0.15rem;
+    cursor:pointer;
+  }
+  .why-text-slider-thumb{
+    position:absolute;
+    left:50%;
+    top:0;
+    width:0.6rem;
+    height:0.6rem;
+    border-radius:50%;
+    background:var(--white);
+    transform:translate(-50%, -50%);
+    pointer-events:none;
   }
 
   .blog-label{
@@ -2278,6 +2391,15 @@
   }
 
   @media (max-width:640px){
+    /* desktop's 3rem/1.5rem breathing room around the whole section is a
+       lot of wasted screen on a phone, where the open card is already
+       being deliberately grown to fill the visible screen (see
+       phoneActiveHeight in mountEdition, which reads this same padding
+       back out via getComputedStyle -- shrinking it here directly grows
+       the card, no JS change needed on that side). */
+    .spotlight{
+      padding:0.75rem 0.5rem;
+    }
     /* every edition always stacks in one column, one full-width row each
        -- idle or open, doesn't matter. Idle editions used to be narrow
        pill buttons sized to their own label, which made the row wrap
@@ -3164,7 +3286,16 @@
 <section class="why" id="whySection">
   <div class="why-left">
     <h2 class="why-title">Warum das Ganze?</h2>
-    <p class="why-text" id="whyText">Lädt…</p>
+    <div class="why-text-row">
+      <div class="why-text" id="whyText"><p class="why-text-para">Lädt…</p></div>
+      <div class="why-text-nav" id="whyTextNav">
+        <button type="button" class="why-text-nav-btn why-text-nav-up" aria-label="Text nach oben scrollen">▲</button>
+        <div class="why-text-slider" id="whyTextSlider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+          <div class="why-text-slider-thumb"></div>
+        </div>
+        <button type="button" class="why-text-nav-btn why-text-nav-down" aria-label="Text nach unten scrollen">▼</button>
+      </div>
+    </div>
   </div>
   <div class="why-right">
     <p class="blog-label">Blog</p>
@@ -3594,14 +3725,158 @@ const videoSection = document.getElementById('videoSection');
 const spotlightSection = document.getElementById('spotlightSection');
 const whySection = document.getElementById('whySection');
 
-/* ---------- "Warum das Ganze?" text ---------- */
+/* ---------- "Warum das Ganze?" text ----------
+   texts/why.txt is a small, deliberately-limited markdown subset (blank-
+   line-separated blocks; a block is a "## Heading" if that's its only
+   line, an ordered list if every line starts "1. "/"2. " etc., otherwise
+   a plain paragraph with its own wrapped lines joined back into one flow)
+   -- just enough to give this one prose text real headings/lists instead
+   of the single run-on paragraph plain textContent produced before, with
+   no need for a full markdown-parser dependency for one static blurb. */
 (function(){
   const whyTextEl = document.getElementById('whyText');
+  const whyTextNav = document.getElementById('whyTextNav');
+  const whyTextUpBtn = document.querySelector('.why-text-nav-up');
+  const whyTextDownBtn = document.querySelector('.why-text-nav-down');
+  const whyTextSlider = document.getElementById('whyTextSlider');
+  const whyTextSliderThumb = whyTextSlider ? whyTextSlider.querySelector('.why-text-slider-thumb') : null;
   if (!whyTextEl) return;
+
+  function renderWhyMarkdown(container, text){
+    container.innerHTML = '';
+    text.trim().split(/\n{2,}/).forEach(function(block){
+      const lines = block.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+      if (!lines.length) return;
+      if (lines.length === 1 && /^#{1,3}\s+/.test(lines[0])){
+        const h = document.createElement('h3');
+        h.className = 'why-text-heading';
+        h.textContent = lines[0].replace(/^#{1,3}\s+/, '');
+        container.appendChild(h);
+        return;
+      }
+      if (lines.every(function(l){ return /^\d+[.)]\s+/.test(l); })){
+        const ol = document.createElement('ol');
+        ol.className = 'why-text-list';
+        lines.forEach(function(l){
+          const li = document.createElement('li');
+          li.textContent = l.replace(/^\d+[.)]\s+/, '');
+          ol.appendChild(li);
+        });
+        container.appendChild(ol);
+        return;
+      }
+      const p = document.createElement('p');
+      p.className = 'why-text-para';
+      p.textContent = lines.join(' ');
+      container.appendChild(p);
+    });
+  }
+
+  // fixed-height scrollbox + up/down/slider nav, same pattern as
+  // .control-info-params (poti params) and .bio-text-clip (artist bio) --
+  // self-contained here (own local drag flag, not the shared sliderDrag
+  // those two use) since this section only ever has the one slider, no
+  // need for a cross-instance arbiter.
+  let dragging = false;
+  function sliderFracFromEvent(track, evt){
+    const rect = track.getBoundingClientRect();
+    if (rect.height <= 0) return 0;
+    return Math.max(0, Math.min(1, (evt.clientY - rect.top) / rect.height));
+  }
+  function scrollMax(){
+    return Math.max(0, whyTextEl.scrollHeight - whyTextEl.clientHeight);
+  }
+  function refreshThumb(){
+    const max = scrollMax();
+    const frac = max > 0 ? whyTextEl.scrollTop / max : 0;
+    if (whyTextSliderThumb) whyTextSliderThumb.style.top = (frac * 100).toFixed(2) + '%';
+    if (whyTextUpBtn) whyTextUpBtn.disabled = whyTextEl.scrollTop <= 0;
+    if (whyTextDownBtn) whyTextDownBtn.disabled = whyTextEl.scrollTop >= max;
+    if (whyTextSlider) whyTextSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
+  }
+  // caps this box's height to whatever's actually left on screen below it
+  // -- not however tall why-left/the section end up, which depends on
+  // why-right's own content (the blog carousel) and can be taller than
+  // one viewport, letting the box grow to fit all the text and the
+  // scrollbar disappear entirely instead of scrolling within view. The
+  // title's own height is responsive (clamp()), so this is measured from
+  // JS rather than guessed as a fixed CSS value.
+  function updateWhyTextHeight(){
+    const whyLeftEl = whyTextEl.closest('.why-left');
+    const sectionEl = whyTextEl.closest('.why');
+    if (!whyLeftEl || !sectionEl) return;
+    // measured relative to the SECTION's own top, not the viewport's --
+    // on first load this section hasn't been scrolled to yet (it's way
+    // down the page), so its distance from the *current* viewport top is
+    // meaningless (and was flooring this to the 80px minimum every time).
+    // The section-paging system always settles this section's own top
+    // flush with the viewport's top once scrolled to (block:'start', see
+    // jumpToIndex), so viewport height minus this row's offset *within
+    // the section* is what the available height will actually be then,
+    // regardless of where the page happens to be scrolled to right now.
+    const rowTopInSection = whyTextEl.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
+    const padBottom = parseFloat(getComputedStyle(whyLeftEl).paddingBottom) || 0;
+    whyTextEl.style.height = Math.max(80, window.innerHeight - rowTopInSection - padBottom) + 'px';
+  }
+  // called once the real text is in -- a short text needs no scrollbar at
+  // all (same "only render the nav if it's actually needed" principle as
+  // the params page-nav)
+  function refreshVisibility(){
+    updateWhyTextHeight();
+    whyTextEl.scrollTop = 0;
+    if (whyTextNav) whyTextNav.classList.toggle('why-text-nav-hidden', scrollMax() <= 0);
+    refreshThumb();
+  }
+  // window resize: re-measure the height and nav visibility same as
+  // above, but deliberately doesn't reset scrollTop back to 0 like
+  // refreshVisibility does -- that's only right the first time real text
+  // replaces the loading placeholder, not every time the window resizes
+  // while someone's already mid-scroll in here
+  window.addEventListener('resize', function(){
+    updateWhyTextHeight();
+    if (whyTextNav) whyTextNav.classList.toggle('why-text-nav-hidden', scrollMax() <= 0);
+    refreshThumb();
+  });
+
+  if (whyTextNav && whyTextUpBtn && whyTextDownBtn && whyTextSlider && whyTextSliderThumb){
+    const SCROLL_STEP = 60; // px per button click
+    whyTextEl.addEventListener('scroll', refreshThumb);
+    // mousedown, not click -- suppresses the browser's default "scroll
+    // the newly focused button into view", same as the params page-nav
+    // and bio-text-nav buttons (see their own identical comment)
+    function suppressFocusScroll(evt){ evt.preventDefault(); }
+    whyTextUpBtn.addEventListener('mousedown', suppressFocusScroll);
+    whyTextDownBtn.addEventListener('mousedown', suppressFocusScroll);
+    whyTextUpBtn.addEventListener('click', function(){ whyTextEl.scrollTop -= SCROLL_STEP; });
+    whyTextDownBtn.addEventListener('click', function(){ whyTextEl.scrollTop += SCROLL_STEP; });
+    function applyFrac(frac){ whyTextEl.scrollTop = frac * scrollMax(); }
+    function startDrag(evt){
+      applyFrac(sliderFracFromEvent(whyTextSlider, evt));
+      dragging = true;
+    }
+    whyTextSlider.addEventListener('mousedown', function(evt){ evt.preventDefault(); startDrag(evt); });
+    whyTextSlider.addEventListener('touchstart', function(evt){
+      if (!evt.touches[0]) return;
+      evt.preventDefault();
+      startDrag(evt.touches[0]);
+    }, { passive:false });
+    window.addEventListener('mousemove', function(evt){ if (dragging) applyFrac(sliderFracFromEvent(whyTextSlider, evt)); });
+    window.addEventListener('mouseup', function(){ dragging = false; });
+    window.addEventListener('touchmove', function(evt){
+      if (!dragging || !evt.touches[0]) return;
+      applyFrac(sliderFracFromEvent(whyTextSlider, evt.touches[0]));
+    }, { passive:true });
+    window.addEventListener('touchend', function(){ dragging = false; });
+  }
+
   fetch('texts/why.txt')
     .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
-    .then(function(text){ whyTextEl.textContent = text.trim(); })
-    .catch(function(){ whyTextEl.textContent = 'Text nicht gefunden'; });
+    .then(function(text){ renderWhyMarkdown(whyTextEl, text); refreshVisibility(); })
+    .catch(function(){
+      whyTextEl.innerHTML = '';
+      whyTextEl.appendChild(Object.assign(document.createElement('p'), { className: 'why-text-para', textContent: 'Text nicht gefunden' }));
+      refreshVisibility();
+    });
 })();
 
 /* ---------- Video / Script tabs ---------- */
@@ -6619,6 +6894,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   pageSections = [stage, videoSection, pedalsSection, spotlightSection, whySection, contactSection].filter(Boolean);
   if (pageSections.length < 2) return;
 
+  // used by both jumpToIndex (centering) and the touch handling further
+  // down (freezing the drag) -- declared up here since both need it
+  const PHONE_QUERY = '(max-width:640px)';
+
   function nearestSectionIndex(){
     let bestIdx = 0;
     let bestDist = Infinity;
@@ -6637,18 +6916,19 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
     currentPageIndex = idx;
     const target = pageSections[idx];
-    // block:'start' (not 'center') everywhere except the spotlight/
-    // edition section -- desktop's sections are exactly one viewport
-    // tall so 'start' vs 'center' looks identical there, and on phone a
-    // section can in principle grow taller than the viewport, where
-    // centering crops it from *both* ends. The spotlight section is
-    // requested centered specifically though (min-height:100vh with its
-    // own internal flex centering, so its card sits in the middle of
-    // that space already -- scrolling it to 'start' left that centered
-    // card looking oddly pinned toward the top of the viewport instead
-    // of centered in it, now that its height is usually close to one
-    // viewport anyway thanks to the shared/fixed card height work).
-    const block = (target === spotlightSection) ? 'center' : 'start';
+    // phone: every section snaps centered, full stop -- this is the one
+    // and only "camera position" a section can rest at on phone, so it
+    // can't just be the spotlight-section special case desktop uses.
+    // Desktop keeps block:'start' everywhere except spotlightSection
+    // (its sections are exactly one viewport tall, where 'start' and
+    // 'center' look identical anyway, so there's no tall-content case on
+    // desktop for 'start' to crop); phone sections routinely need more
+    // than one screen (a long bio, a long "why" text, a tall opened
+    // edition card), where 'start' at least guarantees the top is
+    // reachable -- but the ask here is specifically to always center on
+    // phone regardless, so that's what this does.
+    const isPhone = window.matchMedia(PHONE_QUERY).matches;
+    const block = (isPhone || target === spotlightSection) ? 'center' : 'start';
     target.scrollIntoView({ behavior: 'smooth', block: block });
   }
 
@@ -6689,6 +6969,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // native overflow-y:auto scrolling in there, so this just has to get
     // out of its way rather than hijacking the wheel into a page-jump
     if (e.target.closest && e.target.closest('.bio-text-clip')) return;
+    // and the "Warum das Ganze?" text box (see .why-text), same reasoning
+    if (e.target.closest && e.target.closest('.why-text')) return;
 
     // block ALL native scrolling while paging is active -- only the
     // accumulated delta below decides *when* to jump, not whether the
@@ -6720,31 +7002,22 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   // touch: same "each section is its own room" feel as the mouse-wheel/
   // scrollbar-drag paths above, but for a thumb drag -- phone only (see
-  // PHONE_QUERY below; desktop, including a desktop touchscreen, keeps
+  // PHONE_QUERY above; desktop, including a desktop touchscreen, keeps
   // the plain swipe-to-next-room behavior in the `!wasPhone` branch
   // below, untouched).
   //
-  // Two problems turned out to be the same root cause. Handing the drag
-  // to the browser's native scroll (as a first version of this did) free-
-  // scrolls smoothly while the finger is down, but native touch-scrolling
-  // carries momentum: it keeps coasting for a while *after* the finger
-  // has already lifted, which (a) reads as "the page moving on its own"
-  // once our own release-triggered snap also starts animating on top of
-  // that still-coasting scroll, and (b) means the resting position by the
-  // time of release depends on exactly how hard the momentum carried it
-  // rather than just how far the finger actually moved -- so even a
-  // light, deliberate swipe could coast back near its starting section
-  // and get snapped straight back to it instead of moving on, which reads
-  // as the swipe being ignored.
-  //
-  // Fixed by not handing the gesture to native scrolling at all: touchmove
-  // is prevented and the scroll position is set by hand instead, 1:1 with
-  // the finger, every frame. With no native momentum left to coast on,
-  // release can go back to a plain "any real swipe (past a small dead
-  // zone) commits exactly one section, in that direction" rule -- it can
-  // no longer disagree with where the drag visually ended, since nothing
-  // moves the page except the finger itself.
-  const PHONE_QUERY = '(max-width:640px)';
+  // Phone deliberately owns the *entire* gesture now, start to finish --
+  // touchmove is prevented outright and the page is left frozen for the
+  // whole drag, however far the finger moves. A section on phone should
+  // only ever be able to rest at one of two states: sitting fully
+  // centered (see jumpToIndex), or mid-animation between two centered
+  // sections right after a swipe commits -- never at some arbitrary
+  // scroll position the drag happened to reach, which free-scrolling
+  // (by hand or natively) would otherwise allow. touchend below still
+  // decides "did you swipe, and which way" from how far the finger
+  // moved, exactly as before -- the only thing that changed is that the
+  // page itself no longer visibly follows the finger while that's being
+  // decided.
   // anything that owns its own touch gesture (dragging a poti/switch/button,
   // the param-list slider, the particle-count slider, the blog carousel's
   // own scrollable content) must NOT also count as a page-swipe here --
@@ -6758,8 +7031,6 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider';
   let touchStartY = null;
-  let touchStartScrollY = 0;
-  let touchMaxScrollY = 0;
   let touchSwipeExempt = false;
   let touchIsPhone = false;
   window.addEventListener('touchstart', function(e){
@@ -6767,12 +7038,9 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     touchSwipeExempt = !!(e.target.closest && e.target.closest(TOUCH_SWIPE_EXEMPT_SELECTOR));
     touchIsPhone = window.matchMedia(PHONE_QUERY).matches;
     touchStartY = e.touches[0].clientY;
-    touchStartScrollY = window.scrollY;
-    touchMaxScrollY = document.documentElement.scrollHeight - window.innerHeight;
   }, { passive:true });
 
-  // phone only: hand-track the scroll 1:1 with the finger instead of
-  // letting native touch-scroll (and its momentum) run -- see the block
+  // phone only: freeze the page for the whole drag -- see the block
   // comment above for why. No-ops entirely for an exempt target (a poti/
   // slider/etc that owns its own gesture) or on desktop.
   window.addEventListener('touchmove', function(e){
@@ -6780,9 +7048,6 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (document.querySelector('.modal-overlay.active') || isJumping || pageAnimationActive) return;
     if (!e.touches[0]) return;
     e.preventDefault();
-    const dy = touchStartY - e.touches[0].clientY;
-    const target = Math.max(0, Math.min(touchMaxScrollY, touchStartScrollY + dy));
-    window.scrollTo(window.scrollX, target);
   }, { passive:false });
 
   window.addEventListener('touchend', function(e){
@@ -6813,8 +7078,9 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     }
 
     // phone: any real swipe commits a full one-section step in that
-    // direction -- safe now that the drag was hand-tracked above with no
-    // native momentum to have carried it any further than the finger did
+    // direction -- the page was frozen for the entire drag (see
+    // touchmove above), so there's no momentum or free-scrolled
+    // position to disagree with, just the finger's own start/end delta
     if (Math.abs(delta) < 15) return; // barely moved -- a tap, not a swipe
     const direction = delta > 0 ? 1 : -1;
     const targetIdx = Math.max(0, Math.min(pageSections.length - 1, currentPageIndex + direction));
