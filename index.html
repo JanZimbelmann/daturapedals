@@ -2261,7 +2261,7 @@
        way, the instant this class is added, with no way to sequence a
        "from" frame first. Forcing flex-basis back to auto here (flex:0 0
        auto, matching the plain idle state's own flex value) is what
-       actually fixes it -- auto defders back to the height property, so
+       actually fixes it -- auto defers back to the height property, so
        syncMobileWrapHeight's JS-driven height is finally the one and only
        thing that changes value between idle and hidden-sibling, which is
        what a transition can actually animate. */
@@ -6108,7 +6108,17 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // shorter or taller than another's
       const natural = measureOpenHeight();
       const shared = applySharedHeight(natural);
-      wrap.style.height = shared + 'px';
+      // phone only: a hidden-sibling's height is driven separately (0,
+      // see syncMobileWrapHeight) -- applySharedHeight already knows to
+      // skip writing to *other* instances' wraps when they're a hidden
+      // sibling, but this line is this same instance writing to its OWN
+      // wrap unconditionally, bypassing that guard entirely (lockHeight
+      // runs for every instance regardless of state -- at mount time, on
+      // window load, etc.) -- without this check a hidden sibling kept
+      // getting silently reset to the shared "open" height instead of 0
+      // every single time any instance's lockHeight() happened to run.
+      const isHiddenSiblingOnPhone = window.matchMedia('(max-width:640px)').matches && wrap.classList.contains('wrap-hidden-sibling');
+      if (!isHiddenSiblingOnPhone) wrap.style.height = shared + 'px';
       // phone only: card-clip's own height (collapsed 0 <-> open) also
       // needs an explicit, JS-measured px value here, same as the wrap's
       // height just above -- transitioning to/from height:auto (which is
@@ -6258,6 +6268,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         instance.wrap.classList.add('card-collapsed', 'wrap-hidden-sibling');
       }
     });
+    // phone only: mountEdition's own lockHeight() call (inside it, before
+    // this loop gets a chance to add wrap-hidden-sibling above) already
+    // ran while every instance still looked like the active one, so any
+    // instance that just became hidden here is left with the wrong
+    // (shared, "open") height wrongly baked in as an inline style -- one
+    // corrective pass now that every instance's real class is settled.
+    instances.forEach(syncMobileWrapHeight);
   }).catch(function(e){
     console.error('Failed to load editions:', e);
   });
