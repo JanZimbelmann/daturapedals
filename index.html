@@ -38,6 +38,15 @@
   .stage{
     position:relative;
     width:100vw; height:100vh;
+    /* dvh tracks the *actual* visible viewport as a mobile browser's own
+       address/toolbar chrome shows or hides -- plain vh is defined against
+       the largest possible viewport instead, so on a phone (where that
+       chrome is often still visible when a section-jump lands) vh
+       overshoots the real visible height, leaving dead space at the
+       bottom that reads as landing short/between sections. Kept as a
+       second declaration (not a replacement) so browsers without dvh
+       support silently keep the vh value above. */
+    height:100dvh;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -605,6 +614,7 @@
   .pedals{
     position:relative;
     min-height:100vh;
+    min-height:100dvh; /* see .stage's comment on vh vs dvh */
     width:100%;
     display:flex;
     flex-direction:column;
@@ -620,6 +630,7 @@
     position:relative;
     width:100%;
     height:100vh;
+    height:100dvh; /* see .stage's comment on vh vs dvh */
     display:flex;
     align-items:center;
     justify-content:center;
@@ -785,6 +796,7 @@
     display:flex;
     flex-wrap:wrap;
     min-height:100vh;
+    min-height:100dvh; /* see .stage's comment on vh vs dvh */
     width:100%;
     background:var(--black);
   }
@@ -1165,6 +1177,7 @@
     position:relative;
     width:100%;
     min-height:100vh;
+    min-height:100dvh; /* see .stage's comment on vh vs dvh */
     background:var(--black);
     overflow:hidden;
   }
@@ -1175,6 +1188,7 @@
     align-items:center;
     justify-content:center;
     min-height:100vh;
+    min-height:100dvh; /* see .stage's comment on vh vs dvh */
     width:100%;
     background:var(--black);
     padding:3rem 1.5rem;
@@ -2403,6 +2417,16 @@
        no clearance there reads as running underneath it. */
     .spotlight{
       padding:1.5rem 0.5rem;
+      /* base rule vertically centers its content (align-items:center)
+         inside a min-height:100vh box -- fine on desktop where the
+         section-jump also centers, but on phone the section-jump aligns
+         to the *top* instead (see jumpToIndex), so centered content left
+         a gap above the card equal to whatever headroom the section had
+         left over, landing the card visibly "between two sections" with
+         dead space above it instead of flush under the viewport's top
+         edge. Top-aligning here instead keeps the card's own top flush
+         with wherever the scroll actually lands. */
+      align-items:flex-start;
     }
     /* every edition always stacks in one column, one full-width row each
        -- idle or open, doesn't matter. Idle editions used to be narrow
