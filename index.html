@@ -2405,6 +2405,66 @@
   }
 
   @media (max-width:640px){
+    /* every page-jump target (see pageSections in the section-paging
+       script) gets hard-capped to *exactly* one screen here, replacing
+       whatever min-height each used on desktop. A min-height lets a
+       section grow past the viewport the instant its own content needs
+       more room, which is exactly what was breaking "snap to a section,
+       see all of it, see nothing else": jumpToIndex's block:'start' only
+       ever promises that a section's *top* lands at the viewport's top,
+       never that its bottom also lands at the viewport's bottom -- if the
+       section is taller than one screen, snapping to it always leaves
+       part of it (or the start of the next section) either off-screen or
+       bleeding into view. Fixing this at the JS layer alone (picking a
+       "smarter" scroll position) is a dead end: there simply isn't a
+       single scroll position that shows a too-tall section's top, bottom,
+       and nothing else, all at once. So instead every section is
+       hard-capped to one screen and overflow:hidden here, and whichever
+       *specific* piece of content doesn't fit within that (why-text,
+       why-right's blog carousel, a bio, an opened edition card) gets its
+       own internal scroll affordance instead -- the outer page-jump only
+       ever moves between whole, exactly-one-screen rooms; scrolling
+       *within* one of those rooms is a separate, local concern.
+       .stage and .video-section already used a hard height:100dvh from
+       the start (not min-height), so they're already covered by this same
+       reasoning above without needing an override here. */
+    .pedals, .contact{
+      height:100dvh;
+      min-height:0;
+      overflow:hidden;
+    }
+    /* why-left (title + text) and why-right (blog carousel) sit side by
+       side on desktop, each half the section's own one-screen height --
+       flex-wrap here stacks them into a single column instead (see
+       .why-left/.why-right's shared min-width:280px, too wide for two to
+       fit side by side on a phone), so together they now have to share
+       one screen's height by taking turns vertically instead of splitting
+       it side by side. 4rem/3rem of padding per half was sized for
+       desktop's much larger per-half share of the screen; kept here at a
+       smaller but still real value -- the rest of the reclaimed space
+       goes to why-text's own box (see updateWhyTextHeight, which reserves
+       why-right's measured height out of the same budget). */
+    .why{
+      height:100dvh;
+      min-height:0;
+      overflow:hidden;
+    }
+    .why-left, .why-right{
+      padding:1.5rem 1.25rem;
+    }
+    /* border-right:none + border-bottom is handled by the existing
+       .why-left mobile override elsewhere -- the divider just needs to
+       run along the bottom of the now-horizontal split instead of down
+       the right side of the old side-by-side one. */
+    /* fixed 380px was sized against a full desktop-height half-screen;
+       shrunk here so why-right's total (label + this) leaves why-text a
+       reasonable share of a phone's much shorter one-screen budget. The
+       row-gap and grid-template-rows fractions inside stay proportional
+       (grid-template-rows uses fr units + one fixed 4.5rem row), so this
+       single height change alone reflows the whole carousel to fit. */
+    .blog-carousel{
+      height:280px;
+    }
     /* desktop's 3rem/1.5rem breathing room around the whole section is a
        lot of wasted screen on a phone, where the open card is already
        being deliberately grown to fill the visible screen (see
@@ -2416,6 +2476,9 @@
        the bottom) sits right at those screen edges too, and a card with
        no clearance there reads as running underneath it. */
     .spotlight{
+      height:100dvh;
+      min-height:0;
+      overflow:hidden;
       padding:1.5rem 0.5rem;
       /* base rule vertically centers its content (align-items:center)
          inside a min-height:100vh box -- fine on desktop where the
@@ -3882,7 +3945,18 @@ const whySection = document.getElementById('whySection');
     // regardless of where the page happens to be scrolled to right now.
     const rowTopInSection = whyTextEl.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
     const padBottom = parseFloat(getComputedStyle(whyLeftEl).paddingBottom) || 0;
-    whyTextEl.style.height = Math.max(80, window.innerHeight - rowTopInSection - padBottom) + 'px';
+    // phone: why-right (the blog carousel) no longer sits beside this
+    // column, it sits *below* it in the same one-screen-tall section (see
+    // the .why mobile override) -- so its own height has to come out of
+    // this same budget too, or this box would still claim the entire rest
+    // of the viewport for itself and push why-right below the fold,
+    // making the whole section taller than one screen again despite the
+    // hard cap. Desktop's side-by-side layout has no such conflict, so it
+    // keeps claiming everything below this row exactly as before.
+    const isPhone = window.matchMedia('(max-width:640px)').matches;
+    const whyRightEl = isPhone ? sectionEl.querySelector('.why-right') : null;
+    const whyRightH = whyRightEl ? whyRightEl.getBoundingClientRect().height : 0;
+    whyTextEl.style.height = Math.max(80, window.innerHeight - rowTopInSection - padBottom - whyRightH) + 'px';
   }
   // called once the real text is in -- a short text needs no scrollbar at
   // all (same "only render the nav if it's actually needed" principle as
