@@ -3583,6 +3583,53 @@ function pageAnimationUnlock(){ pageAnimationActive = false; }
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
+// a real smooth-scroll's duration isn't a fixed constant -- it varies with
+// distance, and on mobile Safari specifically can be stretched further
+// still by the dynamic toolbar (address/tab bar) animating in or out at
+// the same time as the scroll. Anything timed against a fixed guessed
+// duration instead of the scroll actually finishing races that: if the
+// real scroll (or the toolbar) is still moving once the timer fires, a
+// fresh touch/wheel/click can interrupt it wherever it happens to be --
+// which is exactly what reads as "landed between two sections" instead of
+// snapped to either one. This watches real scroll position instead: once
+// it hasn't moved for a few consecutive frames, whatever motion was
+// happening is actually done.
+function afterScrollSettles(callback){
+  let lastY = window.scrollY;
+  let stableFrames = 0;
+  const REQUIRED_STABLE_FRAMES = 6; // ~100ms at 60fps
+  const MAX_WAIT_MS = 2500; // safety net -- never wait forever if something's gone wrong
+  const startedAt = Date.now();
+  function tick(){
+    const y = window.scrollY;
+    if (y === lastY) stableFrames++;
+    else { stableFrames = 0; lastY = y; }
+    if (stableFrames >= REQUIRED_STABLE_FRAMES || Date.now() - startedAt > MAX_WAIT_MS){
+      callback();
+      return;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// shared by every "jump to this section" trigger -- the section-paging
+// wheel/touch/keyboard handlers below and each hero CTA's own scroll
+// (openDoor/openPedals/openSlogan/openSumme). Kicks off the normal smooth
+// scroll for the visible motion, then once it's genuinely finished (see
+// afterScrollSettles above) snaps once more, instantly, straight to the
+// same target -- a no-op if the smooth scroll actually landed exactly
+// right, but a real correction if anything (the dynamic toolbar chief
+// among them) left it slightly short/long or interrupted it early.
+// onDone (optional) fires after that correction, once everything's settled.
+function snapSectionIntoView(target, block, onDone){
+  target.scrollIntoView({ behavior:'smooth', block: block });
+  afterScrollSettles(function(){
+    target.scrollIntoView({ behavior:'auto', block: block });
+    if (onDone) onDone();
+  });
+}
+
 function makeGlimpse(text, x, y, size, rotate, opacity, filterId){
   const el = document.createElement('div');
   el.className = 'glimpse';
@@ -4124,8 +4171,11 @@ if (logoBoxEl && wordmarkWrap && videoSection) {
     // let the door swing open first, then move to the video section
     setTimeout(function(){
       syncPageIndex(videoSection);
-      videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      pageAnimationUnlock();
+      // unlocked only once the scroll has actually settled (see
+      // snapSectionIntoView) -- unlocking immediately let a wheel/touch/
+      // keydown interrupt the smooth scroll while it was still mid-flight,
+      // landing wherever it happened to be instead of on this section
+      snapSectionIntoView(videoSection, 'start', pageAnimationUnlock);
     }, 650);
   };
 
@@ -4224,8 +4274,12 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
       // usual near-full-screen one, see phoneActiveHeight) never gets
       // cropped from both ends -- see jumpToIndex for the full reasoning
       const isPhone = window.matchMedia('(max-width:640px)').matches;
-      spotlightSection.scrollIntoView({ behavior: 'smooth', block: isPhone ? 'start' : 'center' });
-      pageAnimationUnlock();
+      // unlocked only once settled (see snapSectionIntoView) -- this is
+      // the single busiest jump on the whole page (letter-scatter, the
+      // Industrial Noise card opening, and the scroll all landing at
+      // once), so it's also the one most likely to still be moving when
+      // an old fixed-duration unlock would have already fired
+      snapSectionIntoView(spotlightSection, isPhone ? 'start' : 'center', pageAnimationUnlock);
     }, 650);
   };
 
@@ -4306,8 +4360,7 @@ if (pedalsLabelEl && wordmarkWrap && pedalsSection) {
     // once the cradle has settled, move to the pre-order section
     setTimeout(function(){
       syncPageIndex(pedalsSection);
-      pedalsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      pageAnimationUnlock();
+      snapSectionIntoView(pedalsSection, 'start', pageAnimationUnlock);
     }, 1000);
   };
 
@@ -4363,9 +4416,10 @@ if (sloganSubEl && wordmarkWrap && letterBlowupEl) {
           wordmarkWrap.classList.remove('subslogan-open');
           if (whySection){
             syncPageIndex(whySection);
-            whySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            snapSectionIntoView(whySection, 'start', pageAnimationUnlock);
+          } else {
+            pageAnimationUnlock();
           }
-          pageAnimationUnlock();
         }, 100);
         return;
       }
@@ -4483,8 +4537,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       dissolveTextIntoNoise(summeLabelEl, summeCanvasEl, 550, function(){
         setTimeout(function(){
           syncPageIndex(contactSection);
-          contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          pageAnimationUnlock();
+          snapSectionIntoView(contactSection, 'start', pageAnimationUnlock);
         }, 300);
       });
     }, 80);
@@ -7088,7 +7141,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }
   currentPageIndex = nearestSectionIndex();
 
-  function jumpToIndex(idx){
+  function jumpToIndex(idx, onDone){
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
     currentPageIndex = idx;
     const target = pageSections[idx];
@@ -7110,7 +7163,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // this is purely a look/feel choice, unaffected by any of the above.
     const isPhone = window.matchMedia(PHONE_QUERY).matches;
     const block = (target === spotlightSection && !isPhone) ? 'center' : 'start';
-    target.scrollIntoView({ behavior: 'smooth', block: block });
+    snapSectionIntoView(target, block, onDone);
   }
 
   let isJumping = false;
@@ -7177,8 +7230,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (targetIdx < 0 || targetIdx > pageSections.length - 1) return; // no section that way
 
     isJumping = true;
-    jumpToIndex(targetIdx);
-    setTimeout(function(){ isJumping = false; }, 550);
+    jumpToIndex(targetIdx, function(){ isJumping = false; });
   }, { passive:false });
 
   // touch: same "each section is its own room" feel as the mouse-wheel/
@@ -7261,8 +7313,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       const targetIdx = currentPageIndex + (delta > 0 ? 1 : -1);
       if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
       isJumping = true;
-      jumpToIndex(targetIdx);
-      setTimeout(function(){ isJumping = false; }, 550);
+      jumpToIndex(targetIdx, function(){ isJumping = false; });
       return;
     }
 
@@ -7274,8 +7325,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const direction = delta > 0 ? 1 : -1;
     const targetIdx = Math.max(0, Math.min(pageSections.length - 1, currentPageIndex + direction));
     isJumping = true;
-    jumpToIndex(targetIdx);
-    setTimeout(function(){ isJumping = false; }, 550);
+    jumpToIndex(targetIdx, function(){ isJumping = false; });
   }, { passive:true });
 
   // keep currentPageIndex correct if the person clicks a link that jumps
@@ -7302,8 +7352,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (targetIdx < 0 || targetIdx > pageSections.length - 1) return;
     e.preventDefault();
     isJumping = true;
-    jumpToIndex(targetIdx);
-    setTimeout(function(){ isJumping = false; }, 550);
+    jumpToIndex(targetIdx, function(){ isJumping = false; });
   });
 
   // scrollbar-thumb dragging doesn't fire wheel/touch/keydown events, just
@@ -7325,9 +7374,37 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     draggingScrollbar = false;
     if (isJumping || pageAnimationActive) return;
     isJumping = true;
-    jumpToIndex(nearestSectionIndex());
-    setTimeout(function(){ isJumping = false; }, 550);
+    jumpToIndex(nearestSectionIndex(), function(){ isJumping = false; });
   });
+
+  // mobile Safari specifically: its dynamic toolbar (address/tab bar)
+  // showing or hiding changes the *visible* viewport height live, without
+  // the page itself ever scrolling. Every section already tracks that via
+  // 100dvh (see the mobile CSS), so a section's own size self-corrects --
+  // what doesn't self-correct is the scroll *offset*: if the toolbar
+  // collapses or expands while at rest mid-section, that section's top is
+  // no longer flush with the (now different) viewport top, reading as
+  // "suddenly not snapped anymore" even though nothing was dragged.
+  // window.visualViewport reports this in real time (plain window resize
+  // doesn't fire reliably for it on iOS); re-snapping instantly (no
+  // visible animation, this isn't a user-initiated jump) to whichever
+  // section is already current keeps the invariant true regardless of
+  // what the browser's own chrome does on its own.
+  if (window.visualViewport){
+    let vvResizeTimer = null;
+    window.visualViewport.addEventListener('resize', function(){
+      if (isJumping || pageAnimationActive) return; // an in-flight jump re-snaps itself once it settles anyway
+      clearTimeout(vvResizeTimer);
+      vvResizeTimer = setTimeout(function(){
+        if (isJumping || pageAnimationActive) return;
+        const target = pageSections[currentPageIndex];
+        if (!target) return;
+        const isPhone = window.matchMedia(PHONE_QUERY).matches;
+        const block = (target === spotlightSection && !isPhone) ? 'center' : 'start';
+        target.scrollIntoView({ behavior:'auto', block: block });
+      }, 120);
+    });
+  }
 })();
 
 /* ---------- Blog viewer: carousel wheel ---------- */
