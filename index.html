@@ -4112,6 +4112,15 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
     wordmarkWrap.classList.add('slogan-open');
     pageAnimationLock();
 
+    // phone: neither edition auto-opens on load anymore (see the editions
+    // bootstrap), so this link has to explicitly open Industrial Noise
+    // itself -- fired now, immediately, rather than alongside the scroll
+    // below, so its card is already expanding (or fully expanded) toward
+    // its real final height well before the scroll below reads that height
+    if (window.matchMedia('(max-width:640px)').matches && window.__openEditionBySlug){
+      window.__openEditionBySlug('industrial_noise');
+    }
+
     const letters = sloganMainEl.querySelectorAll('.letter');
     const spread = Math.min(window.innerWidth, window.innerHeight) * 0.3;
     letters.forEach(function(el){
@@ -6849,9 +6858,14 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       });
     });
 
+    // phone: neither edition auto-opens -- both editions start as plain
+    // idle/collapsed cards (the "Unsere Szene, Unser Sound" link opens
+    // Industrial Noise specifically once clicked, see __openEditionBySlug
+    // below). Desktop keeps the previous "first edition open by default" look.
+    const isPhoneBoot = window.matchMedia('(max-width:640px)').matches;
     editions.forEach(function(edition, idx){
       const instance = mountEdition(edition.slug, edition.programs, edition.colors);
-      if (idx === 0){
+      if (idx === 0 && !isPhoneBoot){
         // first edition starts open by default; the rest start as
         // hidden siblings alongside it (no transition -- this is the
         // initial state, not a user-triggered toggle)
@@ -6867,7 +6881,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         instance.lockHeight();
         instance.playVineReveal(); // visible immediately, no opening animation to wait out
       } else {
-        instance.wrap.classList.add('card-collapsed', 'wrap-hidden-sibling');
+        instance.wrap.classList.add('card-collapsed');
+        // only actually "hidden behind" something if some other instance
+        // is genuinely open (desktop's idx 0) -- on phone activeInstance
+        // is never set here, so both stay plain idle/collapsed, neither
+        // hidden nor active, exactly like the "nothing open yet" state
+        // requestClose() already leaves behind after a real close.
+        if (activeInstance) instance.wrap.classList.add('wrap-hidden-sibling');
       }
     });
     // phone only: mountEdition's own lockHeight() call (inside it, before
@@ -6877,6 +6897,17 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // (shared, "open") height wrongly baked in as an inline style -- one
     // corrective pass now that every instance's real class is settled.
     instances.forEach(syncMobileWrapHeight);
+
+    // bridge for the hero's "Unsere Szene, Unser Sound" link -- a separate
+    // script scope (see sloganMainEl below) that only knows how to scroll
+    // to the section, not open a specific edition's card. Needed now that
+    // phone no longer auto-opens one on load.
+    window.__openEditionBySlug = function(slug){
+      const target = instances.find(function(inst){ return inst.editionSlug === slug; });
+      if (!target || activeInstance === target) return;
+      if (activeInstance) swapToEdition(activeInstance, target);
+      else requestOpen(target);
+    };
   }).catch(function(e){
     console.error('Failed to load editions:', e);
   });
