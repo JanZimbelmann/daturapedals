@@ -7078,10 +7078,18 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // separate window-level listener from also seeing the same gesture, so
   // without this exemption a slider/knob drag longer than the swipe
   // threshold was *also* jumping the whole page to the next section
-  // underneath whatever you were actually trying to do.
+  // underneath whatever you were actually trying to do. Same reasoning
+  // applies to the hero's own tap-to-jump CTAs (logo door, PEDALS label,
+  // slogan, "summe" text): a real thumb tap easily drifts past the 15px
+  // swipe threshold, especially with the scatter/enlarge animation drawing
+  // the eye right as the finger lifts -- without exempting them, that
+  // stray drift fires this listener's own jumpToIndex to whatever section
+  // is merely *next* in line, racing the CTA's own scrollIntoView to its
+  // specific target and occasionally winning, landing on the wrong section.
   const TOUCH_SWIPE_EXEMPT_SELECTOR =
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
-    '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider';
+    '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, ' +
+    '.logo-box, #pedalsLabel, #sloganMain, #summeText';
   let touchStartY = null;
   let touchSwipeExempt = false;
   let touchIsPhone = false;
