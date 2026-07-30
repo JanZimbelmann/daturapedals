@@ -4112,7 +4112,12 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
     // same overall duration as the Datura door before it moves on
     setTimeout(function(){
       syncPageIndex(spotlightSection);
-      spotlightSection.scrollIntoView({ behavior: 'smooth', block: 'center' }); // see jumpToIndex for why this one section is centered, not top-aligned
+      // matches jumpToIndex's own rule exactly: centered on desktop, but
+      // top-aligned on phone so a card taller than the screen (or the
+      // usual near-full-screen one, see phoneActiveHeight) never gets
+      // cropped from both ends -- see jumpToIndex for the full reasoning
+      const isPhone = window.matchMedia('(max-width:640px)').matches;
+      spotlightSection.scrollIntoView({ behavior: 'smooth', block: isPhone ? 'start' : 'center' });
       pageAnimationUnlock();
     }, 650);
   };
@@ -6958,19 +6963,24 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
     currentPageIndex = idx;
     const target = pageSections[idx];
-    // phone: every section snaps centered, full stop -- this is the one
-    // and only "camera position" a section can rest at on phone, so it
-    // can't just be the spotlight-section special case desktop uses.
-    // Desktop keeps block:'start' everywhere except spotlightSection
-    // (its sections are exactly one viewport tall, where 'start' and
-    // 'center' look identical anyway, so there's no tall-content case on
-    // desktop for 'start' to crop); phone sections routinely need more
-    // than one screen (a long bio, a long "why" text, a tall opened
-    // edition card), where 'start' at least guarantees the top is
-    // reachable -- but the ask here is specifically to always center on
-    // phone regardless, so that's what this does.
+    // phone: always block:'start', full stop -- centering a section
+    // that's taller than the viewport (a long bio, a long "why" text, an
+    // opened edition card now deliberately filling nearly the whole
+    // screen) crops it from *both* ends, hiding whatever doesn't fit
+    // above and below equally; aligning its top to the viewport's top
+    // instead guarantees that top is always reachable, with the rest
+    // just a normal scroll away -- "see all of it" wins over "centered"
+    // here. This also happens to still read as centered in the common
+    // case anyway: an opened edition card is deliberately sized to
+    // almost exactly one screen tall (see phoneActiveHeight), so
+    // aligning its top to the screen's top already leaves its own
+    // center very close to the screen's center too.
+    // Desktop keeps block:'start' everywhere except spotlightSection,
+    // which centers there specifically -- desktop's sections are exactly
+    // one viewport tall (no tall-content case for 'start' to crop), so
+    // this is purely a look/feel choice, unaffected by any of the above.
     const isPhone = window.matchMedia(PHONE_QUERY).matches;
-    const block = (isPhone || target === spotlightSection) ? 'center' : 'start';
+    const block = (target === spotlightSection && !isPhone) ? 'center' : 'start';
     target.scrollIntoView({ behavior: 'smooth', block: block });
   }
 
