@@ -855,6 +855,10 @@
        here specifically (not just on .why-text-list) they were getting
        cut off by that new horizontal clip boundary */
     padding-left:0.3rem;
+    /* breathing room at the end of the scrollable text -- without it the
+       last line sits flush against the box's own bottom edge, reading as
+       "the text runs too far down" even though it's all still reachable */
+    padding-bottom:2rem;
   }
   .why-text::-webkit-scrollbar{
     display:none; /* Chrome/Safari equivalent of scrollbar-width:none above */
@@ -2493,6 +2497,36 @@
     .why-left{
       border-right:none;
     }
+    /* Blog tab: desktop's peeking-neighbor "wheel" needs width/height a
+       phone's dedicated Blog tab doesn't have to spare -- region-above is
+       never populated here anyway (see renderWheel's isPhone check), and
+       the whole carousel drops the fixed-grid "wheel" layout for a plain
+       top-anchored column instead: title+arrows sit right under the
+       label (align-items:flex-start, replacing desktop's vertical
+       centering -- "bring the selected post to the top" instead of
+       centering a wheel that no longer has neighbors to justify it), and
+       the selected entry's own content is pulled up flush underneath it.
+       That content box fills the rest of the tab's own one-screen budget
+       via a JS-measured max-height (see sizeBlogContentForPhone), not
+       flex-grow -- blog-body's own align-items:flex-start here means
+       blog-viewer/blog-carousel are never stretched to a definite height
+       in the first place, so there's nothing for flex:1 to distribute;
+       the JS instead measures the content box's own current position
+       directly and caps it to whatever's left below that down to the
+       screen's bottom edge, which works regardless of how any ancestor
+       sizes itself. */
+    .blog-body{
+      align-items:flex-start;
+    }
+    .blog-region-above{
+      display:none;
+    }
+    .blog-carousel{
+      display:flex;
+      flex-direction:column;
+      height:auto;
+      width:100%;
+    }
     /* desktop's 3rem/1.5rem breathing room around the whole section is a
        lot of wasted screen on a phone, where the open card is already
        being deliberately grown to fill the visible screen (see
@@ -4118,6 +4152,10 @@ const whySection = document.getElementById('whySection');
         // re-measure now that it's actually visible again
         updateWhyTextHeight();
         refreshThumb();
+      } else if (tab === 'blog' && window.__resizeBlogContent){
+        // same reasoning in reverse -- see sizeBlogContentForPhone in the
+        // blog carousel's own script
+        window.__resizeBlogContent();
       }
     });
     // matches the "active" class already on the text button in the
@@ -7337,8 +7375,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // stray drift fires this listener's own jumpToIndex to whatever section
   // is merely *next* in line, racing the CTA's own scrollIntoView to its
   // specific target and occasionally winning, landing on the wrong section.
+  // .why-text/.bio-text-clip are real native-scroll (overflow-y:auto) boxes,
+  // same reasoning as .blog-item-content above -- without exempting them
+  // too, a thumb drag meant to scroll "Warum das Ganze?" or an artist bio
+  // was instead getting caught by this listener as a page-swipe attempt,
+  // freezing the page and jumping a whole section instead of just
+  // scrolling the text like it looks like it should.
   const TOUCH_SWIPE_EXEMPT_SELECTOR =
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
+    '.why-text, .bio-text-clip, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, ' +
     '.logo-box, #pedalsLabel, #sloganMain, #summeText';
   let touchStartY = null;
@@ -7576,11 +7621,22 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       '<p class="blog-item-date">' + entry.dateDisplay + '</p>' +
       '<p class="blog-item-title">' + entry.title + '</p>';
 
+    // phone: the peeking-neighbor "wheel" look needs the width/height a
+    // desktop half-screen has to spare -- on phone's own dedicated Blog
+    // tab (see .why-mobile-tabs) there's no room to spare, and the
+    // selected entry's own content is what someone actually came here to
+    // read, so neighbors are skipped entirely and that content gets
+    // pulled up flush under the title instead (see the mobile
+    // .blog-carousel override, and sizeBlogContentForPhone below).
+    const isPhone = window.matchMedia('(max-width:640px)').matches;
+
     // neighbors above (newer entries) -- farthest first, so the nearest
     // one ends up closest to the anchor
-    const aboveStart = Math.max(0, currentIndex - WINDOW_RADIUS);
-    for (let idx = aboveStart; idx < currentIndex; idx++){
-      regionAbove.appendChild(makeNeighborItem(entries[idx], idx, idx - currentIndex));
+    if (!isPhone){
+      const aboveStart = Math.max(0, currentIndex - WINDOW_RADIUS);
+      for (let idx = aboveStart; idx < currentIndex; idx++){
+        regionAbove.appendChild(makeNeighborItem(entries[idx], idx, idx - currentIndex));
+      }
     }
 
     // small connector line, then content directly under the title, then
@@ -7593,12 +7649,45 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     contentEl.className = 'blog-item-content';
     regionBelow.appendChild(contentEl);
     loadContentInto(entry, contentEl);
+    sizeBlogContentForPhone(contentEl);
 
-    const belowEnd = Math.min(entries.length - 1, currentIndex + WINDOW_RADIUS);
-    for (let idx = currentIndex + 1; idx <= belowEnd; idx++){
-      regionBelow.appendChild(makeNeighborItem(entries[idx], idx, idx - currentIndex));
+    if (!isPhone){
+      const belowEnd = Math.min(entries.length - 1, currentIndex + WINDOW_RADIUS);
+      for (let idx = currentIndex + 1; idx <= belowEnd; idx++){
+        regionBelow.appendChild(makeNeighborItem(entries[idx], idx, idx - currentIndex));
+      }
     }
   }
+
+  // phone only: fills the entire rest of the Blog tab's own one-screen
+  // budget (see the mobile .why-mobile-tabs/.blog-carousel overrides),
+  // same "measure what's actually left below this, cap to exactly that"
+  // approach as updateWhyTextHeight -- a no-op (returns early) on desktop,
+  // where .blog-item-content keeps its fixed 190px CSS max-height instead.
+  // Called again from the tab-toggle click handler (see .why-mobile-tabs'
+  // own script) once the Blog tab is actually visible, since this box may
+  // have first been measured while still display:none (a 0-height box)
+  // if the text tab was the one showing when the page loaded.
+  function sizeBlogContentForPhone(contentEl){
+    if (!window.matchMedia('(max-width:640px)').matches) return;
+    const sectionEl = contentEl.closest('.why');
+    const whyRightEl = contentEl.closest('.why-right');
+    if (!sectionEl || !whyRightEl) return;
+    const rowTop = contentEl.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
+    const padBottom = parseFloat(getComputedStyle(whyRightEl).paddingBottom) || 0;
+    contentEl.style.maxHeight = Math.max(80, window.innerHeight - rowTop - padBottom) + 'px';
+  }
+  // bridge for .why-mobile-tabs' own click handler (a separate script
+  // scope) to re-run the sizing above once the Blog tab actually becomes
+  // visible
+  window.__resizeBlogContent = function(){
+    const contentEl = regionBelow.querySelector('.blog-item-content');
+    if (contentEl) sizeBlogContentForPhone(contentEl);
+  };
+  window.addEventListener('resize', function(){
+    const contentEl = regionBelow.querySelector('.blog-item-content');
+    if (contentEl) sizeBlogContentForPhone(contentEl);
+  });
 
   function renderEntry(){
     updateNavState();
