@@ -800,6 +800,12 @@
     width:100%;
     background:var(--black);
   }
+  /* mobile-only tab buttons that switch which of why-left/why-right is
+     showing (see the mobile .why-mobile-tabs override) -- desktop has
+     room to just show both side by side, same as always */
+  .why-mobile-tabs{
+    display:none;
+  }
   .why-left, .why-right{
     flex:1 1 50%;
     min-width:280px;
@@ -1166,10 +1172,9 @@
   }
 
   @media (max-width:640px){
-    .why-left{
-      border-right:none;
-      border-bottom:1px solid var(--grey-2);
-    }
+    /* why-left/why-right no longer stack (see .why-mobile-tabs and the
+       main mobile media query below) -- exactly one shows at a time now,
+       so there's nothing left for a divider border to divide */
   }
 
   /* ---------- contact section: plain black, button top-left, button bottom-right ---------- */
@@ -2435,35 +2440,58 @@
     }
     /* why-left (title + text) and why-right (blog carousel) sit side by
        side on desktop, each half the section's own one-screen height --
-       flex-wrap here stacks them into a single column instead (see
-       .why-left/.why-right's shared min-width:280px, too wide for two to
-       fit side by side on a phone), so together they now have to share
-       one screen's height by taking turns vertically instead of splitting
-       it side by side. 4rem/3rem of padding per half was sized for
-       desktop's much larger per-half share of the screen; kept here at a
-       smaller but still real value -- the rest of the reclaimed space
-       goes to why-text's own box (see updateWhyTextHeight, which reserves
-       why-right's measured height out of the same budget). */
+       both at once was too cramped to be worth it on a phone screen (see
+       .why-mobile-tabs below), so exactly one of the two shows at a time
+       here instead, each free to use the *entire* one-screen budget on
+       its own turn rather than splitting it. */
     .why{
       height:100dvh;
       min-height:0;
       overflow:hidden;
+      flex-direction:column;
     }
+    .why-mobile-tabs{
+      display:flex;
+      gap:0.6rem;
+      padding:1rem 1.25rem 0;
+      flex-shrink:0;
+    }
+    .why-mobile-tab{
+      flex:1;
+      font-family:'IBM Plex Mono', monospace;
+      font-size:0.75rem;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:var(--grey-3);
+      background:transparent;
+      border:1px solid var(--grey-2);
+      border-radius:999px;
+      padding:0.6rem 0.5rem;
+      cursor:pointer;
+      user-select:none;
+      transition:color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .why-mobile-tab.active{
+      color:var(--black);
+      background:var(--white);
+      border-color:var(--white);
+    }
+    /* exactly one of these shows at a time on phone -- see the JS toggle
+       that sets .why-tab-text/.why-tab-blog on .why itself. Each gets the
+       whole rest of the section (flex:1, min-height:0) since it no longer
+       has to share the screen with the other one. */
     .why-left, .why-right{
-      padding:1.5rem 1.25rem;
+      display:none;
+      flex:1;
+      min-height:0;
+      padding:1rem 1.25rem;
     }
-    /* border-right:none + border-bottom is handled by the existing
-       .why-left mobile override elsewhere -- the divider just needs to
-       run along the bottom of the now-horizontal split instead of down
-       the right side of the old side-by-side one. */
-    /* fixed 380px was sized against a full desktop-height half-screen;
-       shrunk here so why-right's total (label + this) leaves why-text a
-       reasonable share of a phone's much shorter one-screen budget. The
-       row-gap and grid-template-rows fractions inside stay proportional
-       (grid-template-rows uses fr units + one fixed 4.5rem row), so this
-       single height change alone reflows the whole carousel to fit. */
-    .blog-carousel{
-      height:280px;
+    .why.why-tab-text .why-left{ display:flex; }
+    .why.why-tab-blog .why-right{ display:flex; }
+    /* border-right (desktop's side-by-side divider) makes no sense once
+       only one column is ever shown at a time */
+    .why-left{
+      border-right:none;
     }
     /* desktop's 3rem/1.5rem breathing room around the whole section is a
        lot of wasted screen on a phone, where the open card is already
@@ -3413,6 +3441,10 @@
 </template>
 
 <section class="why" id="whySection">
+  <div class="why-mobile-tabs" id="whyMobileTabs">
+    <button type="button" class="why-mobile-tab active" data-why-tab="text">Warum das Ganze?</button>
+    <button type="button" class="why-mobile-tab" data-why-tab="blog">Blog</button>
+  </div>
   <div class="why-left">
     <h2 class="why-title">Warum das Ganze?</h2>
     <div class="why-text-row">
@@ -3583,51 +3615,69 @@ function pageAnimationUnlock(){ pageAnimationActive = false; }
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-// a real smooth-scroll's duration isn't a fixed constant -- it varies with
-// distance, and on mobile Safari specifically can be stretched further
-// still by the dynamic toolbar (address/tab bar) animating in or out at
-// the same time as the scroll. Anything timed against a fixed guessed
-// duration instead of the scroll actually finishing races that: if the
-// real scroll (or the toolbar) is still moving once the timer fires, a
-// fresh touch/wheel/click can interrupt it wherever it happens to be --
-// which is exactly what reads as "landed between two sections" instead of
-// snapped to either one. This watches real scroll position instead: once
-// it hasn't moved for a few consecutive frames, whatever motion was
-// happening is actually done.
-function afterScrollSettles(callback){
-  let lastY = window.scrollY;
-  let stableFrames = 0;
-  const REQUIRED_STABLE_FRAMES = 6; // ~100ms at 60fps
-  const MAX_WAIT_MS = 2500; // safety net -- never wait forever if something's gone wrong
-  const startedAt = Date.now();
-  function tick(){
-    const y = window.scrollY;
-    if (y === lastY) stableFrames++;
-    else { stableFrames = 0; lastY = y; }
-    if (stableFrames >= REQUIRED_STABLE_FRAMES || Date.now() - startedAt > MAX_WAIT_MS){
-      callback();
+// the scroll position that lands `target`'s top (or, for block:'center',
+// its vertical center) at the right spot in the viewport -- recomputed
+// fresh every time it's called, not cached, since the whole point of
+// calling this mid-animation (see animateScrollTo) is to keep tracking
+// the *current* right answer even if the layout itself shifts underneath
+// the animation (mobile Safari's dynamic toolbar collapsing/expanding
+// being the main real-world case: every section tracks that live via
+// 100dvh, so a section's true position can genuinely change mid-scroll).
+function computeSnapY(target, block){
+  const rect = target.getBoundingClientRect();
+  const absoluteTop = rect.top + window.scrollY;
+  if (block === 'center') return absoluteTop - (window.innerHeight - rect.height) / 2;
+  return absoluteTop;
+}
+
+// replaces native scrollIntoView(behavior:'smooth') for every section-jump
+// on the site. The native version hands the entire animation over to the
+// browser, whose real duration/easing isn't something we can know or rely
+// on -- mobile Safari especially, where its own dynamic toolbar animating
+// at the same time can stretch or otherwise disturb it, landing short of
+// the real target. That used to get papered over with a separate
+// "wait for it to settle, then pop-correct" step, but the pop itself was
+// the problem: exactly the "not smooth" moment the correction was visible
+// happening. Owning the animation ourselves instead means every frame,
+// including the very last one, is *us* choosing the scroll position --
+// there's no separate "did the browser actually get there" question left
+// to ask afterwards, so there's nothing left to visibly correct. The
+// target position is re-measured every frame (see computeSnapY) rather
+// than fixed once at the start, so if the layout genuinely shifts mid-
+// flight this still eases smoothly onto the real, current target instead
+// of a stale one -- no jump, no correction, just one continuous motion.
+function animateScrollTo(target, block, durationMs, onDone){
+  const startY = window.scrollY;
+  const startTargetY = computeSnapY(target, block);
+  const startTime = performance.now();
+  function ease(t){ return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function frame(now){
+    const t = Math.min(1, (now - startTime) / durationMs);
+    if (t >= 1){
+      window.scrollTo({ top: computeSnapY(target, block), left: 0, behavior: 'instant' });
+      if (onDone) onDone();
       return;
     }
-    requestAnimationFrame(tick);
+    // eased distance along the *original* start->target span, but applied
+    // as an offset from the freshly re-measured target so a mid-flight
+    // shift nudges the whole curve rather than snapping onto it discontinuously
+    const currentTargetY = computeSnapY(target, block);
+    const y = currentTargetY - (startTargetY - startY) * (1 - ease(t));
+    // 'instant', not 'auto' -- 'auto' means "respect scroll-behavior",
+    // and html{scroll-behavior:smooth} is set site-wide, which would let
+    // the browser smooth *each* of these 60-times-a-second calls on top
+    // of the easing this function already applies by hand, fighting it
+    window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+    requestAnimationFrame(frame);
   }
-  requestAnimationFrame(tick);
+  requestAnimationFrame(frame);
 }
 
 // shared by every "jump to this section" trigger -- the section-paging
 // wheel/touch/keyboard handlers below and each hero CTA's own scroll
-// (openDoor/openPedals/openSlogan/openSumme). Kicks off the normal smooth
-// scroll for the visible motion, then once it's genuinely finished (see
-// afterScrollSettles above) snaps once more, instantly, straight to the
-// same target -- a no-op if the smooth scroll actually landed exactly
-// right, but a real correction if anything (the dynamic toolbar chief
-// among them) left it slightly short/long or interrupted it early.
-// onDone (optional) fires after that correction, once everything's settled.
+// (openDoor/openPedals/openSlogan/openSumme).
 function snapSectionIntoView(target, block, onDone){
-  target.scrollIntoView({ behavior:'smooth', block: block });
-  afterScrollSettles(function(){
-    target.scrollIntoView({ behavior:'auto', block: block });
-    if (onDone) onDone();
-  });
+  animateScrollTo(target, block, 500, onDone);
 }
 
 function makeGlimpse(text, x, y, size, rotate, opacity, filterId){
@@ -3971,12 +4021,14 @@ const whySection = document.getElementById('whySection');
     if (whyTextSlider) whyTextSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
   }
   // caps this box's height to whatever's actually left on screen below it
-  // -- not however tall why-left/the section end up, which depends on
-  // why-right's own content (the blog carousel) and can be taller than
-  // one viewport, letting the box grow to fit all the text and the
+  // -- not however tall why-left/the section end up, which can be taller
+  // than one viewport, letting the box grow to fit all the text and the
   // scrollbar disappear entirely instead of scrolling within view. The
   // title's own height is responsive (clamp()), so this is measured from
-  // JS rather than guessed as a fixed CSS value.
+  // JS rather than guessed as a fixed CSS value. On phone, why-right (the
+  // blog carousel) is a separate tab rather than sharing the screen with
+  // this one (see .why-mobile-tabs), so it's never visible at the same
+  // time as this box and doesn't need to be budgeted for here.
   function updateWhyTextHeight(){
     const whyLeftEl = whyTextEl.closest('.why-left');
     const sectionEl = whyTextEl.closest('.why');
@@ -3992,18 +4044,7 @@ const whySection = document.getElementById('whySection');
     // regardless of where the page happens to be scrolled to right now.
     const rowTopInSection = whyTextEl.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
     const padBottom = parseFloat(getComputedStyle(whyLeftEl).paddingBottom) || 0;
-    // phone: why-right (the blog carousel) no longer sits beside this
-    // column, it sits *below* it in the same one-screen-tall section (see
-    // the .why mobile override) -- so its own height has to come out of
-    // this same budget too, or this box would still claim the entire rest
-    // of the viewport for itself and push why-right below the fold,
-    // making the whole section taller than one screen again despite the
-    // hard cap. Desktop's side-by-side layout has no such conflict, so it
-    // keeps claiming everything below this row exactly as before.
-    const isPhone = window.matchMedia('(max-width:640px)').matches;
-    const whyRightEl = isPhone ? sectionEl.querySelector('.why-right') : null;
-    const whyRightH = whyRightEl ? whyRightEl.getBoundingClientRect().height : 0;
-    whyTextEl.style.height = Math.max(80, window.innerHeight - rowTopInSection - padBottom - whyRightH) + 'px';
+    whyTextEl.style.height = Math.max(80, window.innerHeight - rowTopInSection - padBottom) + 'px';
   }
   // called once the real text is in -- a short text needs no scrollbar at
   // all (same "only render the nav if it's actually needed" principle as
@@ -4054,6 +4095,35 @@ const whySection = document.getElementById('whySection');
       applyFrac(sliderFracFromEvent(whyTextSlider, evt.touches[0]));
     }, { passive:true });
     window.addEventListener('touchend', function(){ dragging = false; });
+  }
+
+  // mobile only: why-left ("Warum das Ganze?") and why-right (the blog)
+  // take turns on their own screen instead of sharing one (see
+  // .why-mobile-tabs) -- desktop hides these buttons entirely via CSS and
+  // keeps showing both side by side, untouched.
+  const whyMobileTabs = document.getElementById('whyMobileTabs');
+  if (whyMobileTabs){
+    const whySectionEl = whyTextEl.closest('.why');
+    const whyTabButtons = Array.prototype.slice.call(whyMobileTabs.querySelectorAll('.why-mobile-tab'));
+    whyMobileTabs.addEventListener('click', function(e){
+      const btn = e.target.closest('.why-mobile-tab');
+      if (!btn || !whySectionEl) return;
+      const tab = btn.getAttribute('data-why-tab');
+      whyTabButtons.forEach(function(b){ b.classList.toggle('active', b === btn); });
+      whySectionEl.classList.toggle('why-tab-text', tab === 'text');
+      whySectionEl.classList.toggle('why-tab-blog', tab === 'blog');
+      if (tab === 'text'){
+        // why-text was display:none while the blog tab was showing, so any
+        // earlier attempt to size it measured against a collapsed box --
+        // re-measure now that it's actually visible again
+        updateWhyTextHeight();
+        refreshThumb();
+      }
+    });
+    // matches the "active" class already on the text button in the
+    // markup -- this puts the matching class on the section itself so
+    // the CSS (.why.why-tab-text .why-left) actually shows that panel
+    if (whySectionEl) whySectionEl.classList.add('why-tab-text');
   }
 
   fetch('texts/why.txt')
@@ -7401,7 +7471,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (!target) return;
         const isPhone = window.matchMedia(PHONE_QUERY).matches;
         const block = (target === spotlightSection && !isPhone) ? 'center' : 'start';
-        target.scrollIntoView({ behavior:'auto', block: block });
+        // 'instant', not 'auto' -- see animateScrollTo's own comment on why
+        window.scrollTo({ top: computeSnapY(target, block), left: 0, behavior: 'instant' });
       }, 120);
     });
   }
