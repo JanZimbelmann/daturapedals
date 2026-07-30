@@ -2496,6 +2496,14 @@
        only one column is ever shown at a time */
     .why-left{
       border-right:none;
+      /* more than the shared 1rem bottom padding above -- this is the
+         whole panel's own clearance from the screen's bottom edge, not
+         the scrollable text's own internal padding (see .why-text's
+         separate padding-bottom for that); updateWhyTextHeight reads
+         this value back via getComputedStyle, so the text box
+         automatically shrinks to leave this much room, no JS change
+         needed here. */
+      padding-bottom:2.5rem;
     }
     /* the ordered list's numbers render outside the li's own padding box
        (default list-style-position:outside), and overflow-y:auto on
@@ -2948,6 +2956,16 @@
       left:50%;
       right:auto;
       transform:translateX(-50%);
+      /* these sit dead center on phone now (desktop's scattered corner
+         positions rarely landed on top of a particle) -- background is
+         transparent by default (see .preorder-btn), which reads fine when
+         the box is just passing over empty space, but with particles
+         constantly drifting behind it here, some are always going to
+         wander directly underneath and show right through, looking like
+         the box isn't actually in front of them. A solid backing (same
+         black as the page) actually blocks whatever's behind it instead
+         of just visually sitting above it in z-order. */
+      background:var(--black);
     }
     .contact-btn-top{ top:34%; bottom:auto; }
     .contact-btn-bottom{ top:50%; bottom:auto; }
@@ -3114,8 +3132,24 @@
   }
 
   .modal-box-impressum{
+    /* max-height/overflow used to live directly on this box, but
+       .modal-close is an absolutely-positioned *child* of it -- when the
+       same element both scrolls its own content and hosts an absolutely-
+       positioned child, that child scrolls away with everything else
+       instead of staying pinned to the box's own visible corner (it's
+       only ever "pinned" relative to the box's full scrollable content
+       area, not its viewport). Moved the actual scrolling to a separate
+       inner wrapper (.impressum-scroll) instead, so this box itself no
+       longer scrolls and the close button -- still a direct child of
+       *this*, not of the wrapper -- has nothing pulling it out of view.
+    */
     max-height:80vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .impressum-scroll{
     overflow-y:auto;
+    min-height:0;
   }
   .impressum-heading{
     font-family:'Anton', sans-serif;
@@ -3585,35 +3619,39 @@
 <div class="modal-overlay" id="modalImpressum">
   <div class="modal-box modal-box-impressum">
     <button class="modal-close" id="modalImpressumClose" aria-label="Schließen">&times;</button>
-    <h3 class="impressum-heading">Impressum</h3>
+    <!-- everything scrollable lives in here, not on modal-box-impressum
+         itself -- see .impressum-scroll's own CSS comment for why -->
+    <div class="impressum-scroll">
+      <h3 class="impressum-heading">Impressum</h3>
 
-    <p class="impressum-section-title">Angaben gemäß § 5 TMG</p>
-    <p class="impressum-text">
-      Datura Pedals GbR<br>
-      Musterstraße 12<br>
-      04109 Leipzig<br>
-      Deutschland
-    </p>
+      <p class="impressum-section-title">Angaben gemäß § 5 TMG</p>
+      <p class="impressum-text">
+        Datura Pedals GbR<br>
+        Musterstraße 12<br>
+        04109 Leipzig<br>
+        Deutschland
+      </p>
 
-    <p class="impressum-section-title">Vertreten durch</p>
-    <p class="impressum-text">Max Mustermann, Erika Musterfrau</p>
+      <p class="impressum-section-title">Vertreten durch</p>
+      <p class="impressum-text">Max Mustermann, Erika Musterfrau</p>
 
-    <p class="impressum-section-title">Kontakt</p>
-    <p class="impressum-text">
-      Telefon: +49 (0) 341 123456<br>
-      E-Mail: daturapedals@gmail.com
-    </p>
+      <p class="impressum-section-title">Kontakt</p>
+      <p class="impressum-text">
+        Telefon: +49 (0) 341 123456<br>
+        E-Mail: daturapedals@gmail.com
+      </p>
 
-    <p class="impressum-section-title">Umsatzsteuer-ID</p>
-    <p class="impressum-text">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000</p>
+      <p class="impressum-section-title">Umsatzsteuer-ID</p>
+      <p class="impressum-text">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000</p>
 
-    <p class="impressum-section-title">Redaktionell verantwortlich</p>
-    <p class="impressum-text">Max Mustermann, Musterstraße 12, 04109 Leipzig</p>
+      <p class="impressum-section-title">Redaktionell verantwortlich</p>
+      <p class="impressum-text">Max Mustermann, Musterstraße 12, 04109 Leipzig</p>
 
-    <p class="impressum-section-title">EU-Streitschlichtung</p>
-    <p class="impressum-text">Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
+      <p class="impressum-section-title">EU-Streitschlichtung</p>
+      <p class="impressum-text">Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
 
-    <p class="impressum-note">Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.</p>
+      <p class="impressum-note">Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.</p>
+    </div>
   </div>
 </div>
 
