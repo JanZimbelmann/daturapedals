@@ -2497,6 +2497,15 @@
     .why-left{
       border-right:none;
     }
+    /* the ordered list's numbers render outside the li's own padding box
+       (default list-style-position:outside), and overflow-y:auto on
+       .why-text implicitly makes overflow-x compute to auto too --
+       0.3rem of left padding was enough clearance for that on desktop,
+       but not on phone's own narrower box, so the "1."/"2." markers were
+       getting clipped by that same overflow boundary here specifically. */
+    .why-text{
+      padding-left:1.2rem;
+    }
     /* Blog tab: desktop's peeking-neighbor "wheel" needs width/height a
        phone's dedicated Blog tab doesn't have to spare -- region-above is
        never populated here anyway (see renderWheel's isPhone check), and
@@ -2887,6 +2896,19 @@
     white-space:nowrap;
     pointer-events:none;
   }
+  @media (max-width:640px){
+    /* the particle-count fader is a hover-revealed desktop affordance
+       (see .particle-slider's own comment: "invisible until hovered") --
+       there's no hover on a phone, so it'd otherwise just sit there
+       either permanently invisible or permanently in the way; simplest
+       is to not render it at all here rather than reworking a hover-only
+       control for touch. Same "own media query right after the base
+       rule" placement as the .contact-btn-* override below, for the same
+       cascade-ordering reason. */
+    .particle-slider{
+      display:none;
+    }
+  }
   .contact-btn-top{
     position:absolute;
     top:24%;
@@ -2907,6 +2929,29 @@
     left:18%;
     transform:translate(-50%, 50%);
     z-index:1;
+  }
+  @media (max-width:640px){
+    /* desktop scatters these three at percentage-based corner offsets --
+       on a phone-width section those same percentages leave far less
+       horizontal clearance than a button's own width needs, running it
+       past the screen edge instead of just off-center like on a wide
+       desktop viewport. Centering all three horizontally (left:50%,
+       transform:translateX(-50%) instead of each rule's own two-axis
+       translate) guarantees every button stays fully on screen regardless
+       of width, stacked down the vertical center instead of scattered to
+       the sides. Placed in its own media query right here (rather than
+       the main mobile block earlier in the file) so it comes after these
+       same-specificity base rules in source order and actually wins the
+       cascade -- an earlier media query block doesn't beat a later plain
+       rule of equal specificity just for being wrapped in @media. */
+    .contact-btn-top, .contact-btn-bottom, .contact-btn-impressum{
+      left:50%;
+      right:auto;
+      transform:translateX(-50%);
+    }
+    .contact-btn-top{ top:34%; bottom:auto; }
+    .contact-btn-bottom{ top:50%; bottom:auto; }
+    .contact-btn-impressum{ top:66%; bottom:auto; }
   }
 
   /* ---------- modals (Pre-Order / Kontakt / Newsletter) ---------- */
