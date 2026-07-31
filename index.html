@@ -2722,13 +2722,6 @@
       max-width:none;
       height:auto;
       padding:0.6rem 1rem;
-      /* this becomes a plain full-width header bar on phone (see the
-         comment on .spotlight-wraps above) sitting directly on top of the
-         program bar right below it -- desktop's full border (needed to
-         frame a standalone side panel) reads as an unwanted stray white
-         line right at that seam here instead, since there's no gap for
-         it to actually divide anything. */
-      border-bottom:none;
     }
     /* the desktop-only ".wrap-active locks the side box back to 56px"
        rule (it undoes the :hover 64px-wide enlarge once a tab becomes
@@ -2742,6 +2735,17 @@
       width:100%;
       min-width:0;
       max-width:none;
+      /* only the *expanded* header bar sits directly on top of its own
+         card's content (the program bar) right below it -- desktop's full
+         border (needed to frame a standalone side panel) reads as an
+         unwanted stray white line right at that seam here instead, since
+         there's no gap for it to actually divide. An idle/collapsed box
+         has no such card riding directly under it (just the next edition's
+         own collapsed box, or plain page background), so it keeps its
+         normal 4-sided border -- restated on the .wrap-active box
+         specifically rather than the plain .spotlight-side-box rule above,
+         which was dropping this on every state including idle ones. */
+      border-bottom:none;
     }
     /* :hover doesn't mean anything on a touch device -- worse, a tap on
        an element that still has real :hover styles is exactly the
@@ -2883,72 +2887,128 @@
          visible reason. flex:none defers back to its own content height. */
       flex:none;
     }
+    /* height matches .artist-circle-wrap's own (see below) -- both
+       children placed here are position:absolute (see their own rules),
+       so this is their actual positioning frame: top:0 lines up with the
+       circle's top cut-line, top:50% with its exact vertical middle.
+       Without an explicit height to match, there'd be nothing for those
+       percentages to be relative to. */
     .artist-caption{
+      position:relative;
       align-items:flex-start;
-      margin-top:0.3rem;
+      margin-top:0;
       width:auto;
+      flex:1;
+      min-width:0;
+      height:142px;
     }
+    /* centered on the circle's own vertical middle (see .artist-circle-img
+       below, cropped symmetrically now instead of bottom-aligned) rather
+       than stacked in flow after the kooperation line -- flow order would
+       have made its position depend on how tall that line's content
+       happened to be, when the point is for it to always land dead center
+       on the image regardless. */
     .artist-name-current{
       text-align:left;
       max-width:160px;
+      position:absolute;
+      top:50%;
+      left:0;
+      transform:translateY(-50%);
     }
     .artist-nav-row{
       display:none;
     }
-    /* the wrap clips the image's *bottom* off by default, with the
-       "sunset horizon" line (.artist-circle-clip::after) sitting right at
-       that cut -- flipped here to clip the top instead, so the line sits
-       above the image rather than slicing across its lower portion */
+    /* symmetric crop: the image is centered in the wrap now (see
+       .artist-circle-img below) instead of bottom-aligned, so shrinking
+       the wrap below the image's own 170px height clips equally off the
+       top and bottom, the same distance from the middle either way,
+       instead of piling the whole cut onto one side. 142px crops 14px off
+       each edge. Shorter than before on purpose (was 158, one-sided) --
+       between this and the caption no longer needing flow room for a
+       stacked kooperation block, the whole row sits noticeably shorter,
+       which is what actually lets the bio text start higher below it. */
     .artist-circle-wrap{
-      /* cuts noticeably less of the circle off than the default 140px
-         (30px lost) -- most of the photo stays visible, with just enough
-         clipped that the line still reads as sitting "into" the image
-         rather than floating just above it */
-      height:158px;
+      height:142px;
     }
     .artist-circle-img{
-      top:auto;
-      bottom:0;
+      top:50%;
+      bottom:auto;
+      transform:translateY(-50%);
     }
+    /* the top cut-line (unchanged position, top:0) plus its new mirror at
+       bottom:0 -- both confined to the clip's own width so they actually
+       cross the image, unlike their ::before/::after counterparts on the
+       wrap just below, which are the parts allowed to run on past it */
     .artist-circle-clip::after{
       bottom:auto;
       top:0;
     }
-    /* extends the same cut-line rightward past the circle itself, into
-       the gap toward the name/collab column -- drawn on the wrap (which
-       stays overflow:visible) rather than the clip (overflow:hidden,
-       needed to actually cut the image), so it isn't clipped away the
-       instant it pokes out past the circle's own width. */
+    .artist-circle-clip::before{
+      content:'';
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      height:1px;
+      background:var(--edition-fg, var(--white));
+    }
+    /* extends both cut-lines rightward past the circle itself, into the
+       gap toward the name/collab column -- drawn on the wrap (which stays
+       overflow:visible) rather than the clip (overflow:hidden, needed to
+       actually cut the image), so they aren't clipped away the instant
+       they poke out past the circle's own width. left:0 with no matching
+       negative-left/margin means neither one ever extends *before* the
+       circle's own left edge -- only rightward, same as the confined
+       portion crossing the image itself. */
     .artist-circle-wrap::before{
       content:'';
       position:absolute;
       left:0;
       top:0;
-      width:calc(100% + 2.5rem);
+      width:calc(100% + 3.5rem);
+      height:1px;
+      background:var(--edition-fg, var(--white));
+    }
+    .artist-circle-wrap::after{
+      content:'';
+      position:absolute;
+      left:0;
+      bottom:0;
+      width:calc(100% + 3.5rem);
       height:1px;
       background:var(--edition-fg, var(--white));
     }
     /* "In Kooperation mit:" + the numbered collab buttons, relocated into
-       the caption column (see syncMobileLayout) -- the desktop 2-column
-       grid + decorative divider lines only made sense as a standalone
-       full-width row; stacked here under the name instead, lines dropped
-       since there's no room for them to mean anything at this width. */
+       the caption column (see syncMobileLayout) -- pinned to top:0 so the
+       text visually sits right on the top cut-line/its rightward
+       extension, the way it read as part of one continuous line on
+       desktop's own divider. Side by side again (not stacked) now that
+       it's living on a single line height rather than its own free-
+       standing row; the divider lines themselves still make no sense at
+       this width, so those stay dropped. */
     .card-page-artist .collab-divider{
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
       display:flex;
-      flex-direction:column;
-      align-items:flex-start;
+      align-items:center;
+      justify-content:space-between;
       height:auto;
-      padding:0.4rem 0 0;
-      gap:0.4rem;
+      padding:0;
+      gap:0.6rem;
+    }
+    .card-page-artist .collab-divider-left-group,
+    .card-page-artist .collab-divider-right-group{
+      min-width:0;
     }
     .card-page-artist .collab-divider-line{
       display:none;
     }
     .card-page-artist .collab-divider-text{
       padding:0;
-      white-space:normal;
-      overflow:visible;
-      text-overflow:clip;
+      white-space:nowrap;
     }
     .card-page-artist .collab-buttons{
       margin-right:0;
@@ -3031,7 +3091,8 @@
        row is just nav + circle-block + padding, none of which depend on
        the bio box's own size, so there's nothing left to feed back. */
     .card-page-info.active,
-    .card-page-artist.active{
+    .card-page-artist.active,
+    .card-page-controls.active{
       justify-content:flex-start;
     }
     /* Mod 0 / Mod 1 once relocated here: the collapsed-strip/expand-to-
@@ -3065,56 +3126,57 @@
     }
     .card-page-controls .spotlight-diagram-block{
       background:var(--black);
-      /* keeps its natural size rather than also being flex-shrunk if the
-         params below it need more room than the tab's own available
-         height -- see the overflow-y:auto on the tab itself, and the
-         override right below for why the diagram wasn't the thing
-         actually stopping the params from properly overflowing into it */
+      /* keeps its natural size rather than also being flex-shrunk -- see
+         the fixed-height override on .bio-panel-object below for why this
+         one no longer needs to leave it any extra room */
       flex-shrink:0;
+      /* base rule's 1.75rem all around (shared with desktop's side-by-side
+         layout) left a noticeable gap above the diagram before it ever
+         reached this now top-aligned tab (see .card-page-controls.active
+         above) -- trimmed so the pedal itself sits right under the tabs. */
+      padding:0.5rem 1.75rem;
     }
     .card-page-controls .bio-panel-object{
       position:static !important;
       width:auto !important;
-      /* NOT flex:1 (flex-grow:1, flex-shrink:1, flex-basis:0%) -- basis:0%
-         means this box's own size comes purely from however much space
-         flex-grow assigns it, ignoring its actual content entirely, so it
-         was always shrinking down to "whatever's left after the diagram"
-         regardless of how many params that content actually needed --
-         with .control-info-params no longer height-capped (see
-         getParamPageSize), that "leftover space" was routinely smaller
-         than the params grid's own real height, and the excess just
-         never existed as far as layout was concerned (nothing to scroll
-         to, since nothing was ever measured as overflowing). flex-shrink:0
-         with no flex-grow instead sizes this from its own natural content
-         height, same as the diagram above it -- *that* natural height is
-         what can now genuinely exceed the tab's available space, which is
-         exactly what overflow-y:auto on the tab is there to catch. */
       flex-shrink:0;
       background:var(--grey-1);
       border-top:1px solid var(--grey-2);
+      /* fixed, constant height regardless of what's currently selected --
+         always-open on phone (see the comment above), so without an
+         explicit height the box previously resized between "no control
+         picked yet" (a couple of lines of placeholder text) and "a synth's
+         full param list" (several rows in the 2-column grid), which read
+         as the whole tab jumping every time a different control was
+         pressed. A param list taller than this scrolls internally instead
+         of growing the box any further. */
+      height:13rem;
+      overflow-y:auto;
     }
     .card-page-controls .bio-panel-object .object-info-inner{
       opacity:1 !important;
-      /* height:100% (base rule) against a parent whose own height is
-         supposed to come from *this* element's content -- bio-panel-
-         object above is flex-shrink:0/flex-grow:0 now specifically so it
-         sizes itself from its content instead of an assigned share of
-         leftover space, but percentage heights inside an auto-sized flex
-         item are a well-known inconsistent edge case, and Chromium was
-         resolving it using the flex container's available space anyway,
-         recreating the exact clipping this was meant to fix. Auto here
-         removes the percentage (and the circular dependency it created)
-         entirely -- this just sizes from its own content, same as
-         everything else in this chain now does. */
+      /* auto, not 100% -- this box's own parent is a fixed height now
+         (see above) with its own overflow-y:auto, so content just sizes
+         itself naturally and the parent scrolls if it doesn't fit,
+         instead of this element being stretched/squashed to match it. */
       height:auto;
+      /* the base rule's 1rem right padding was still reading as "right up
+         against the edge" once the params sat in 2 columns -- a bit more
+         room specifically here, past what the single-column desktop/
+         Overview text needs. */
+      padding-right:1.75rem;
     }
     /* "Potentiometer 1 (Mod 0)" etc -- not needed to understand what's
        selected (the pedal's own highlighted control + the synth name
        right below already make that clear), and dropping it is real
        vertical room back on a screen this cramped. .spotlight-title is
        shared with the Artist tab's "Bio:" label, so this only targets
-       the one actually inside this tab's own info panels. */
-    .card-page-controls .object-info-inner > .spotlight-title{
+       the one actually inside this tab's own info panels. Excludes
+       .no-selection-yet (see renderBoxTitles) -- that's this same element
+       showing "Please select a button..." instead of a real control name,
+       which is exactly what the always-open box (see .bio-panel-object
+       above) needs to actually show before anything's been picked. */
+    .card-page-controls .object-info-inner > .spotlight-title:not(.no-selection-yet){
       display:none;
     }
     /* 2 columns instead of the shared single-column list, and no fixed
@@ -4886,7 +4948,17 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
     // itself -- fired now, immediately, rather than alongside the scroll
     // below, so its card is already expanding (or fully expanded) toward
     // its real final height well before the scroll below reads that height
-    if (window.matchMedia('(max-width:640px)').matches && window.__openEditionBySlug){
+    const isPhoneSlogan = window.matchMedia('(max-width:640px)').matches;
+    // a *different* edition already being open means this goes through
+    // swapToEdition's close-then-open sequence instead of a plain
+    // requestOpen -- close (CARD_MS*0.85) then open (CARD_MS) adds up to
+    // noticeably more than the 650ms this function waits below before
+    // jumping/measuring the section, so that jump used to fire mid-swap,
+    // while the card was still mid-close: wrong height, wrong scroll
+    // landing, and the old card's own fade-out reading as "everything
+    // just went dark" for however long it took the rest to catch up.
+    const alreadyHadOtherEditionOpen = isPhoneSlogan && !!document.querySelector('.spotlight-wrap.wrap-active');
+    if (isPhoneSlogan && window.__openEditionBySlug){
       window.__openEditionBySlug('industrial_noise');
     }
 
@@ -4953,7 +5025,7 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
       // once), so it's also the one most likely to still be moving when
       // an old fixed-duration unlock would have already fired
       snapSectionIntoView(spotlightSection, isPhone ? 'start' : 'center', pageAnimationUnlock);
-    }, 650);
+    }, alreadyHadOtherEditionOpen ? 950 : 650);
   };
 
   sloganMainEl.addEventListener('click', openSlogan);
@@ -6416,7 +6488,50 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // land on a card that's never had a tab explicitly picked on it
       // before (so it would otherwise default back to Overview).
       const carriedPage = oldInstance.getActivePage && oldInstance.getActivePage();
+      const oldWrap = oldInstance.wrap;
+      const rect = oldWrap.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const FADE_MS = 220;
+      // the plain close-then-open sequence (still used below, via
+      // requestClose/requestOpen -- same timing and side effects,
+      // resetPedalObjectInfo/resetVineReveal included, completely
+      // unchanged) fixed the old bug of the new card landing at the very
+      // bottom, but its own close is still a slide-up-and-away -- while
+      // the new card, sitting right after it in the flow, spends that
+      // whole stretch collapsed far down the page (behind the still-full-
+      // height old card) before snapping up into place the instant the
+      // old one finishes collapsing. On a real device that reads as the
+      // new edition arriving from below/the side, not as one box simply
+      // changing what it shows. Freezing the old wrap at its exact
+      // current rect and fading its *opacity* out (faster than its own
+      // slide would become visually noticeable) masks that slide
+      // entirely without touching requestClose's own timing at all --
+      // what's left on screen is just this box's content fading away in
+      // place, the same read as switching programs within one edition.
+      frozenWraps.add(oldWrap);
+      oldWrap.style.position = 'absolute';
+      oldWrap.style.left = (rect.left - containerRect.left) + 'px';
+      oldWrap.style.top = (rect.top - containerRect.top) + 'px';
+      oldWrap.style.width = rect.width + 'px';
+      oldWrap.style.height = rect.height + 'px';
+      oldWrap.style.zIndex = '1';
+      oldWrap.style.transition = 'opacity ' + FADE_MS + 'ms ease';
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){ oldWrap.style.opacity = '0'; });
+      });
       requestClose(oldInstance, function(){
+        frozenWraps.delete(oldWrap);
+        oldWrap.style.position = '';
+        oldWrap.style.left = '';
+        oldWrap.style.top = '';
+        oldWrap.style.width = '';
+        oldWrap.style.height = '';
+        oldWrap.style.zIndex = '';
+        oldWrap.style.opacity = '';
+        oldWrap.style.transition = '';
+        // old is fully faded, collapsed, and out of the way by now, so
+        // this grows the new card cleanly from the top of its own real
+        // flow position instead of racing anything (see requestOpen)
         requestOpen(newInstance, { initialPage: carriedPage });
       });
       return;
@@ -6606,6 +6721,16 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       const modTag1 = wrap.querySelector('.mod-tag-1');
       const detail0 = wrap.querySelector('.object-info-detail-0');
       const detail1 = wrap.querySelector('.object-info-detail-1');
+      // phone: the row this sits in (control name + Mod tag) is hidden by
+      // its own CSS -- redundant there once a real control's picked (the
+      // pedal's own highlighted control already says which one), but that
+      // same rule blanket-hid this *placeholder* message too, before a
+      // control's ever been picked -- leaving the always-open box (see
+      // .card-page-controls .bio-panel-object) looking completely empty
+      // instead of prompting anything. This class lets that CSS rule keep
+      // hiding the row for a real label while still showing it for this one.
+      if (objectInfoTitleRow) objectInfoTitleRow.classList.toggle('no-selection-yet', !pendingLabel);
+      if (objectInfoTitleMod1Row) objectInfoTitleMod1Row.classList.toggle('no-selection-yet', !pendingLabel);
       if (pendingLabel){
         if (objectInfoTitle) objectInfoTitle.textContent = pendingLabel;
         if (objectInfoTitleMod1) objectInfoTitleMod1.textContent = pendingLabel;
