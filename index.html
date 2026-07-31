@@ -859,6 +859,16 @@
        last line sits flush against the box's own bottom edge, reading as
        "the text runs too far down" even though it's all still reachable */
     padding-bottom:2rem;
+    /* without this, scrolling this box to its own end and continuing to
+       drag lets the touch gesture "chain" into the next scrollable
+       ancestor by native browser behavior -- on phone that's the page
+       itself, bypassing the section-paging freeze entirely (this box is
+       in TOUCH_SWIPE_EXEMPT_SELECTOR precisely so it can scroll natively,
+       but that exemption says nothing about what happens once its own
+       scroll range is exhausted). Landing in genuine free-scroll instead
+       of staying snapped is exactly what read as "sometimes I can just
+       continuously scroll". This stops the chain right here. */
+    overscroll-behavior:contain;
   }
   .why-text::-webkit-scrollbar{
     display:none; /* Chrome/Safari equivalent of scrollbar-width:none above */
@@ -1135,6 +1145,14 @@
     padding:0.9rem 1.2rem;
     box-sizing:border-box;
     overflow-y:auto;
+    /* without this, a touch-scroll that reaches the *end* of this box's
+       own content keeps going by native "scroll chaining" into whatever
+       scrollable ancestor is next -- on phone that's the page itself,
+       bypassing the section-paging freeze entirely (it only ever sees
+       the touch as "already exempt, not its concern", see
+       TOUCH_SWIPE_EXEMPT_SELECTOR) and landing in genuine free-scroll
+       instead of staying snapped. This stops the chain right here. */
+    overscroll-behavior:contain;
     scrollbar-width:thin;
     scrollbar-color:var(--grey-2) transparent;
     cursor:default;
@@ -1884,6 +1902,11 @@
        natural height already fits without it). */
     height:10rem;
     overflow-y:auto;
+    /* see .why-text's identical comment -- without this, scrolling to
+       this box's own end and continuing to drag chains the touch
+       gesture into the page itself instead of stopping, bypassing the
+       section-paging freeze and landing in free-scroll. */
+    overscroll-behavior:contain;
     scrollbar-width:none; /* Firefox -- .bio-text-nav draws the one visible scrollbar, not the browser's own */
   }
   .bio-text-clip::-webkit-scrollbar{
@@ -2414,6 +2437,32 @@
   }
 
   @media (max-width:640px){
+    /* the hero's own font-size clamps already shrink every line quite a
+       bit on a narrow phone screen, and the margins between them were
+       shared with desktop's much larger text -- the combined effect
+       reads as everything bunched into one small, tightly-packed block
+       sitting in the middle of a mostly-empty screen instead of a
+       deliberately arranged page. More room between each line specifically
+       here gives the whole hero a more considered, spread-out feel. */
+    .pedals-label{ margin-top:1.6rem; }
+    .slogan-main{ margin-top:2.2rem; }
+    .divider{ margin-top:1.6rem; }
+    .slogan-sub{ margin-top:1rem; }
+    .summe-text{ margin-top:2.2rem; }
+    /* a long-press on a link or button-like element still let the
+       native text-selection highlight (or, on iOS specifically, the
+       press-and-hold link callout menu -- copy/share/open in new tab,
+       a *different* mechanism from text selection that user-select:none
+       alone doesn't touch) kick in, even though these are meant to be
+       plain tap targets, not selectable/long-press-able text. Most
+       individual interactive elements already set user-select:none of
+       their own, but this catches whatever wasn't and specifically adds
+       -webkit-touch-callout:none, which nothing else on the page set. */
+    a, button, [role="button"]{
+      -webkit-touch-callout:none;
+      -webkit-user-select:none;
+      user-select:none;
+    }
     /* every page-jump target (see pageSections in the section-paging
        script) gets hard-capped to *exactly* one screen here, replacing
        whatever min-height each used on desktop. A min-height lets a
@@ -4033,6 +4082,15 @@ function schedulePedalRotation(){
 if (pedalSlides.length > 1) {
   if (pedalViewer){
     pedalViewer.addEventListener('mouseenter', function(){
+      // phone: a tap can fire a synthetic mouseenter with no matching
+      // mouseleave until the user happens to touch elsewhere, so this
+      // "hover" state could get stuck on indefinitely -- speeding up the
+      // rotation and never slowing back down, or flipping on/off
+      // unpredictably depending on where else got tapped. There's no
+      // real hover intent to react to on a touchscreen in the first
+      // place, so it just never engages there; rotation stays at its
+      // normal, un-sped-up pace regardless of tapping the image.
+      if (window.matchMedia('(max-width:640px)').matches) return;
       pedalHovering = true;
       pedalViewer.classList.add('no-fade');
       schedulePedalRotation();
@@ -4267,6 +4325,32 @@ const whySection = document.getElementById('whySection');
   const scriptTextEl = document.getElementById('scriptText');
   if (!tabVideoBtn || !tabScriptBtn || !panelVideo || !panelScript || !videoIframe || !scriptTextEl) return;
 
+  // phone: .video-panels' own aspect-ratio (16:9, sized off its *width*)
+  // makes sense on a wide desktop viewport, but on a narrow phone screen
+  // it leaves this box short, with most of the section's own one-screen
+  // height sitting empty above/below it. An explicit JS height (which
+  // naturally overrides aspect-ratio -- that only ever fills in whichever
+  // dimension is otherwise auto, and an explicit height leaves nothing
+  // for it to fill) instead fills the section's actual available space,
+  // same "measure what's really left" approach as updateWhyTextHeight.
+  // The video panel's own children (.video-frame/iframe) already stretch
+  // to fill whatever height this box ends up with (position:absolute;
+  // inset:0), and YouTube's player letterboxes its own 16:9 content
+  // inside a taller iframe rather than distorting it, so this is a safe
+  // trade -- desktop's aspect-ratio is untouched.
+  const videoPanelsEl = document.querySelector('.video-panels');
+  function sizeVideoBoxForPhone(){
+    if (!videoPanelsEl) return;
+    if (!window.matchMedia('(max-width:640px)').matches){ videoPanelsEl.style.height = ''; return; }
+    const sectionEl = videoPanelsEl.closest('.video-section');
+    if (!sectionEl) return;
+    const rowTop = videoPanelsEl.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
+    const padBottom = parseFloat(getComputedStyle(sectionEl).paddingBottom) || 0;
+    videoPanelsEl.style.height = Math.max(120, window.innerHeight - rowTop - padBottom) + 'px';
+  }
+  sizeVideoBoxForPhone();
+  window.addEventListener('resize', sizeVideoBoxForPhone);
+
   let scriptLoaded = false;
   let videoPlaying = false; // embed doesn't autoplay, so it starts paused
 
@@ -4438,14 +4522,31 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
 
     const letters = sloganMainEl.querySelectorAll('.letter');
     const spread = Math.min(window.innerWidth, window.innerHeight) * 0.3;
+    const isPhoneScatter = window.matchMedia('(max-width:640px)').matches;
+    const SCATTER_EDGE_MARGIN = 16;
     letters.forEach(function(el){
       const angle = Math.random() * Math.PI * 2;
       const dist = 90 + Math.random() * spread;
-      const dx = Math.cos(angle) * dist;
+      let dx = Math.cos(angle) * dist;
       let dy = Math.sin(angle) * dist;
       // dampen downward scatter specifically so letters don't drift
       // low enough to become visible in the section below
       if (dy > 0) dy *= 0.5;
+      // phone: this same radial distance, applied from each letter's own
+      // position, assumed desktop's comfortable margin on either side of
+      // the centered text -- on a narrow viewport a letter already near
+      // the left/right edge of the word can get pushed straight past the
+      // screen edge instead. Clamping the *destination* x to stay on
+      // screen (rather than shrinking the distance uniformly for every
+      // letter) only reins in the ones that would've gone too far,
+      // leaving letters nearer center scattering exactly as before.
+      if (isPhoneScatter){
+        const rect = el.getBoundingClientRect();
+        const letterCenterX = rect.left + rect.width / 2;
+        const minDx = SCATTER_EDGE_MARGIN - letterCenterX;
+        const maxDx = (window.innerWidth - SCATTER_EDGE_MARGIN) - letterCenterX;
+        dx = Math.max(minDx, Math.min(maxDx, dx));
+      }
       const rot = (Math.random() - 0.5) * 720;
       el.style.setProperty('--sx', dx + 'px');
       el.style.setProperty('--sy', dy + 'px');
@@ -5075,11 +5176,24 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   });
 
   if (!reduceMotionFlow) {
+    // threshold used to be 0.05 -- starting the moment the section is
+    // barely visible sounds right for "don't animate off-screen", but it
+    // also means this fires *mid-scroll*, right as the section-jump
+    // animation (see animateScrollTo) is still easing toward it. From
+    // that point on, this section's own per-frame particle physics +
+    // canvas redraw (100 of them by default) is a second real per-frame
+    // workload competing with the scroll animation's own per-frame work
+    // for the rest of the trip -- exactly what read as the arrival
+    // stuttering/"halting" instead of easing smoothly all the way in.
+    // Waiting until the section is almost entirely in view means that
+    // contention window only opens once the scroll is essentially
+    // already done, regardless of what triggered the scroll (this jump
+    // system, a plain user swipe, or anything else).
     const flowObserver = new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
         if (entry.isIntersecting) start(); else stop();
       });
-    }, { threshold: 0.05 });
+    }, { threshold: 0.98 });
     flowObserver.observe(section);
   }
 
@@ -7087,6 +7201,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       card.style.setProperty('--box-slide', (-fullCardSize).toFixed(1) + 'px');
       card.classList.add('sliding-out');
       clearTimeout(stageTimer);
+      // the +40 pad past the card's own CARD_MS slide/fade duration was
+      // headroom for the transition to visibly finish before snapping the
+      // wrap down to its collapsed size -- on phone specifically, that
+      // pad plus the full duration read as a longer pause than it needed
+      // to before the other (hidden-sibling) cards started growing back
+      // in, since by ~85% through the slide the closing card is already
+      // essentially gone. Trimmed there only; desktop's side-by-side
+      // layout has more room for the wait to read fine as-is.
+      const collapseDelay = isPhone ? Math.round(CARD_MS * 0.85) : CARD_MS + 40;
       stageTimer = setTimeout(function(){
         wrap.classList.add('card-collapsed');
         // reset the clip's explicit height back to its 0px baseline (see
@@ -7096,7 +7219,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (cardClip && window.matchMedia('(max-width:640px)').matches) cardClip.style.height = '0px';
         resetVineReveal();
         if (onDone) onDone();
-      }, CARD_MS + 40);
+      }, collapseDelay);
     }
 
     // jumps straight to a specific program within *this* edition, used
