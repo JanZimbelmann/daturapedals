@@ -2661,7 +2661,10 @@
       height:calc(100dvh + 1px);
       min-height:0;
       overflow:hidden;
-      padding:1.5rem 0.5rem 3rem;
+      /* bottom raised again (3rem -> 4.5rem) -- still overlapping some
+         phones' own browser chrome (a fuller options/tab bar, not just a
+         slim gesture indicator) at the previous value */
+      padding:1.5rem 0.5rem 4.5rem;
       /* base rule vertically centers its content (align-items:center)
          inside a min-height:100vh box -- fine on desktop where the
          section-jump also centers, but on phone the section-jump aligns
@@ -2719,6 +2722,13 @@
       max-width:none;
       height:auto;
       padding:0.6rem 1rem;
+      /* this becomes a plain full-width header bar on phone (see the
+         comment on .spotlight-wraps above) sitting directly on top of the
+         program bar right below it -- desktop's full border (needed to
+         frame a standalone side panel) reads as an unwanted stray white
+         line right at that seam here instead, since there's no gap for
+         it to actually divide anything. */
+      border-bottom:none;
     }
     /* the desktop-only ".wrap-active locks the side box back to 56px"
        rule (it undoes the :hover 64px-wide enlarge once a tab becomes
@@ -2821,6 +2831,14 @@
        matches the viewport's current slide direction). */
     .spotlight-box{
       transform:translateY(var(--box-slide));
+      /* the side box sits directly above this as a full-width header bar
+         here (see its own mobile override, border-bottom:none) rather
+         than beside it like on desktop -- this box's own *top* border,
+         though, still drew a second white line right at that exact seam,
+         undoing the point of removing the header bar's own bottom one.
+         Only the top edge needs to go; left/right/bottom still form the
+         header bar + content's shared outer frame same as before. */
+      border-top:none;
     }
 
     /* desktop only, by request -- the sound-preview button hangs off the
@@ -2838,21 +2856,36 @@
     }
     .spotlight-bio-block{
       padding-left:1.75rem;
+      /* the base rule's 1.75rem top padding, stacked on top of the circle
+         row's own bottom padding right above it, read as a big dead gap
+         before "Bio:" ever showed up -- tightened so the bio starts right
+         under the image, closer to how the rest of this tab is spaced. */
+      padding-top:0.5rem;
     }
     /* image + name side by side instead of stacked underneath, and no
        next/prev nav -- there's no room (or need) for a dedicated "jump
        to another collaborator" control on top of the name itself here */
     .spotlight-circle-block{
       flex-direction:row;
-      align-items:center;
+      align-items:flex-start;
       justify-content:flex-start;
       width:100%;
       gap:1rem;
-      padding:0 0 1rem;
+      padding:0 0 0.5rem;
+      /* the base rule's flex:0 1 230px sizes this block's WIDTH on
+         desktop, where it's a row-item of .spotlight-bottom-row -- but
+         that row switches to flex-direction:column on phone (see its own
+         override just below), which turns this block into a COLUMN item
+         instead, and flex-basis always tracks the *main* axis. Left alone,
+         the same 230px silently became a forced 230px-tall block instead
+         of a 230px-wide one, stretching this row artificially tall and
+         pushing the bio block that same amount further down for no
+         visible reason. flex:none defers back to its own content height. */
+      flex:none;
     }
     .artist-caption{
       align-items:flex-start;
-      margin-top:0;
+      margin-top:0.3rem;
       width:auto;
     }
     .artist-name-current{
@@ -2866,6 +2899,13 @@
        "sunset horizon" line (.artist-circle-clip::after) sitting right at
        that cut -- flipped here to clip the top instead, so the line sits
        above the image rather than slicing across its lower portion */
+    .artist-circle-wrap{
+      /* cuts noticeably less of the circle off than the default 140px
+         (30px lost) -- most of the photo stays visible, with just enough
+         clipped that the line still reads as sitting "into" the image
+         rather than floating just above it */
+      height:158px;
+    }
     .artist-circle-img{
       top:auto;
       bottom:0;
@@ -2873,6 +2913,45 @@
     .artist-circle-clip::after{
       bottom:auto;
       top:0;
+    }
+    /* extends the same cut-line rightward past the circle itself, into
+       the gap toward the name/collab column -- drawn on the wrap (which
+       stays overflow:visible) rather than the clip (overflow:hidden,
+       needed to actually cut the image), so it isn't clipped away the
+       instant it pokes out past the circle's own width. */
+    .artist-circle-wrap::before{
+      content:'';
+      position:absolute;
+      left:0;
+      top:0;
+      width:calc(100% + 2.5rem);
+      height:1px;
+      background:var(--edition-fg, var(--white));
+    }
+    /* "In Kooperation mit:" + the numbered collab buttons, relocated into
+       the caption column (see syncMobileLayout) -- the desktop 2-column
+       grid + decorative divider lines only made sense as a standalone
+       full-width row; stacked here under the name instead, lines dropped
+       since there's no room for them to mean anything at this width. */
+    .card-page-artist .collab-divider{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      height:auto;
+      padding:0.4rem 0 0;
+      gap:0.4rem;
+    }
+    .card-page-artist .collab-divider-line{
+      display:none;
+    }
+    .card-page-artist .collab-divider-text{
+      padding:0;
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+    }
+    .card-page-artist .collab-buttons{
+      margin-right:0;
     }
     /* .bio-text-row's margin-right (reserved space for the Mod boxes
        sitting beside it on desktop) doesn't apply here -- those get
@@ -2939,11 +3018,20 @@
     }
     /* Overview specifically reads better pinned to the top, right under
        the tabs, rather than centered in the leftover space like the
-       general .card-page.active rule above does for every page -- Artist/
-       Controls keep the centering (usually fills the space anyway, or a
-       short Artist bio still benefits from it), this just carves out
-       Overview's own case. */
-    .card-page-info.active{
+       general .card-page.active rule above does for every page -- Controls
+       keeps the centering (usually fills the space anyway), this just
+       carves out Overview's own case. Artist gets the same top-alignment
+       (see its own rule below) for a different reason: its own bio-text-
+       clip already sizes itself to fill whatever room is actually left
+       (see updateBioTextHeightForPhone) using this page's *current*
+       height as an input -- centering on top of that fed the page's own
+       leftover space back into the very measurement computing it, so each
+       reopen could compound further off the last one's rounding instead of
+       settling on a fixed answer. Top-aligned, the space above the bio
+       row is just nav + circle-block + padding, none of which depend on
+       the bio box's own size, so there's nothing left to feed back. */
+    .card-page-info.active,
+    .card-page-artist.active{
       justify-content:flex-start;
     }
     /* Mod 0 / Mod 1 once relocated here: the collapsed-strip/expand-to-
@@ -2955,32 +3043,95 @@
     .card-page-controls.active{
       display:flex;
       flex-direction:column;
-      gap:1px;
-      background:var(--grey-2);
-      /* the general .card-page rule's own padding-top:1rem (clearance
-         under the tabs, shared by every page) sits *inside* this
-         element's box same as everything else -- since this is the one
-         page that gives itself a visible background (so the 1px gaps
-         between its stacked children read as hairline dividers), that
-         padding strip showed the same background too, as a solid gray
-         bar with nothing behind it instead of a hairline. Zeroed here and
-         moved to the first child's own margin-top instead, so the
-         clearance still exists but isn't part of *this* element's own
-         painted area. */
-      padding-top:0;
+      /* the 1px-gap-on-a-gray-background trick (background:grey-2 behind
+         a flex gap, each child opaque) turned out to always show that
+         same gray *anywhere* this element has empty space of its own --
+         including the general .card-page rule's shared padding-top:1rem
+         clearance under the tabs, which isn't a real "divider" at all,
+         just unfilled space -- moving that space from padding to a
+         child's own margin (an earlier attempt) didn't actually fix this:
+         margin sits *outside* the child's box but still *inside* the
+         parent's, so the parent's background painted straight through it
+         exactly the same way, just relabeled. Real fix: no shared
+         background on this element at all -- each child gets its own
+         hairline border instead, which only ever draws a single 1px line
+         between two actual boxes, never a gap-shaped bar. */
+      /* dropping the title + paginated 4-row window below (see
+         getParamPageSize) frees up real room, but a synth with plenty of
+         params in 2 columns can still end up taller than the screen has
+         left -- this lets the whole tab scroll to reach the rest instead
+         of clipping it or pushing the diagram off-screen. */
+      overflow-y:auto;
     }
     .card-page-controls .spotlight-diagram-block{
       background:var(--black);
-      margin-top:1rem;
+      /* keeps its natural size rather than also being flex-shrunk if the
+         params below it need more room than the tab's own available
+         height -- see the overflow-y:auto on the tab itself, and the
+         override right below for why the diagram wasn't the thing
+         actually stopping the params from properly overflowing into it */
+      flex-shrink:0;
     }
     .card-page-controls .bio-panel-object{
       position:static !important;
       width:auto !important;
-      flex:1;
+      /* NOT flex:1 (flex-grow:1, flex-shrink:1, flex-basis:0%) -- basis:0%
+         means this box's own size comes purely from however much space
+         flex-grow assigns it, ignoring its actual content entirely, so it
+         was always shrinking down to "whatever's left after the diagram"
+         regardless of how many params that content actually needed --
+         with .control-info-params no longer height-capped (see
+         getParamPageSize), that "leftover space" was routinely smaller
+         than the params grid's own real height, and the excess just
+         never existed as far as layout was concerned (nothing to scroll
+         to, since nothing was ever measured as overflowing). flex-shrink:0
+         with no flex-grow instead sizes this from its own natural content
+         height, same as the diagram above it -- *that* natural height is
+         what can now genuinely exceed the tab's available space, which is
+         exactly what overflow-y:auto on the tab is there to catch. */
+      flex-shrink:0;
       background:var(--grey-1);
+      border-top:1px solid var(--grey-2);
     }
     .card-page-controls .bio-panel-object .object-info-inner{
       opacity:1 !important;
+      /* height:100% (base rule) against a parent whose own height is
+         supposed to come from *this* element's content -- bio-panel-
+         object above is flex-shrink:0/flex-grow:0 now specifically so it
+         sizes itself from its content instead of an assigned share of
+         leftover space, but percentage heights inside an auto-sized flex
+         item are a well-known inconsistent edge case, and Chromium was
+         resolving it using the flex container's available space anyway,
+         recreating the exact clipping this was meant to fix. Auto here
+         removes the percentage (and the circular dependency it created)
+         entirely -- this just sizes from its own content, same as
+         everything else in this chain now does. */
+      height:auto;
+    }
+    /* "Potentiometer 1 (Mod 0)" etc -- not needed to understand what's
+       selected (the pedal's own highlighted control + the synth name
+       right below already make that clear), and dropping it is real
+       vertical room back on a screen this cramped. .spotlight-title is
+       shared with the Artist tab's "Bio:" label, so this only targets
+       the one actually inside this tab's own info panels. */
+    .card-page-controls .object-info-inner > .spotlight-title{
+      display:none;
+    }
+    /* 2 columns instead of the shared single-column list, and no fixed
+       page-window height -- every param renders at once now (see
+       getParamPageSize), so this just grows to fit them instead of
+       clipping to a fixed number of rows; .control-info-page-nav is
+       never even built in that case (maxOffset resolves to 0), but
+       hidden here too as a defensive no-op if it somehow still rendered. */
+    .card-page-controls .control-info-params{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      grid-auto-rows:min-content;
+      height:auto;
+      overflow:visible;
+    }
+    .card-page-controls .control-info-page-nav{
+      display:none;
     }
     /* desktop shows both Mod 0 and Mod 1 info side by side -- redundant
        here where they'd just stack as two boxes saying the same generic
@@ -3132,7 +3283,10 @@
     }
     .contact-btn-top{ top:34%; bottom:auto; }
     .contact-btn-bottom{ top:50%; bottom:auto; }
-    .contact-btn-impressum{ top:66%; bottom:auto; }
+    /* shifted left and further down from the same centered/stacked
+       position the other two keep -- left:50% -> 30% moves its own
+       centered point left instead of dead-center; top raised further down */
+    .contact-btn-impressum{ top:78%; bottom:auto; left:30%; }
   }
 
   /* ---------- modals (Pre-Order / Kontakt / Newsletter) ---------- */
@@ -4316,6 +4470,22 @@ if (pedalSlides.length > 1) {
       pedalViewer.classList.remove('no-fade');
       schedulePedalRotation();
     });
+    // phone: everything above was mouse-only, leaving touch entirely
+    // dependent on the browser synthesizing mousedown/mouseup/click from
+    // the real touch -- that synthesis isn't instant, and the still-
+    // ticking auto-rotation timer (unaffected by touch until the
+    // synthetic mousedown's own clearTimeout finally runs) could still
+    // fire in that gap, racing the tap's own transition and reading as
+    // two fades happening at once. Wiring touchstart/touchend directly to
+    // the exact same hold/release logic reacts to the real touch
+    // immediately instead of waiting on synthetic events to catch up.
+    pedalViewer.addEventListener('touchstart', function(e){
+      e.preventDefault();
+      pedalHeld = true;
+      if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
+    }, { passive:false });
+    pedalViewer.addEventListener('touchend', releasePedalHold);
+    pedalViewer.addEventListener('touchcancel', releasePedalHold);
   }
   schedulePedalRotation();
 }
@@ -4729,6 +4899,17 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
       const dist = 90 + Math.random() * spread;
       let dx = Math.cos(angle) * dist;
       let dy = Math.sin(angle) * dist;
+      // phone: an elliptical scatter instead of a circular one -- letters
+      // still fly out in every direction (angle stays fully random), but
+      // scaled down horizontally and up vertically afterward so the
+      // spread reads as mostly up/down instead of side to side. Done
+      // before the edge-clamp below so that clamp is reining in these
+      // already-smaller x offsets, not fighting against the original
+      // (larger) ones.
+      if (isPhoneScatter){
+        dx *= 0.55;
+        dy *= 1.35;
+      }
       // dampen downward scatter specifically so letters don't drift
       // low enough to become visible in the section below
       if (dy > 0) dy *= 0.5;
@@ -5768,8 +5949,16 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // this, .control-info-page-nav's up/down buttons and slider (and the
   // Up/Down arrow keys / mouse wheel while hovering the list, see the
   // "keydown"/"wheel" section-paging handlers) page through them one row
-  // at a time instead of scrolling
-  const PARAM_PAGE_SIZE = 4;
+  // at a time instead of scrolling. Phone shows every param at once
+  // instead (2 columns, see .control-info-params' own mobile CSS, with
+  // the whole box scrolling if it's still taller than the screen) --
+  // effectively unlimited here means maxOffset below always resolves to
+  // 0, so the page-nav (built only `if (maxOffset > 0)`) never gets
+  // created there at all, same effect as raising the real desktop limit
+  // without needing a second code path.
+  function getParamPageSize(){
+    return window.matchMedia('(max-width:640px)').matches ? 9999 : 4;
+  }
 
   // (re)builds just the visible window of param rows inside an already-
   // mounted .control-info-params element -- kept separate from the rest of
@@ -5777,7 +5966,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // recreate those, which would otherwise interrupt an in-progress drag
   function renderParamRows(paramsEl, params, offset){
     paramsEl.innerHTML = '';
-    params.slice(offset, offset + PARAM_PAGE_SIZE).forEach(function(param){
+    params.slice(offset, offset + getParamPageSize()).forEach(function(param){
       const row = document.createElement('p');
       row.className = 'control-info-param';
       const nameSpan = document.createElement('span');
@@ -5849,7 +6038,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       groupEl.appendChild(nameEl);
 
       const total = group.params.length;
-      const maxOffset = Math.max(0, total - PARAM_PAGE_SIZE);
+      const maxOffset = Math.max(0, total - getParamPageSize());
       const offset = Math.min(pageOffsets[group.synth] || 0, maxOffset);
       pageOffsets[group.synth] = offset;
 
@@ -6114,7 +6303,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const target = wrap.classList.contains('wrap-hidden-sibling') ? 0 : inst.sideBox.getBoundingClientRect().height;
     wrap.style.height = target + 'px';
   }
-  function requestOpen(instance){
+  function requestOpen(instance, opts){
     if (activeInstance) return; // inactive siblings are unclickable while one is open, shouldn't normally reach here
     activeInstance = instance;
     instances.forEach(syncMobileWrapHeight);
@@ -6147,6 +6336,21 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // finished settling into its final spot.
     function openNow(){
       instance.openCard();
+      // set *after* openCard() (not before, and not from outside this
+      // function, where the caller has no way to know whether tabsAreMoving
+      // deferred this whole function via setTimeout) -- setActivePage's own
+      // remeasure (specifically updateBioTextHeightForPhone, for the Artist
+      // page) measures how much room is left below the bio row by reading
+      // the wrap's *actual current* bottom edge, which only means anything
+      // once openCard()/lockHeight() has already resized the wrap to its
+      // real open height. Doing this before openCard() measured that gap
+      // while the wrap was still at its pre-open (collapsed/small) size,
+      // wildly overestimating the bio box's height -- tall enough that the
+      // Artist page's real content no longer fit inside its own page box,
+      // which .card-page.active's vertical centering then resolved by
+      // overflowing equally above and below it (the "above" part reading
+      // as overlapping the tab-nav row).
+      if (opts && opts.initialPage) instance.setActivePage(opts.initialPage);
       // the vine-reveal is only worth watching once the card itself has
       // actually finished sliding/fading into view -- playing it
       // alongside openCard() would mean most of it happens while the
@@ -6189,6 +6393,34 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // never again interact with the new one's simultaneous grow, in either
   // direction. It's handed back to normal flow once fully shrunk away.
   function swapToEdition(oldInstance, newInstance){
+    // mobile: editions stack in a single column and only one is ever
+    // expanded at a time (idle siblings collapse to small pills, not a
+    // shrinking flex neighbor sitting *beside* a growing one) -- the
+    // freeze-in-place trick below exists purely to stop two side-by-side
+    // flex items from pushing each other around while simultaneously
+    // animating, which has nothing to interact with here at all. Pulling
+    // the old wrap out to position:absolute at its old (near-full-screen)
+    // rect, while the new one simultaneously tries to grow into a mobile
+    // column that never actually made room for it that way, is exactly
+    // what was landing the newly-opened card somewhere unexpected --
+    // visible only right at the very bottom instead of properly filling
+    // the screen. Reusing the plain close-then-open sequence instead (the
+    // same one a single edition's own toggle already uses, and which
+    // already handles phone's own height/scroll specifics correctly)
+    // sidesteps the whole freeze mechanism rather than trying to adapt it.
+    if (window.matchMedia('(max-width:640px)').matches){
+      // carry over whichever tab (Overview/Artist/Controls) was showing on
+      // the old card -- a collab jump to a different edition is still the
+      // same "keep looking at what I was just looking at" gesture as
+      // switching programs within one edition, it just also happens to
+      // land on a card that's never had a tab explicitly picked on it
+      // before (so it would otherwise default back to Overview).
+      const carriedPage = oldInstance.getActivePage && oldInstance.getActivePage();
+      requestClose(oldInstance, function(){
+        requestOpen(newInstance, { initialPage: carriedPage });
+      });
+      return;
+    }
     const oldWrap = oldInstance.wrap;
     const rect = oldWrap.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
@@ -6523,8 +6755,19 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
       if (phone){
         if (descBlockEl) infoPage.appendChild(descBlockEl);
-        if (collabDividerEl) artistPage.appendChild(collabDividerEl);
         if (bottomRowEl) artistPage.appendChild(bottomRowEl);
+        // phone: "In Kooperation mit" + the numbered collab buttons used to
+        // sit in their own full-width row above the circle+bio row entirely
+        // (fine on desktop, where there's room for a whole extra divider
+        // line) -- here they're tucked into the caption column instead, so
+        // they read as part of "who this is" (name, then who they worked
+        // with) rather than an unrelated floating bar. Appended into the
+        // caption specifically (not the circle-block itself, which is a
+        // row on phone -- see its own override) so it stacks *below* the
+        // name rather than beside it.
+        const captionEl = bottomRowEl && bottomRowEl.querySelector('.artist-caption');
+        if (collabDividerEl && captionEl) captionEl.appendChild(collabDividerEl);
+        else if (collabDividerEl) artistPage.appendChild(collabDividerEl);
         if (diagramBlockEl) controlsPage.appendChild(diagramBlockEl);
         if (bioPanelObject) controlsPage.appendChild(bioPanelObject);
         if (bioPanelObjectMod1) controlsPage.appendChild(bioPanelObjectMod1);
@@ -6712,13 +6955,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           if (deg > POTI_MAX_DEG) deg = POTI_MAX_DEG;
           return deg;
         }
-        function startDrag(evt){
+        function startDrag(point){
           dragging = true;
           poti.classList.add('poti-active');
-          angleDeg = angleFromPointer(evt);
+          angleDeg = angleFromPointer(point);
           render();
           showPedalObjectInfo(POTI_LABELS[potiIndex] || 'Potentiometer', poti, potiStoreKey, potiVal());
-          evt.preventDefault();
         }
         function moveDrag(evt){
           if (!dragging) return;
@@ -6737,10 +6979,19 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           dragging = false;
           poti.classList.remove('poti-active');
         }
-        poti.addEventListener('mousedown', startDrag);
+        poti.addEventListener('mousedown', function(evt){ evt.preventDefault(); startDrag(evt); });
         window.addEventListener('mousemove', moveDrag);
         window.addEventListener('mouseup', endDrag);
+        // preventDefault has to run on the real TouchEvent here, not the
+        // Touch point object startDrag itself works with (a Touch has no
+        // .preventDefault of its own) -- previously startDrag tried to
+        // call it on whatever it was handed, which for the touch path was
+        // that same plain Touch object, silently doing nothing. Since
+        // nothing ever actually suppressed it, this is exactly why
+        // dragging a poti could also scroll/pan the page underneath it.
         poti.addEventListener('touchstart', function(evt){
+          if (!evt.touches[0]) return;
+          evt.preventDefault();
           startDrag(evt.touches[0]);
         }, { passive:false });
         window.addEventListener('touchmove', function(evt){
@@ -6783,7 +7034,22 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         btn.addEventListener('mousedown', press);
         btn.addEventListener('mouseup', release);
         btn.addEventListener('mouseleave', release);
-        btn.addEventListener('touchstart', function(evt){ evt.preventDefault(); press(); }, { passive:false });
+        // toggle/latch mode (switch 3 right) is driven by the plain click
+        // handler above instead of press/release -- but this always
+        // called preventDefault() on touchstart regardless of mode, which
+        // is exactly what was silently swallowing that click: mobile
+        // browsers synthesize a click from a touchstart+touchend tap, but
+        // preventDefault()-ing the touchstart can suppress that synthetic
+        // click entirely. In momentary mode that's fine (nothing here
+        // ever needed the click), but in toggle mode it meant a tap could
+        // never actually toggle the button on touch, only a real mouse
+        // click could. Skipping preventDefault (and press(), a no-op in
+        // this mode anyway) here lets the tap synthesize its click normally.
+        btn.addEventListener('touchstart', function(evt){
+          if (buttonsToggleMode) return;
+          evt.preventDefault();
+          press();
+        }, { passive:false });
         btn.addEventListener('touchend', release);
         btn.addEventListener('touchcancel', release);
         buttonEls.push(btn);
@@ -7510,7 +7776,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       lockHeight: lockHeight,
       editionSlug: editionSlug,
       selectProgram: selectProgram,
-      playVineReveal: triggerVineReveal
+      playVineReveal: triggerVineReveal,
+      setActivePage: setActivePage,
+      getActivePage: function(){
+        const activeBtn = wrap.querySelector('.card-page-btn.active');
+        return activeBtn ? activeBtn.dataset.page : null;
+      }
     };
     instances.push(instance);
 
@@ -7862,13 +8133,23 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
     '.why-text, .bio-text-clip, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, ' +
-    '.logo-box, #pedalsLabel, #sloganMain, #summeText';
+    '.logo-box, #pedalsLabel, #sloganMain, #summeText, .why-mobile-tab, .card-page-btn';
+  // the *real scrollable text* subset of the exempt selector above --
+  // .pedal-poti/.particle-slider/#sloganMain etc "own their own gesture"
+  // in a way that never hands off to a page-swipe no matter what (they
+  // have no scroll position to speak of), but a text box like why-text
+  // should: scroll it internally right up until it's already at its own
+  // top/bottom, and only *then* does continuing the same drag hand off
+  // to the normal section-jump -- see touchend below.
+  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .blog-item-content';
   let touchStartY = null;
   let touchSwipeExempt = false;
+  let touchExemptScrollEl = null;
   let touchIsPhone = false;
   window.addEventListener('touchstart', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
     touchSwipeExempt = !!(e.target.closest && e.target.closest(TOUCH_SWIPE_EXEMPT_SELECTOR));
+    touchExemptScrollEl = (e.target.closest && e.target.closest(TOUCH_SCROLL_BOUNDARY_SELECTOR)) || null;
     touchIsPhone = window.matchMedia(PHONE_QUERY).matches;
     touchStartY = e.touches[0].clientY;
   }, { passive:true });
@@ -7885,15 +8166,32 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   window.addEventListener('touchend', function(e){
     const exempt = touchSwipeExempt;
+    const scrollEl = touchExemptScrollEl;
     const wasPhone = touchIsPhone;
     touchSwipeExempt = false;
-    if (document.querySelector('.modal-overlay.active') || touchStartY === null || isJumping || pageAnimationActive || exempt){
+    touchExemptScrollEl = null;
+    if (document.querySelector('.modal-overlay.active') || touchStartY === null || isJumping || pageAnimationActive){
       touchStartY = null;
       return;
     }
     const touchEndY = e.changedTouches[0].clientY;
     const delta = touchStartY - touchEndY;
     touchStartY = null;
+
+    if (exempt){
+      if (!scrollEl) return; // a control that owns its gesture outright (poti, slider, tap target...) -- never hands off
+      // scroll-boundary handoff: dragging inside a real scrollable text
+      // box always scrolls it first (see touchmove above, unaffected);
+      // only once that box is already sitting at the very end in the
+      // direction being dragged does the *same* gesture instead count as
+      // a page-swipe to the next/previous section -- overscroll-behavior:
+      // contain (see the box's own CSS) keeps it pinned there rather than
+      // rubber-banding while that's being decided.
+      const atBottom = scrollEl.scrollTop >= scrollEl.scrollHeight - scrollEl.clientHeight - 1;
+      const atTop = scrollEl.scrollTop <= 1;
+      if (delta > 0 && !atBottom) return; // dragging further in, box isn't done scrolling yet
+      if (delta < 0 && !atTop) return;
+    }
 
     if (!wasPhone){
       // desktop (e.g. a touchscreen laptop): unchanged plain swipe --
