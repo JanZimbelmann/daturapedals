@@ -2444,11 +2444,50 @@
        sitting in the middle of a mostly-empty screen instead of a
        deliberately arranged page. More room between each line specifically
        here gives the whole hero a more considered, spread-out feel. */
-    .pedals-label{ margin-top:1.6rem; }
-    .slogan-main{ margin-top:2.2rem; }
-    .divider{ margin-top:1.6rem; }
-    .slogan-sub{ margin-top:1rem; }
-    .summe-text{ margin-top:2.2rem; }
+    .pedals-label{ margin-top:2.2rem; }
+    .slogan-main{ margin-top:3rem; }
+    .divider{ margin-top:2.2rem; }
+    .slogan-sub{ margin-top:1.4rem; }
+    .summe-text{ margin-top:3rem; }
+    /* the 13vw factor in the desktop clamp resolves to less than its own
+       3.5rem floor on any phone-width viewport, so DATURA always renders
+       at exactly that floor there -- raised here so it actually reads as
+       larger on phone specifically, not just clamped to the same
+       minimum as before. .door shares this so the door-opening animation
+       (see #wordmarkWrap.open) still lines up with the real wordmark's size. */
+    .wordmark, .door{
+      font-size:clamp(4.2rem, 15vw, 9rem);
+    }
+    /* a tap fires a synthetic mouseenter with no matching mouseleave
+       until something else gets touched, so every one of these hover
+       effects could get stuck engaged indefinitely on phone instead of
+       the brief, deliberate moment they're meant to be on a real mouse
+       hover -- there's no actual hover intent to react to on a
+       touchscreen in the first place. Same specificity as each rule
+       being neutralized (so this wins by coming later, not by force),
+       (see startChaos's own JS-side guard for the logo's own heavier
+       chaos effect, which isn't pure CSS and needed its own guard there). */
+    .wordmark:hover{ animation:none; }
+    .wordmark:hover::before,
+    .wordmark:hover::after{ opacity:0; animation:none; }
+    .slogan-main:hover,
+    .pedals-label:hover{ animation:none; }
+    .slogan-main:hover::before,
+    .pedals-label:hover::before,
+    .slogan-main:hover::after,
+    .pedals-label:hover::after{ opacity:0; animation:none; }
+    .summe-text:hover{ color:var(--grey-3); }
+    /* the periodic idle glitch (see scheduleIdleFlash, retimed to a fixed
+       3s on phone) is the *only* glitch moment phone ever gets now that
+       hover's heavier chaos effect is disabled there -- a bit more
+       intensity here, plus a real motion-blur filter (never part of the
+       shared desktop version), makes that one moment read as a
+       deliberate "crazy distortion" instead of the same subtle flicker
+       desktop gets constantly from hovering. */
+    .wordmark.glitching-idle{
+      animation: glitch-shake-hover 0.3s steps(2,end) 1;
+      filter: blur(1.5px);
+    }
     /* a long-press on a link or button-like element still let the
        native text-selection highlight (or, on iOS specifically, the
        press-and-hold link callout menu -- copy/share/open in new tab,
@@ -2483,11 +2522,19 @@
        own internal scroll affordance instead -- the outer page-jump only
        ever moves between whole, exactly-one-screen rooms; scrolling
        *within* one of those rooms is a separate, local concern.
-       .stage and .video-section already used a hard height:100dvh from
-       the start (not min-height), so they're already covered by this same
-       reasoning above without needing an override here. */
+       Every section actually gets 1px *more* than a plain 100dvh, not
+       exactly 100dvh -- real devices can round each section's computed
+       dvh independently, and stacked across 6 of them that rounding can
+       leave a hairline (sub-pixel) gap at some boundary, showing a
+       sliver of the next section right at the edge of the screen once
+       snapped. overflow:hidden is already on every section, so a 1px
+       overlap this small is completely invisible; it just removes any
+       possible gap instead. */
+    .stage, .video-section{
+      height:calc(100dvh + 1px);
+    }
     .pedals, .contact{
-      height:100dvh;
+      height:calc(100dvh + 1px);
       min-height:0;
       overflow:hidden;
     }
@@ -2498,7 +2545,7 @@
        here instead, each free to use the *entire* one-screen budget on
        its own turn rather than splitting it. */
     .why{
-      height:100dvh;
+      height:calc(100dvh + 1px);
       min-height:0;
       overflow:hidden;
       flex-direction:column;
@@ -2602,12 +2649,17 @@
        value rather than shrinking to near-zero though -- a phone browser's
        own chrome (address/search bar up top, its gesture/option bar down
        the bottom) sits right at those screen edges too, and a card with
-       no clearance there reads as running underneath it. */
+       no clearance there reads as running underneath it. Bottom gets
+       noticeably more than top: the top chrome (address/search bar) is
+       usually a single, fairly short strip, while the bottom one (gesture
+       bar, or a full options/tab bar on some phones/browsers) tends to be
+       taller and was still overlapping the card's own bottom edge at the
+       old, more symmetric padding. */
     .spotlight{
-      height:100dvh;
+      height:calc(100dvh + 1px);
       min-height:0;
       overflow:hidden;
-      padding:1.5rem 0.5rem;
+      padding:1.5rem 0.5rem 3rem;
       /* base rule vertically centers its content (align-items:center)
          inside a min-height:100vh box -- fine on desktop where the
          section-jump also centers, but on phone the section-jump aligns
@@ -2785,22 +2837,51 @@
     .spotlight-bio-block{
       padding-left:1.75rem;
     }
-    /* undoes .bio-text-row's desktop-only reserved margin -- the Mod
-       boxes it's clearing room for there get relocated into their own
-       card-page-controls page here (see syncMobileLayout), so nothing
-       ever floats over this bio text on phone. The fixed-height
-       scrollbar (see initBioScroll) is desktop only too -- phone just
-       shows the whole bio, same as scrolling the rest of the page. */
+    /* image + name side by side instead of stacked underneath, and no
+       next/prev nav -- there's no room (or need) for a dedicated "jump
+       to another collaborator" control on top of the name itself here */
+    .spotlight-circle-block{
+      flex-direction:row;
+      align-items:center;
+      justify-content:flex-start;
+      width:100%;
+      gap:1rem;
+      padding:0 0 1rem;
+    }
+    .artist-caption{
+      align-items:flex-start;
+      margin-top:0;
+      width:auto;
+    }
+    .artist-name-current{
+      text-align:left;
+      max-width:160px;
+    }
+    .artist-nav-row{
+      display:none;
+    }
+    /* the wrap clips the image's *bottom* off by default, with the
+       "sunset horizon" line (.artist-circle-clip::after) sitting right at
+       that cut -- flipped here to clip the top instead, so the line sits
+       above the image rather than slicing across its lower portion */
+    .artist-circle-img{
+      top:auto;
+      bottom:0;
+    }
+    .artist-circle-clip::after{
+      bottom:auto;
+      top:0;
+    }
+    /* .bio-text-row's margin-right (reserved space for the Mod boxes
+       sitting beside it on desktop) doesn't apply here -- those get
+       relocated into their own card-page-controls page instead (see
+       syncMobileLayout), so nothing ever floats over this bio text on
+       phone. It keeps its own scrollbar though (see
+       updateBioTextHeightForPhone) -- Artist is its own full-screen tab
+       here, not something you can keep scrolling past on the page, so a
+       long bio has nowhere else to go without one. */
     .bio-text-row{
       margin-right:0;
-      display:block;
-    }
-    .bio-text-clip{
-      height:auto;
-      overflow:visible;
-    }
-    .bio-text-nav{
-      display:none;
     }
     /* phone-only: the 3 tabs + one page at a time, built by moving the
        real elements into these slots (see syncMobileLayout) -- see the
@@ -2854,6 +2935,15 @@
     .card-page-info .spotlight-desc-block{
       flex:0 0 auto;
     }
+    /* Overview specifically reads better pinned to the top, right under
+       the tabs, rather than centered in the leftover space like the
+       general .card-page.active rule above does for every page -- Artist/
+       Controls keep the centering (usually fills the space anyway, or a
+       short Artist bio still benefits from it), this just carves out
+       Overview's own case. */
+    .card-page-info.active{
+      justify-content:flex-start;
+    }
     /* Mod 0 / Mod 1 once relocated here: the collapsed-strip/expand-to-
        overlay design (see .bio-panel-object above) only makes sense
        sharing space with the bio text in the desktop bio-slider -- here
@@ -2865,9 +2955,21 @@
       flex-direction:column;
       gap:1px;
       background:var(--grey-2);
+      /* the general .card-page rule's own padding-top:1rem (clearance
+         under the tabs, shared by every page) sits *inside* this
+         element's box same as everything else -- since this is the one
+         page that gives itself a visible background (so the 1px gaps
+         between its stacked children read as hairline dividers), that
+         padding strip showed the same background too, as a solid gray
+         bar with nothing behind it instead of a hairline. Zeroed here and
+         moved to the first child's own margin-top instead, so the
+         clearance still exists but isn't part of *this* element's own
+         painted area. */
+      padding-top:0;
     }
     .card-page-controls .spotlight-diagram-block{
       background:var(--black);
+      margin-top:1rem;
     }
     .card-page-controls .bio-panel-object{
       position:static !important;
@@ -2877,6 +2979,16 @@
     }
     .card-page-controls .bio-panel-object .object-info-inner{
       opacity:1 !important;
+    }
+    /* desktop shows both Mod 0 and Mod 1 info side by side -- redundant
+       here where they'd just stack as two boxes saying the same generic
+       placeholder ("please select a button") until something's actually
+       picked, and a phone screen doesn't have the room to spare for it
+       anyway. Mod 1 specifically still works exactly the same when its
+       own switch is toggled (unchanged JS); it just doesn't get a second
+       standing box of its own on phone. */
+    .card-page-controls .bio-panel-object-mod1{
+      display:none;
     }
   }
   .contact-canvas{
@@ -3978,6 +4090,12 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
   }
 
   function startChaos(){
+    // phone: a tap fires a synthetic mouseenter with no matching
+    // mouseleave until something else gets touched, so this continuous
+    // chaos effect could get stuck running indefinitely instead of the
+    // brief, deliberately-timed idle flash (see scheduleIdleFlash) --
+    // there's no real hover intent to react to on a touchscreen anyway
+    if (window.matchMedia('(max-width:640px)').matches) return;
     if (chaosRaf) return;
     clearTimeout(idleFlashTimer); // pause idle flashes while actively hovering
     wordmarkEl.classList.remove('glitching-idle');
@@ -3999,15 +4117,22 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 
   // idle flash: a brief, subtle glitch burst every so often while nobody's
   // hovering -- reuses the existing .glitching-idle shake+ghost-color
-  // animation (see CSS), randomly timed so it never reads as a metronome
+  // animation (see CSS), randomly timed so it never reads as a metronome.
+  // Phone has no hover to trigger the heavier chaos effect above at all
+  // (see startChaos's own guard), so this is the *only* glitch moment it
+  // ever gets -- a fixed, more frequent 3s cadence there instead of
+  // desktop's randomized 4-10s makes it a deliberate, noticeable beat
+  // rather than something so infrequent it reads as barely there.
   let idleFlashTimer = null;
   function scheduleIdleFlash(){
     clearTimeout(idleFlashTimer);
+    const isPhone = window.matchMedia('(max-width:640px)').matches;
+    const delay = isPhone ? 3000 : (4000 + Math.random() * 6000); // phone: every 3s. desktop: ~4-10s
     idleFlashTimer = setTimeout(function(){
       wordmarkEl.classList.add('glitching-idle');
       setTimeout(function(){ wordmarkEl.classList.remove('glitching-idle'); }, 320);
       scheduleIdleFlash();
-    }, 4000 + Math.random() * 6000); // every ~4-10s
+    }, delay);
   }
   scheduleIdleFlash();
 })();
@@ -4052,17 +4177,27 @@ function advancePedalSlide(){
   pedalSlides[currentSlide].classList.add('active');
 }
 
-function doPedalTransition(){
+// forceFlash: an explicit press/tap advancing the image should always
+// feel like a hard hit regardless of hover state -- mobile has no hover
+// to begin with (see the mouseenter guard below), so without this a tap
+// there always fell through to the plain crossfade, reading as a soft
+// fade instead of the punchy transition a deliberate press should have.
+function doPedalTransition(forceFlash){
   if (pedalSlides.length <= 1) return;
-  if (pedalHovering && pedalFlashEl){
-    // energetic hover transition: quick flash to black, swap the
-    // slide underneath it (instantly -- no-fade class kills the
-    // crossfade so it doesn't overlap with the flash), then fade
-    // the flash back out
+  if ((pedalHovering || forceFlash) && pedalFlashEl){
+    // energetic transition: quick flash to black, swap the slide
+    // underneath it (instantly -- no-fade class kills the crossfade so
+    // it doesn't overlap with the flash), then fade the flash back out.
+    // hover's own mouseenter/mouseleave normally own this class, so only
+    // touch it here if hover didn't already -- avoids removing it out
+    // from under an actual hover interaction still in progress
+    const hadNoFade = pedalViewer.classList.contains('no-fade');
+    pedalViewer.classList.add('no-fade');
     pedalFlashEl.style.opacity = '1';
     setTimeout(function(){
       advancePedalSlide();
       pedalFlashEl.style.opacity = '0';
+      if (!hadNoFade) pedalViewer.classList.remove('no-fade');
     }, 90);
   } else {
     advancePedalSlide();
@@ -4102,11 +4237,14 @@ if (pedalSlides.length > 1) {
       if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
     });
     // release: force an immediate advance to the next image, then
-    // resume the faster hover-paced rotation from there
+    // resume the faster hover-paced rotation from there. This is a
+    // deliberate press, not the ambient auto-rotation timer, so it
+    // always gets the hard flash transition (see doPedalTransition)
+    // regardless of hover state -- mobile has none to begin with.
     function releasePedalHold(){
       if (!pedalHeld) return;
       pedalHeld = false;
-      doPedalTransition();
+      doPedalTransition(true);
       schedulePedalRotation();
     }
     pedalViewer.addEventListener('mouseup', releasePedalHold);
@@ -5157,6 +5295,34 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (running) rafId = requestAnimationFrame(step);
   }
 
+  // a single non-looping paint of every particle at its current position,
+  // with a real opaque background fill first (not step()'s own faint
+  // trailing one, which assumes something's already there to fade) --
+  // used anywhere resize()/initParticles() run without immediately
+  // start()ing the real animation. Without this, the canvas only ever
+  // had resize()'s own plain black fill on it until start() first ran,
+  // which on phone (see the IntersectionObserver below, deliberately
+  // delayed until the section is almost fully in view so its own per-
+  // frame cost doesn't compete with the scroll-jump animation for
+  // frames) meant arriving to a section that was genuinely just solid
+  // black for a beat before the particles suddenly all popped in at
+  // once -- reading as the scroll itself stalling/snapping oddly, when
+  // it was really the canvas that hadn't drawn anything yet. Painting
+  // one static frame up front means there's always *something* there
+  // immediately, motion or not; only the continuous animation itself
+  // waits for arrival, not the particles' own existence.
+  function drawStaticFrame(){
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(238,238,234,0.85)';
+    for (let i = 0; i < particles.length; i++){
+      const p = particles[i];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   function start(){
     if (running) return;
     running = true;
@@ -5169,10 +5335,12 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   resize();
   initParticles();
+  drawStaticFrame();
 
   window.addEventListener('resize', function(){
     resize();
     initParticles();
+    if (!running) drawStaticFrame();
   });
 
   if (!reduceMotionFlow) {
@@ -6248,6 +6416,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // it (e.g. Controls, with the diagram + both mod boxes stacked, vs
       // the shorter Overview)
       remeasureCardHeight();
+      // bio-text-clip was measuring a zero rect while this tab was
+      // display:none -- only correct to size it now that it's actually
+      // the visible page (see updateBioTextHeightForPhone's own comment)
+      if (pageName === 'artist') updateBioTextHeightForPhone();
     }
     cardPageBtns.forEach(function(btn){
       btn.addEventListener('click', function(){ setActivePage(btn.dataset.page); });
@@ -6582,8 +6754,36 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const bioTextSlider = wrap.querySelector('.bio-text-slider');
     const bioTextSliderThumb = wrap.querySelector('.bio-text-slider-thumb');
     let refreshBioScrollVisibility = function(){};
+    // phone: Artist is its own full-screen tab (see card-page-artist),
+    // not something you can keep scrolling past on the page like before
+    // -- a long bio now has nowhere else to go without its own bounded,
+    // scrollable box, same "measure what's really left, cap to that"
+    // approach as updateWhyTextHeight. Only meaningful while this tab is
+    // actually the visible one (display:none elements measure as a zero
+    // rect), so this is called from setActivePage specifically when
+    // switching *to* 'artist', not on some generic timer/observer.
+    let updateBioTextHeightForPhone = function(){};
     if (bioTextClip && bioTextNav && bioTextUpBtn && bioTextDownBtn && bioTextSlider && bioTextSliderThumb){
       const BIO_SCROLL_STEP = 40; // px per button click -- roughly a line and a bit
+      updateBioTextHeightForPhone = function(){
+        if (!window.matchMedia('(max-width:640px)').matches) return;
+        const sectionEl = bioTextClip.closest('.spotlight');
+        if (!sectionEl) return;
+        // .card-page-artist.active still centers its content vertically
+        // (the general .card-page.active rule -- see its own comment),
+        // so measuring this box's position *before* neutralizing its own
+        // current height would be self-referential: its still-unbounded
+        // "auto" height (however tall the full bio naturally is) gets
+        // centered first, pushing its own top well *above* the section
+        // (and the viewport) to split that oversized height evenly above
+        // and below. Collapsing it to 0 first removes its own size from
+        // that centering math, so what's left is just "Bio:" and
+        // everything above it -- a stable, sensible position to measure from.
+        bioTextClip.style.height = '0px';
+        const rowTop = bioTextClip.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
+        const padBottom = parseFloat(getComputedStyle(sectionEl).paddingBottom) || 0;
+        bioTextClip.style.height = Math.max(80, window.innerHeight - rowTop - padBottom) + 'px';
+      };
       function bioScrollMax(){
         return Math.max(0, bioTextClip.scrollHeight - bioTextClip.clientHeight);
       }
@@ -6601,6 +6801,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // shouldn't leave the new bio scrolled to wherever the previous
       // one happened to be
       refreshBioScrollVisibility = function(){
+        updateBioTextHeightForPhone();
         bioTextClip.scrollTop = 0;
         bioTextNav.classList.toggle('bio-text-nav-hidden', bioScrollMax() <= 0);
         refreshBioScrollThumb();
@@ -6831,7 +7032,15 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       currentWav = 'examples/' + entry.programSlug + '.wav';
       resetPedalControls();
       resetPedalObjectInfo();
-      setActivePage('info');
+      // phone: switching to a different *program* within the same edition
+      // (say noise -> drums) used to always snap back to the Overview tab,
+      // discarding whichever of Artist/Controls was actually open. These
+      // tabs are inert on desktop (see setActivePage's own comment --
+      // there's no tab bar there, everything just shows at once), so
+      // forcing back to Overview only ever had a visible effect on phone
+      // in the first place; skipping it there instead keeps whichever tab
+      // was already open exactly as the user left it.
+      if (!window.matchMedia('(max-width:640px)').matches) setActivePage('info');
       // skipped when pre-populating a card that isn't visible yet (e.g. a
       // collab-button jump to another edition, still mid-swap) -- firing
       // it there would run the whole draw-in-and-reveal animation while
