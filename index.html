@@ -2477,16 +2477,18 @@
     .slogan-main:hover::after,
     .pedals-label:hover::after{ opacity:0; animation:none; }
     .summe-text:hover{ color:var(--grey-3); }
-    /* the periodic idle glitch (see scheduleIdleFlash, retimed to a fixed
-       3s on phone) is the *only* glitch moment phone ever gets now that
-       hover's heavier chaos effect is disabled there -- a bit more
-       intensity here, plus a real motion-blur filter (never part of the
-       shared desktop version), makes that one moment read as a
-       deliberate "crazy distortion" instead of the same subtle flicker
-       desktop gets constantly from hovering. */
+    /* the periodic idle glitch (see scheduleIdleFlash, retimed to a
+       random 2.5-7.5s on phone) is the *only* glitch moment phone ever
+       gets now that hover's heavier chaos effect is disabled there --
+       the shared keyframe animation is a fixed 2-step back-and-forth
+       (same shake every time), which reads as repetitive/mechanical on
+       its own without hover's continuous randomized jitter layered on
+       top of it like desktop gets. Turned off here so scheduleIdleFlash
+       can instead drive this element's transform/filter directly from
+       JS (see randomGlitchBurst), genuinely randomized frame to frame
+       rather than oscillating between the same two fixed offsets. */
     .wordmark.glitching-idle{
-      animation: glitch-shake-hover 0.3s steps(2,end) 1;
-      filter: blur(1.5px);
+      animation:none;
     }
     /* a long-press on a link or button-like element still let the
        native text-selection highlight (or, on iOS specifically, the
@@ -3958,6 +3960,32 @@ function snapSectionIntoView(target, block, onDone){
   animateScrollTo(target, block, 500, onDone);
 }
 
+// a genuinely randomized shake burst -- as opposed to a fixed keyframe
+// animation oscillating between the same two offsets every time it
+// plays, this picks a fresh random offset (and slight rotation) every
+// single frame for the whole duration, so no two bursts ever move the
+// same way. Used for phone's periodic idle glitches (see
+// scheduleIdleFlash and the "other hero texts" shake below), which have
+// no continuous hover-driven jitter (see chaosTick) to layer on top of a
+// fixed animation the way desktop's hover effect does -- without this,
+// the same repeating 2-step wiggle read as mechanical on its own.
+function randomGlitchBurst(el, durationMs, magnitude){
+  const startTime = performance.now();
+  function frame(now){
+    const elapsed = now - startTime;
+    if (elapsed >= durationMs){
+      el.style.transform = '';
+      return;
+    }
+    const jx = (Math.random() - 0.5) * magnitude * 2;
+    const jy = (Math.random() - 0.5) * magnitude;
+    const rot = (Math.random() - 0.5) * magnitude * 0.3;
+    el.style.transform = 'translate(' + jx.toFixed(1) + 'px,' + jy.toFixed(1) + 'px) rotate(' + rot.toFixed(2) + 'deg)';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
 function makeGlimpse(text, x, y, size, rotate, opacity, filterId){
   const el = document.createElement('div');
   el.className = 'glimpse';
@@ -4116,25 +4144,59 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
   logoBoxLocal.addEventListener('mouseleave', stopChaos);
 
   // idle flash: a brief, subtle glitch burst every so often while nobody's
-  // hovering -- reuses the existing .glitching-idle shake+ghost-color
-  // animation (see CSS), randomly timed so it never reads as a metronome.
-  // Phone has no hover to trigger the heavier chaos effect above at all
-  // (see startChaos's own guard), so this is the *only* glitch moment it
-  // ever gets -- a fixed, more frequent 3s cadence there instead of
-  // desktop's randomized 4-10s makes it a deliberate, noticeable beat
-  // rather than something so infrequent it reads as barely there.
+  // hovering -- reuses the existing .glitching-idle ghost-color opacity
+  // animation (see CSS) for the duplicate-layer flicker, randomly timed
+  // so it never reads as a metronome. Phone has no hover to trigger the
+  // heavier chaos effect above at all (see startChaos's own guard), so
+  // this is the *only* glitch moment it ever gets -- a more frequent
+  // random 2.5-7.5s cadence there instead of desktop's ~4-10s makes it a
+  // deliberate, noticeable beat rather than something so infrequent it
+  // reads as barely there. The actual shake itself is JS-driven there
+  // too (randomGlitchBurst), not the shared fixed keyframe (disabled for
+  // .glitching-idle on phone specifically, see its own CSS comment) --
+  // genuinely random frame to frame instead of the same two-step wiggle
+  // every single time.
   let idleFlashTimer = null;
   function scheduleIdleFlash(){
     clearTimeout(idleFlashTimer);
     const isPhone = window.matchMedia('(max-width:640px)').matches;
-    const delay = isPhone ? 3000 : (4000 + Math.random() * 6000); // phone: every 3s. desktop: ~4-10s
+    const delay = isPhone ? (2500 + Math.random() * 5000) : (4000 + Math.random() * 6000); // phone: every 2.5-7.5s. desktop: ~4-10s
     idleFlashTimer = setTimeout(function(){
       wordmarkEl.classList.add('glitching-idle');
+      if (isPhone){
+        randomGlitchBurst(wordmarkEl, 300, 6);
+        wordmarkEl.style.filter = 'blur(' + (1 + Math.random() * 1.5).toFixed(2) + 'px)';
+        setTimeout(function(){ wordmarkEl.style.filter = ''; }, 300);
+      }
       setTimeout(function(){ wordmarkEl.classList.remove('glitching-idle'); }, 320);
       scheduleIdleFlash();
     }, delay);
   }
   scheduleIdleFlash();
+})();
+
+/* ---------- other hero texts: occasional random shake, phone only ----------
+   mirrors the wordmark's own periodic idle glitch above, just far less
+   frequent and lighter -- these are secondary text, not the main title,
+   so a rare moment of life is enough without competing for attention
+   anywhere near as often. Desktop already gets a hover-triggered shake
+   on each of these individually (see .slogan-main:hover etc.); this is
+   phone's own equivalent, since hover doesn't fire there at all. */
+(function(){
+  if (reduceMotion) return;
+  if (!window.matchMedia('(max-width:640px)').matches) return;
+  const shakeTargets = ['.pedals-label', '.slogan-main', '.slogan-sub', '.summe-text']
+    .map(function(sel){ return document.querySelector(sel); })
+    .filter(Boolean);
+  if (!shakeTargets.length) return;
+  function scheduleOtherTextsShake(){
+    const delay = 30000 + Math.random() * 30000; // every 30-60s
+    setTimeout(function(){
+      shakeTargets.forEach(function(el){ randomGlitchBurst(el, 300, 4); });
+      scheduleOtherTextsShake();
+    }, delay);
+  }
+  scheduleOtherTextsShake();
 })();
 
 /* ---------- pedals section: rotates through real photos in ./images/ ---------- */
