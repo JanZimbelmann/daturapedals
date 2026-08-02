@@ -2747,6 +2747,19 @@
          below, see .spotlight-box) -- kept on in every state, expanded or
          not, so the line under the edition name never flickers on/off
          depending on which tab happens to be active. */
+      /* desktop highlights this box by swapping fg/bg on :hover -- which
+         doesn't mean anything on a touch device (see the reset just
+         below), so tapping an edition here previously gave no visual
+         feedback that it was the one now open at all. Tied to actually
+         being open instead of a hover state that can't exist here is
+         also arguably more correct than desktop's own hover -- it stays
+         highlighted for as long as the card actually is, not just for a
+         mouse position. */
+      background:var(--edition-fg, var(--white));
+      border-color:var(--edition-fg, var(--white));
+    }
+    .spotlight-wrap.wrap-active .spotlight-side-title{
+      color:var(--edition-bg, var(--black));
     }
     /* :hover doesn't mean anything on a touch device -- worse, a tap on
        an element that still has real :hover styles is exactly the
@@ -2846,14 +2859,12 @@
       border-top:none;
     }
 
-    /* desktop only, by request -- the sound-preview button hangs off the
-       program bar's separator line (see positionVineReveal), which the
-       mobile card-page layout doesn't have in the same shape, so it's
-       switched off here rather than adapted */
-    .spotlight-center-play,
-    .vine-reveal{
-      display:none;
-    }
+    /* relocated into the Controls tab specifically on phone now (see
+       syncMobileLayout + .card-page-controls .vine-reveal/.spotlight-
+       center-play's own rules) -- no longer blanket-hidden here. Outside
+       that tab (or before it's ever been visited) they're display:none
+       for the plain reason that .card-page/.card-page.active already
+       apply to whichever page currently contains them. */
 
     .spotlight-top-row,
     .spotlight-bottom-row{
@@ -2929,44 +2940,42 @@
        between this and the caption no longer needing flow room for a
        stacked kooperation block, the whole row sits noticeably shorter,
        which is what actually lets the bio text start higher below it. */
-    .artist-circle-wrap{
+    /* scoped to .card-page-artist specifically (not just .artist-circle-
+       wrap on its own) -- the artist-links modal (.modal-artist-photo-
+       wrap) reuses this exact same markup/classes, and without the scope
+       it was picking up this whole top+bottom cut-line treatment too,
+       instead of keeping its own plain single-bottom-line desktop look. */
+    .card-page-artist .artist-circle-wrap{
       height:142px;
     }
-    .artist-circle-img{
+    .card-page-artist .artist-circle-img{
       top:50%;
       bottom:auto;
       transform:translateY(-50%);
     }
-    /* the top cut-line (unchanged position, top:0) plus its new mirror at
-       bottom:0 -- both confined to the clip's own width so they actually
-       cross the image, unlike their ::before/::after counterparts on the
-       wrap just below, which are the parts allowed to run on past it */
-    .artist-circle-clip::after{
+    /* the top cut-line only (unchanged position, top:0) -- confined to the
+       clip's own width so it actually crosses the image, unlike its
+       ::before counterpart on the wrap just below, which is the part
+       allowed to run on past it. The bottom cut-line no longer has a
+       matching confined segment at all (see .artist-circle-wrap::after
+       below) -- just the top one crossing the circle now. */
+    .card-page-artist .artist-circle-clip::after{
       bottom:auto;
       top:0;
     }
-    .artist-circle-clip::before{
-      content:'';
-      position:absolute;
-      left:0;
-      right:0;
-      bottom:0;
-      height:1px;
-      background:var(--edition-fg, var(--white));
-    }
-    /* extends both cut-lines rightward past the circle itself, all the
+    /* extends the top cut-line rightward past the circle itself, all the
        way to the card's own real right edge -- drawn on the wrap (which
        stays overflow:visible) rather than the clip (overflow:hidden,
-       needed to actually cut the image), so they aren't clipped away the
-       instant they poke out past the circle's own width. Deliberately
+       needed to actually cut the image), so it isn't clipped away the
+       instant it pokes out past the circle's own width. Deliberately
        oversized (200vw, not a fixed rem guess) so it always reaches the
        edge regardless of how wide this card actually ends up -- the
        card's own outer clip (.spotlight-card-clip, overflow:hidden) is
        what actually truncates it exactly at that real edge. left:0 with
-       no matching negative-left/margin means neither line ever extends
-       *before* the circle's own left edge -- only rightward, same as the
-       confined portion crossing the image itself. */
-    .artist-circle-wrap::before{
+       no matching negative-left/margin means it never extends *before*
+       the circle's own left edge -- only rightward, same as the confined
+       portion crossing the image itself. */
+    .card-page-artist .artist-circle-wrap::before{
       content:'';
       position:absolute;
       left:0;
@@ -2975,10 +2984,17 @@
       height:1px;
       background:var(--edition-fg, var(--white));
     }
-    .artist-circle-wrap::after{
+    /* the bottom cut-line, by contrast, only ever existed to the right of
+       the circle -- left:100% (the wrap's own right edge, i.e. exactly
+       where the circle image itself ends) rather than left:0, so it never
+       crosses over the image the way the top one does. Cutting the image
+       off at the bottom is still purely the wrap's own shorter-than-the-
+       image height (see .artist-circle-wrap above) -- this was only ever
+       a visual accent marking that cut, never load-bearing for it. */
+    .card-page-artist .artist-circle-wrap::after{
       content:'';
       position:absolute;
-      left:0;
+      left:100%;
       bottom:0;
       width:200vw;
       height:1px;
@@ -3008,9 +3024,21 @@
     .card-page-artist .collab-divider-line{
       display:none;
     }
+    /* foreground-colored (matching the line it sits on) rather than the
+       muted grey desktop's divider text uses, plus a small horizontal
+       padding + matching opaque background -- desktop's own version of
+       this "text breaking a line" look comes from genuinely separate line
+       segments stopping short on either side of the text; this line is
+       one single continuous piece running underneath everything (see
+       .artist-circle-wrap::before), so painting over it with a same-color
+       patch right where the text sits is the more minimal way to get the
+       same broken-line effect without splitting it into segments. */
     .card-page-artist .collab-divider-text{
-      padding:0;
+      padding:0 0.4rem;
+      margin-left:-0.4rem;
       white-space:nowrap;
+      color:var(--edition-fg, var(--white));
+      background-color:var(--edition-bg, var(--black));
     }
     /* moved out of the top row entirely (see .collab-divider above) and
        pinned low in the caption instead, between the artist name (see its
@@ -3024,6 +3052,15 @@
       left:0;
       bottom:0.3rem;
       margin-right:0;
+    }
+    /* the bottom cut-line's rightward extension (see
+       .artist-circle-wrap::after) runs at roughly this same height --
+       opaque instead of the base rule's transparent so each circle masks
+       the line out from behind it, the same "paint over it" trick as
+       .collab-divider-text above, rather than the line visibly crossing
+       through every button. */
+    .card-page-artist .collab-button{
+      background-color:var(--edition-bg, var(--black));
     }
     /* .bio-text-row's margin-right (reserved space for the Mod boxes
        sitting beside it on desktop) doesn't apply here -- those get
@@ -3126,6 +3163,11 @@
     .card-page-controls.active{
       display:flex;
       flex-direction:column;
+      /* .controls-vine-anchor (and the vine/button hanging off it) are
+         position:absolute -- without this, they'd anchor to the card
+         itself (the next positioned ancestor up), nowhere near this
+         page's own content. */
+      position:relative;
       /* the 1px-gap-on-a-gray-background trick (background:grey-2 behind
          a flex gap, each child opaque) turned out to always show that
          same gray *anywhere* this element has empty space of its own --
@@ -3157,6 +3199,54 @@
          reached this now top-aligned tab (see .card-page-controls.active
          above) -- trimmed so the pedal itself sits right under the tabs. */
       padding:0.5rem 1.75rem;
+      /* was center -- shifted left instead, freeing up the right-hand
+         side of this row for the sound-preview button + its vine-reveal
+         animation (see .controls-vine-anchor and its own siblings below) */
+      justify-content:flex-start;
+    }
+    /* the pedal's own 220px max-width (base rule) plus this tab's already-
+       narrow available width left no real room beside it for the sound-
+       preview button without the two overlapping -- scaled down enough
+       here specifically to clear it. */
+    .card-page-controls .pedal-diagram{
+      max-width:128px;
+    }
+    /* stand-in for desktop's program-bar separator line -- the vine-
+       reveal animation (see triggerVineReveal/positionVineReveal) always
+       needs *some* line to visually hang from, and this tab has none of
+       its own. Sits in the gap between the tab row above and the pedal
+       diagram below, running from this box's own right edge left to
+       roughly where the (now left-shifted) diagram ends. */
+    .controls-vine-anchor{
+      display:none;
+    }
+    .card-page-controls .controls-vine-anchor{
+      display:block;
+      position:absolute;
+      top:0.85rem;
+      right:1.5rem;
+      left:60%;
+      height:1px;
+      background:var(--grey-2);
+    }
+    /* both relocated into this page on phone (see syncMobileLayout) --
+       desktop centers them on the card (left:50%) since the program bar's
+       own separator line runs the card's full width; here they instead
+       hang from .controls-vine-anchor above, which only spans the gap to
+       the right of the diagram, so they're shifted out to sit roughly
+       centered *on that line* instead of the whole card. */
+    .card-page-controls .vine-reveal{
+      left:auto;
+      right:1.5rem;
+      transform:none;
+    }
+    .card-page-controls .spotlight-center-play{
+      left:auto;
+      right:3rem;
+      transform:translateY(-50%);
+    }
+    .card-page-controls .spotlight-center-play:hover{
+      transform:translateY(-50%) scale(1.08);
     }
     .card-page-controls .bio-panel-object{
       /* was static -- the scroll-nav added below (position:absolute)
@@ -3192,8 +3282,10 @@
          read as the whole page (pedal diagram included) lurching along
          with it. */
       height:100%;
+      width:100%;
       box-sizing:border-box;
       overflow-y:auto;
+      overflow-x:hidden;
       overscroll-behavior:contain;
       scrollbar-width:none;
       /* extra room past the base rule's 1rem -- both for the 2-column
@@ -3219,6 +3311,18 @@
       bottom:0.6rem;
       right:0.6rem;
       gap:0.3rem;
+    }
+    /* only shown once there's actually something to scroll to (see
+       initControlScrollNav's own refresh()) -- with it hidden, the info
+       text can also use the extra room that was being reserved for it
+       (see .object-info-inner's own padding-right just below, which this
+       overrides down to something closer to the single-column desktop
+       default). */
+    .card-page-controls .control-info-scroll-nav.control-info-scroll-nav-hidden{
+      display:none;
+    }
+    .card-page-controls .bio-panel-object:has(.control-info-scroll-nav-hidden) .object-info-inner{
+      padding-right:1.25rem;
     }
     /* Mod 0's box is the only one ever shown here (see
        .bio-panel-object-mod1{display:none} below) -- while rose mod is
@@ -3259,9 +3363,32 @@
       grid-auto-rows:min-content;
       height:auto;
       overflow:visible;
+      min-width:0;
     }
     .card-page-controls .control-info-page-nav{
       display:none;
+    }
+    /* the chain above (box -> group -> params-row -> params grid) is all
+       flex/grid, none of which shrink a child below its own content size
+       by default (min-width:auto) -- combined with .control-info-param's
+       own white-space:nowrap (fine on desktop, where there's a whole
+       sidebar's width to spend), a long param name had nowhere to go but
+       force the grid track wider than the box itself, which is what was
+       actually pushing this whole box into horizontal scrolling instead
+       of just wrapping to 2 columns like it's supposed to. min-width:0
+       lets every level in the chain actually shrink to the space it's
+       given; the name itself still doesn't wrap (still one line), it just
+       truncates with an ellipsis now instead of forcing everything wider. */
+    .card-page-controls .control-info-box,
+    .card-page-controls .control-info-group,
+    .card-page-controls .control-info-params-row,
+    .card-page-controls .control-info-param{
+      min-width:0;
+    }
+    .card-page-controls .control-info-param-name{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     /* desktop shows both Mod 0 and Mod 1 info side by side -- redundant
        here where they'd just stack as two boxes saying the same generic
@@ -3512,14 +3639,18 @@
     text-align:center;
     margin:0 0 1.8rem;
   }
-  .modal-artist-links{
+  /* shared icon-link row: the artist credentials modal's link list, and
+     (see .modal-link-row's own usage in the Kontakt/Newsletter modals)
+     their Instagram/Email links too -- one look for "here's a row of
+     places to reach someone" everywhere it comes up */
+  .modal-link-row{
     display:flex;
     flex-wrap:wrap;
     justify-content:center; /* a single link sitting flush left read as
       empty/stranded -- centering the row looks intentional at any count */
     gap:1.6rem;
   }
-  .modal-artist-link{
+  .modal-link{
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -3529,18 +3660,18 @@
   }
   /* the one-link case gets a little extra size/presence so it reads as
      "the" link rather than a leftover fragment */
-  .modal-artist-link:only-child .modal-artist-link-icon{
+  .modal-link:only-child .modal-link-icon{
     width:60px;
     height:60px;
   }
-  .modal-artist-link:only-child .modal-artist-link-icon svg{
+  .modal-link:only-child .modal-link-icon svg{
     width:27px;
     height:27px;
   }
-  .modal-artist-link:only-child .modal-artist-link-caption{
+  .modal-link:only-child .modal-link-caption{
     font-size:0.75rem;
   }
-  .modal-artist-link-icon{
+  .modal-link-icon{
     width:48px;
     height:48px;
     flex-shrink:0;
@@ -3551,7 +3682,7 @@
     justify-content:center;
     transition:background 0.25s ease, color 0.25s ease, transform 0.25s ease, width 0.2s ease, height 0.2s ease;
   }
-  .modal-artist-link-icon svg{
+  .modal-link-icon svg{
     width:22px;
     height:22px;
     fill:none;
@@ -3559,23 +3690,29 @@
     stroke-width:1.6;
     transition:width 0.2s ease, height 0.2s ease;
   }
-  .modal-artist-link:hover .modal-artist-link-icon{
+  .modal-link:hover .modal-link-icon{
     background:var(--edition-fg, var(--white));
     color:var(--black);
     transform:scale(1.06);
   }
-  .modal-artist-link-caption{
+  .modal-link-caption{
     font-size:0.68rem;
     letter-spacing:0.12em;
     text-transform:uppercase;
     color:var(--grey-3);
   }
-  /* only shown when the current artist has zero links at all */
-  #modalArtistEmpty{
+  /* only shown when a link row ends up with zero links at all */
+  .modal-link-empty{
     display:none;
   }
-  #modalArtistEmpty.visible{
+  .modal-link-empty.visible{
     display:block;
+  }
+  /* Newsletter modal only: two rows -- the link row on top, the email
+     signup form below (see .newsletter-form) -- so this row needs space
+     under it that the single-row Kontakt modal doesn't */
+  #modalNewsletter .modal-link-row{
+    margin-bottom:2.2rem;
   }
 
   .modal-box-impressum{
@@ -3594,9 +3731,21 @@
     display:flex;
     flex-direction:column;
   }
+  .impressum-scroll-row{
+    display:flex;
+    min-height:0;
+  }
   .impressum-scroll{
     overflow-y:auto;
+    overflow-x:hidden;
     min-height:0;
+    min-width:0;
+    flex:1;
+  }
+  /* phone-only up/down+slider (see max-width:640px below) -- desktop's
+     own native scrollbar on .impressum-scroll above is enough there */
+  .impressum-scroll-nav{
+    display:none;
   }
   .impressum-heading{
     font-family:'Anton', sans-serif;
@@ -3617,6 +3766,12 @@
     line-height:1.65;
     margin:0;
     padding-right:1.5rem;
+    /* the EU-Streitschlichtung paragraph's URL has no natural break point
+       short enough to fit this column -- without this, that one line
+       forced the whole box wider than its own container instead of
+       wrapping, which is exactly the horizontal scroll this is meant to
+       never have. */
+    overflow-wrap:break-word;
   }
   .impressum-note{
     margin-top:2rem;
@@ -3626,63 +3781,31 @@
     font-style:italic;
     color:var(--grey-2);
   }
-  .modal-columns{
-    display:flex;
-    flex-wrap:wrap;
-    gap:2.5rem;
-    align-items:center;
-  }
-  .modal-qr-link{
-    display:block;
-    width:150px;
-    flex-shrink:0;
-    border:1px solid var(--grey-2);
-    padding:0.6rem;
-    transition:border-color 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
-  }
-  .modal-qr-link:hover{
-    border-color:var(--white);
-    transform:scale(1.04);
-  }
-  .modal-qr-link img{
-    display:block;
-    width:100%;
-    height:auto;
-  }
-  .modal-qr-caption{
-    margin-top:0.7rem;
-    font-size:0.68rem;
-    letter-spacing:0.12em;
-    text-transform:uppercase;
-    color:var(--grey-3);
-    text-align:center;
-  }
-  .modal-right{
-    flex:1;
-    min-width:220px;
-  }
-  .modal-right.compact{
-    flex:0 0 auto;
-    min-width:0;
-  }
-  .modal-email-btn{
-    display:inline-block;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:0.8rem;
-    letter-spacing:0.14em;
-    text-transform:uppercase;
-    color:var(--white);
-    background:transparent;
-    border:1px solid var(--white);
-    padding:0.9rem 1.6rem;
-    cursor:pointer;
-    user-select:none;
-    text-decoration:none;
-    transition:background 0.25s ease, color 0.25s ease;
-  }
-  .modal-email-btn:hover{
-    background:var(--white);
-    color:var(--black);
+  @media (max-width:640px){
+    /* same up/down+slider look as the Artist tab's bio-text-nav and the
+       Controls tab's info-box nav (reuses their button/slider/thumb
+       classes) -- shown here in place of desktop's native scrollbar,
+       which doesn't get its own visible affordance on a touch device. */
+    .impressum-scroll-nav{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:space-between;
+      flex-shrink:0;
+      width:1.2rem;
+      padding:0.2rem 0 0.2rem 0.6rem;
+      gap:0.3rem;
+    }
+    .impressum-scroll-nav.impressum-scroll-nav-hidden{
+      display:none;
+    }
+    .impressum-scroll-slider{
+      flex:1;
+    }
+    .impressum-text,
+    .impressum-heading{
+      padding-right:0.5rem;
+    }
   }
   .newsletter-form{
     display:flex;
@@ -3842,7 +3965,16 @@
     </div>
     <div class="card-page card-page-info active" data-page="info"></div>
     <div class="card-page card-page-artist" data-page="artist"></div>
-    <div class="card-page card-page-controls" data-page="controls"></div>
+    <div class="card-page card-page-controls" data-page="controls">
+      <!-- phone-only stand-in for desktop's program-bar separator line
+           (see .controls-vine-anchor's own CSS) -- the vine-reveal
+           animation normally starts from that bar's bottom edge
+           (positionVineReveal), which doesn't exist in this tab's own
+           layout at all; this gives it an equivalent short line to hang
+           from instead, in the gap to the right of the (now left-shifted)
+           pedal diagram. -->
+      <div class="controls-vine-anchor"></div>
+    </div>
 
     <button class="spotlight-center-play" aria-label="Sound abspielen">
       <span class="play-emblem"></span>
@@ -4081,74 +4213,76 @@
   <div class="modal-box modal-box-impressum">
     <button class="modal-close" id="modalImpressumClose" aria-label="Schließen">&times;</button>
     <!-- everything scrollable lives in here, not on modal-box-impressum
-         itself -- see .impressum-scroll's own CSS comment for why -->
-    <div class="impressum-scroll">
-      <h3 class="impressum-heading">Impressum</h3>
+         itself -- see .impressum-scroll's own CSS comment for why.
+         .impressum-scroll-row wraps it together with the phone-only
+         up/down+slider nav (see .impressum-scroll-nav's own CSS) --
+         inert/hidden on desktop, where .impressum-scroll's native
+         scrollbar is already enough. -->
+    <div class="impressum-scroll-row">
+      <div class="impressum-scroll">
+        <h3 class="impressum-heading">Impressum</h3>
 
-      <p class="impressum-section-title">Angaben gemäß § 5 TMG</p>
-      <p class="impressum-text">
-        Datura Pedals GbR<br>
-        Musterstraße 12<br>
-        04109 Leipzig<br>
-        Deutschland
-      </p>
+        <p class="impressum-section-title">Angaben gemäß § 5 TMG</p>
+        <p class="impressum-text">
+          Datura Pedals GbR<br>
+          Musterstraße 12<br>
+          04109 Leipzig<br>
+          Deutschland
+        </p>
 
-      <p class="impressum-section-title">Vertreten durch</p>
-      <p class="impressum-text">Max Mustermann, Erika Musterfrau</p>
+        <p class="impressum-section-title">Vertreten durch</p>
+        <p class="impressum-text">Max Mustermann, Erika Musterfrau</p>
 
-      <p class="impressum-section-title">Kontakt</p>
-      <p class="impressum-text">
-        Telefon: +49 (0) 341 123456<br>
-        E-Mail: daturapedals@gmail.com
-      </p>
+        <p class="impressum-section-title">Kontakt</p>
+        <p class="impressum-text">
+          Telefon: +49 (0) 341 123456<br>
+          E-Mail: daturapedals@gmail.com
+        </p>
 
-      <p class="impressum-section-title">Umsatzsteuer-ID</p>
-      <p class="impressum-text">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000</p>
+        <p class="impressum-section-title">Umsatzsteuer-ID</p>
+        <p class="impressum-text">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000</p>
 
-      <p class="impressum-section-title">Redaktionell verantwortlich</p>
-      <p class="impressum-text">Max Mustermann, Musterstraße 12, 04109 Leipzig</p>
+        <p class="impressum-section-title">Redaktionell verantwortlich</p>
+        <p class="impressum-text">Max Mustermann, Musterstraße 12, 04109 Leipzig</p>
 
-      <p class="impressum-section-title">EU-Streitschlichtung</p>
-      <p class="impressum-text">Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
+        <p class="impressum-section-title">EU-Streitschlichtung</p>
+        <p class="impressum-text">Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
 
-      <p class="impressum-note">Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.</p>
+        <p class="impressum-note">Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.</p>
+      </div>
+      <div class="impressum-scroll-nav">
+        <button type="button" class="bio-text-nav-btn impressum-scroll-up" aria-label="Nach oben scrollen">▲</button>
+        <div class="bio-text-slider impressum-scroll-slider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+          <div class="bio-text-slider-thumb"></div>
+        </div>
+        <button type="button" class="bio-text-nav-btn impressum-scroll-down" aria-label="Nach unten scrollen">▼</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Kontakt modal -->
+<!-- Kontakt modal: links read from texts/contact_send.json, see the
+     modals IIFE further down -->
 <div class="modal-overlay" id="modalContact">
   <div class="modal-box">
     <button class="modal-close" id="modalContactClose" aria-label="Schließen">&times;</button>
-    <div class="modal-columns">
-      <a class="modal-qr-link" href="https://www.instagram.com/daturapedals/" target="_blank" rel="noopener">
-        <img src="images/IGQR.png" alt="Instagram QR-Code">
-        <p class="modal-qr-caption">@daturapedals</p>
-      </a>
-      <div class="modal-right compact">
-        <a class="modal-email-btn" href="mailto:daturapedals@gmail.com?subject=Kontaktanfrage">Email Schreiben</a>
-      </div>
-    </div>
+    <div class="modal-link-row" id="modalContactLinks"></div>
+    <p class="modal-text modal-link-empty" id="modalContactEmpty">Keine Links verfügbar.</p>
   </div>
 </div>
 
-<!-- Newsletter modal -->
+<!-- Newsletter modal: link row (top) reads texts/contact_receive.json,
+     see the modals IIFE further down -- signup form (bottom) unrelated -->
 <div class="modal-overlay" id="modalNewsletter">
   <div class="modal-box">
     <button class="modal-close" id="modalNewsletterClose" aria-label="Schließen">&times;</button>
-    <div class="modal-columns">
-      <a class="modal-qr-link" href="https://www.instagram.com/daturapedals/" target="_blank" rel="noopener">
-        <img src="images/IGQR.png" alt="Instagram QR-Code">
-        <p class="modal-qr-caption">@daturapedals</p>
-      </a>
-      <div class="modal-right">
-        <form class="newsletter-form" id="newsletterForm">
-          <input type="email" id="newsletterEmail" placeholder="deine@email.de" required>
-          <button type="submit">Versenden</button>
-        </form>
-        <p class="newsletter-note" id="newsletterNote"></p>
-      </div>
-    </div>
+    <div class="modal-link-row" id="modalNewsletterLinks"></div>
+    <p class="modal-text modal-link-empty" id="modalNewsletterEmpty">Keine Links verfügbar.</p>
+    <form class="newsletter-form" id="newsletterForm">
+      <input type="email" id="newsletterEmail" placeholder="deine@email.de" required>
+      <button type="submit">Versenden</button>
+    </form>
+    <p class="newsletter-note" id="newsletterNote"></p>
   </div>
 </div>
 
@@ -4164,8 +4298,8 @@
       </div>
     </div>
     <p class="modal-artist-name" id="modalArtistName"></p>
-    <div class="modal-artist-links" id="modalArtistLinks"></div>
-    <p class="modal-text" id="modalArtistEmpty">Keine Links verfügbar.</p>
+    <div class="modal-link-row" id="modalArtistLinks"></div>
+    <p class="modal-text modal-link-empty" id="modalArtistEmpty">Keine Links verfügbar.</p>
   </div>
 </div>
 
@@ -4567,7 +4701,7 @@ function doPedalTransition(forceFlash){
 function schedulePedalRotation(){
   if (pedalTimeoutId) clearTimeout(pedalTimeoutId);
   if (pedalHeld) return; // paused while the mouse button is held down
-  const delay = pedalHovering ? 500 : 2450;
+  const delay = pedalHovering ? 250 : 2450;
   pedalTimeoutId = setTimeout(function(){
     doPedalTransition();
     schedulePedalRotation();
@@ -5051,8 +5185,8 @@ if (sloganMainEl && wordmarkWrap && spotlightSection) {
       // already-smaller x offsets, not fighting against the original
       // (larger) ones.
       if (isPhoneScatter){
-        dx *= 0.4;
-        dy *= 1.5;
+        dx *= 0.55;
+        dy *= 1.35;
       }
       // dampen downward scatter specifically so letters don't drift
       // low enough to become visible in the section below
@@ -5481,13 +5615,6 @@ if (summeTextEl && wordmarkWrap && contactSection) {
 
   let particles = [];
 
-  function initParticles(){
-    particles = [];
-    for (let i = 0; i < PARTICLE_COUNT; i++){
-      particles.push(makeParticle());
-    }
-  }
-
   // adjusts the live particle count by adding/removing individual
   // particles rather than rebuilding the whole array -- so dragging the
   // slider grows/shrinks the existing flow instead of every particle
@@ -5690,10 +5817,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // a single non-looping paint of every particle at its current position,
   // with a real opaque background fill first (not step()'s own faint
   // trailing one, which assumes something's already there to fade) --
-  // used anywhere resize()/initParticles() run without immediately
-  // start()ing the real animation. Without this, the canvas only ever
-  // had resize()'s own plain black fill on it until start() first ran,
-  // which on phone (see the IntersectionObserver below, deliberately
+  // used anywhere resize()/revealParticlesOneByOne() run without
+  // immediately start()ing the real animation. Without this, the canvas
+  // only ever had resize()'s own plain black fill on it until start()
+  // first ran, which (see the IntersectionObserver below, deliberately
   // delayed until the section is almost fully in view so its own per-
   // frame cost doesn't compete with the scroll-jump animation for
   // frames) meant arriving to a section that was genuinely just solid
@@ -5725,16 +5852,23 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     if (rafId) cancelAnimationFrame(rafId);
   }
 
-  // phone only: particles spawn in one at a time once the section is
-  // actually the one in view, rather than all existing already (see
-  // isPhoneParticles above) -- and clear back to none the moment it's
-  // left, so returning to it plays the same reveal again instead of
-  // finding it already full. drawStaticFrame() after each addition keeps
-  // something visible between animation frames while not yet running
-  // (see start()'s own threshold below), same reasoning as its own
-  // original comment.
+  // particles spawn in one at a time once the section is actually the one
+  // in view, rather than all existing already -- true on both phone and
+  // desktop now. Phone additionally clears back to none the moment the
+  // section is left (see isPhoneParticles below), so returning to it
+  // plays the same reveal again; desktop leaves whatever's already there
+  // alone on the way out, and hasRevealedOnce keeps a later re-entry from
+  // clearing/replaying the reveal a second time -- there, it's a one-time
+  // entrance the first time you ever scroll down to it, not something
+  // that resets on every visit. drawStaticFrame() after each addition
+  // keeps something visible between animation frames while not yet
+  // running (see start()'s own threshold below), same reasoning as its
+  // own original comment.
   let revealTimer = null;
+  let revealDelayTimer = null;
+  let hasRevealedOnce = false;
   function stopReveal(){
+    if (revealDelayTimer){ clearTimeout(revealDelayTimer); revealDelayTimer = null; }
     if (revealTimer){ clearInterval(revealTimer); revealTimer = null; }
   }
   function revealParticlesOneByOne(){
@@ -5753,12 +5887,11 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   }
 
   resize();
-  if (isPhoneParticles) particles = []; else initParticles();
+  particles = [];
   drawStaticFrame();
 
   window.addEventListener('resize', function(){
     resize();
-    if (!isPhoneParticles) initParticles();
     if (!running) drawStaticFrame();
   });
 
@@ -5778,17 +5911,29 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // system, a plain user swipe, or anything else).
     const flowObserver = new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
-        if (isPhoneParticles){
-          if (entry.isIntersecting){
-            start();
-            revealParticlesOneByOne();
-          } else {
-            stop();
-            clearParticlesInstantly();
+        if (entry.isIntersecting){
+          start();
+          if (isPhoneParticles || !hasRevealedOnce){
+            // the 0.98 threshold above already means the scroll-jump
+            // animation is essentially done by the time this fires, but
+            // "essentially" still left a real gap on phone -- each new
+            // particle's own spawn-point search (see makeParticle/
+            // randomFreePoint, checking against every button's obstacle
+            // zone) is real main-thread work landing right as
+            // animateScrollTo's own rAF loop is trying to ease through
+            // its last few frames, and a dropped frame there reads as the
+            // buttons visibly snapping the rest of the way instead of
+            // gliding in. A short buffer here gives that tail end room to
+            // actually finish first, so the reveal's own burst of work
+            // starts on a clean, idle frame instead of competing with it.
+            stopReveal();
+            revealDelayTimer = setTimeout(revealParticlesOneByOne, 180);
+            hasRevealedOnce = true;
           }
-          return;
+        } else {
+          stop();
+          if (isPhoneParticles) clearParticlesInstantly();
         }
-        if (entry.isIntersecting) start(); else stop();
       });
     }, { threshold: 0.98 });
     flowObserver.observe(section);
@@ -5889,6 +6034,66 @@ if (summeTextEl && wordmarkWrap && contactSection) {
    used to be singleton (getElementById, window.showPedalObjectInfo,
    etc.) is now scoped per clone via querySelector, so N cards can exist
    and run independently at once. ---------- */
+
+// hand-drawn, thin-outline icons (matching the pedal diagram's own
+// fill:none/stroke aesthetic) -- inner shapes only, wrapped in a
+// viewBox="0 0 24 24" <svg> when rendered. Shared by the artist
+// credentials modal (see openCredentials below) and the Kontakt/
+// Newsletter modals (see the modals IIFE further down), so it lives at
+// top level rather than inside either one. A couple of small shapes
+// (play triangles, the instagram dot) are deliberately filled solid via
+// their own fill="currentColor" so they read clearly at this size,
+// overriding the icon's own fill:none default.
+const LINK_ICONS = {
+  instagram: { label: 'Instagram', svg: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17" cy="7" r="0.6" fill="currentColor" stroke="none"/>' },
+  bandcamp: { label: 'Bandcamp', svg: '<polygon points="4,16 10,8 20,8 14,16" fill="currentColor" stroke="none"/>' },
+  youtube: { label: 'YouTube', svg: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10 9 L16 12 L10 15 Z" fill="currentColor" stroke="none"/>' },
+  soundcloud: { label: 'SoundCloud', svg: '<path d="M6 16 h11 a4 4 0 0 0 0 -8 a5 5 0 0 0 -9.5 -1.5 a3.5 3.5 0 0 0 -1.5 9.5 Z"/><line x1="9" y1="12" x2="9" y2="16"/><line x1="11.5" y1="10" x2="11.5" y2="16"/><line x1="14" y1="11" x2="14" y2="16"/>' },
+  homepage: { label: 'Homepage', svg: '<path d="M4 11 L12 4 L20 11"/><path d="M15 8 V4 H17 V9.6"/><path d="M6 10 V19 H18 V10"/><path d="M10 19 V13 H14 V19"/>' },
+  // paper plane, solid-filled like the instagram dot/bandcamp/youtube
+  // triangles above, with a stroked crease line down the middle of the
+  // wing -- the same silhouette Telegram's own logo uses
+  telegram: { label: 'Telegram', svg: '<path d="M20.5 4 L3 11.2 L10 13.6 L12.7 20 L14.8 15.6 L20.5 4 Z" fill="currentColor" stroke="none"/><path d="M10 13.6 L20.5 4" stroke-width="1"/>' },
+  // envelope: same rect+path stroke construction as homepage's roofline above
+  mail: { label: 'Email', svg: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 6.5 L12 13 L20 6.5"/>' }
+};
+// bios/*.json and texts/contact_*.json aren't consistent about where
+// links live -- some nest them under "links", some put the platform keys
+// flat alongside "text" -- so this checks both rather than assuming one shape
+function extractLinks(data){
+  const raw = (data && data.links) || data || {};
+  const links = {};
+  Object.keys(LINK_ICONS).forEach(function(key){
+    if (raw[key]) links[key] = raw[key];
+  });
+  return links;
+}
+// renders one row of icon+caption links into `container` (see .modal-link-row
+// CSS), used by the artist credentials modal and the Kontakt/Newsletter
+// modals alike. `mailSubject`, if given, is only applied to a "mail" link
+// (a bare address, not yet a mailto: URL -- every other key is a ready-to-use URL).
+function renderLinkRow(container, emptyEl, links, mailSubject){
+  if (!container) return;
+  container.innerHTML = '';
+  Object.keys(links).forEach(function(key){
+    const icon = LINK_ICONS[key];
+    if (!icon) return;
+    const isMail = key === 'mail';
+    const a = document.createElement('a');
+    a.className = 'modal-link';
+    a.href = isMail ? ('mailto:' + links[key] + (mailSubject ? ('?subject=' + encodeURIComponent(mailSubject)) : '')) : links[key];
+    if (!isMail){
+      a.target = '_blank';
+      a.rel = 'noopener';
+    }
+    a.innerHTML =
+      '<span class="modal-link-icon"><svg viewBox="0 0 24 24">' + icon.svg + '</svg></span>' +
+      '<span class="modal-link-caption">' + icon.label + '</span>';
+    container.appendChild(a);
+  });
+  if (emptyEl) emptyEl.classList.toggle('visible', container.children.length === 0);
+}
+
 (function(){
   const container = document.getElementById('spotlightWraps');
   const template = document.getElementById('editionCardTemplate');
@@ -6329,30 +6534,6 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     });
   }
 
-  // hand-drawn, thin-outline icons (matching the pedal diagram's own
-  // fill:none/stroke aesthetic) for the artist credentials modal -- inner
-  // shapes only, wrapped in a viewBox="0 0 24 24" <svg> when rendered.
-  // A couple of small shapes (play triangles, the instagram dot) are
-  // deliberately filled solid via their own fill="currentColor" so they
-  // read clearly at this size, overriding the icon's own fill:none default.
-  const ARTIST_LINK_ICONS = {
-    instagram: { label: 'Instagram', svg: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17" cy="7" r="0.6" fill="currentColor" stroke="none"/>' },
-    bandcamp: { label: 'Bandcamp', svg: '<polygon points="4,16 10,8 20,8 14,16" fill="currentColor" stroke="none"/>' },
-    youtube: { label: 'YouTube', svg: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10 9 L16 12 L10 15 Z" fill="currentColor" stroke="none"/>' },
-    soundcloud: { label: 'SoundCloud', svg: '<path d="M6 16 h11 a4 4 0 0 0 0 -8 a5 5 0 0 0 -9.5 -1.5 a3.5 3.5 0 0 0 -1.5 9.5 Z"/><line x1="9" y1="12" x2="9" y2="16"/><line x1="11.5" y1="10" x2="11.5" y2="16"/><line x1="14" y1="11" x2="14" y2="16"/>' },
-    homepage: { label: 'Homepage', svg: '<path d="M4 11 L12 4 L20 11"/><path d="M15 8 V4 H17 V9.6"/><path d="M6 10 V19 H18 V10"/><path d="M10 19 V13 H14 V19"/>' }
-  };
-  // bios/*.json isn't consistent about where links live -- some nest them
-  // under "links", some put the platform keys flat alongside "text" -- so
-  // this checks both rather than assuming one shape
-  function extractArtistLinks(data){
-    const raw = (data && data.links) || data || {};
-    const links = {};
-    Object.keys(ARTIST_LINK_ICONS).forEach(function(key){
-      if (raw[key]) links[key] = raw[key];
-    });
-    return links;
-  }
   // ---------- shared accordion coordinator: at most one instance "active" ----------
   const instances = [];
   let activeInstance = null;
@@ -6767,16 +6948,23 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // refresh() to call whenever this box's content changes; a no-op
     // function if the markup isn't there (desktop never renders it).
     function initControlScrollNav(panelObject){
+      const navEl = panelObject && panelObject.querySelector('.control-info-scroll-nav');
       const scrollEl = panelObject && panelObject.querySelector('.object-info-inner');
       const upBtn = panelObject && panelObject.querySelector('.control-info-scroll-up');
       const downBtn = panelObject && panelObject.querySelector('.control-info-scroll-down');
       const slider = panelObject && panelObject.querySelector('.control-info-scroll-slider');
       const thumb = slider && slider.querySelector('.bio-text-slider-thumb');
-      if (!scrollEl || !upBtn || !downBtn || !slider || !thumb) return function(){};
+      if (!navEl || !scrollEl || !upBtn || !downBtn || !slider || !thumb) return function(){};
       const STEP = 40;
       function scrollMax(){ return Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight); }
       function refresh(){
         const max = scrollMax();
+        // unlike the Artist tab's bio-nav (kept always visible by explicit
+        // request), this one only ever shows up once there's actually
+        // something to scroll to -- most controls' info comfortably fits
+        // in the fixed-height box as it is, so a nav that's always there
+        // would mostly just be pointing at nothing.
+        navEl.classList.toggle('control-info-scroll-nav-hidden', max <= 0);
         const frac = max > 0 ? scrollEl.scrollTop / max : 0;
         thumb.style.top = (frac * 100).toFixed(2) + '%';
         upBtn.disabled = scrollEl.scrollTop <= 0;
@@ -7042,6 +7230,10 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       // display:none -- only correct to size it now that it's actually
       // the visible page (see updateBioTextHeightForPhone's own comment)
       if (pageName === 'artist') updateBioTextHeightForPhone();
+      // same reasoning -- .controls-vine-anchor (what the vine/button now
+      // hang off on phone, see positionVineReveal) also measures a zero
+      // rect until this tab is actually the visible one
+      if (pageName === 'controls') positionVineReveal();
     }
     cardPageBtns.forEach(function(btn){
       btn.addEventListener('click', function(){ setActivePage(btn.dataset.page); });
@@ -7109,9 +7301,28 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (diagramBlockEl) controlsPage.appendChild(diagramBlockEl);
         if (bioPanelObject) controlsPage.appendChild(bioPanelObject);
         if (bioPanelObjectMod1) controlsPage.appendChild(bioPanelObjectMod1);
+        // the sound-preview button + its vine-reveal animation normally
+        // hang off the program bar (see positionVineReveal), which this
+        // tab has none of -- relocated into this same page, hanging off
+        // .controls-vine-anchor instead (see its own CSS and
+        // positionVineReveal's phone branch)
+        const playBtnEl = wrap.querySelector('.spotlight-center-play');
+        const vineRevealEl = wrap.querySelector('.vine-reveal');
+        if (playBtnEl) controlsPage.appendChild(playBtnEl);
+        if (vineRevealEl) controlsPage.appendChild(vineRevealEl);
       } else if (topRowEl){
         if (descBlockEl) topRowEl.insertBefore(descBlockEl, topRowEl.firstChild);
         if (diagramBlockEl) topRowEl.appendChild(diagramBlockEl);
+        // undoes the phone-only relocation above -- back to being direct
+        // children of the card itself, right *before* .spotlight-top-row
+        // (their original spot), where desktop's own positionVineReveal
+        // (anchored to the program bar) expects them
+        const playBtnEl2 = wrap.querySelector('.spotlight-center-play');
+        const vineRevealEl2 = wrap.querySelector('.vine-reveal');
+        if (topRowEl.parentNode){
+          if (playBtnEl2) topRowEl.parentNode.insertBefore(playBtnEl2, topRowEl);
+          if (vineRevealEl2) topRowEl.parentNode.insertBefore(vineRevealEl2, topRowEl);
+        }
         if (collabDividerEl) topRowEl.insertAdjacentElement('afterend', collabDividerEl);
         if (bottomRowEl && collabDividerEl) collabDividerEl.insertAdjacentElement('afterend', bottomRowEl);
         // undoes the phone-only relocation above -- back into its own
@@ -7585,7 +7796,30 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     // regardless of which page is currently showing.
     const barWrapEl = wrap.querySelector('.program-bar-wrap');
     function positionVineReveal(){
-      if (!vineReveal || !barWrapEl) return;
+      if (!vineReveal) return;
+      // phone: no program bar in this tab's own layout at all -- hangs
+      // off .controls-vine-anchor instead (see its own CSS), relocated
+      // alongside the vine/button into card-page-controls specifically
+      // (see syncMobileLayout), so this is only ever meaningful while
+      // that tab is the visible one; getBoundingClientRect on a hidden
+      // (display:none) anchor would just measure a zero rect otherwise.
+      if (window.matchMedia('(max-width:640px)').matches){
+        const anchorEl = wrap.querySelector('.controls-vine-anchor');
+        // .card-page-controls.active is themselves position:relative (so
+        // .controls-vine-anchor itself has something to anchor to) --
+        // which also makes it the containing block the relocated vine/
+        // button resolve their own top against now, not the card, so the
+        // offset has to be measured from *this*, not card's own rect.
+        const controlsPageEl = anchorEl && anchorEl.parentElement;
+        if (!anchorEl || !controlsPageEl) return;
+        const anchorRect = anchorEl.getBoundingClientRect();
+        if (anchorRect.width === 0 && anchorRect.height === 0) return; // not visible right now
+        const lineY = anchorRect.top - controlsPageEl.getBoundingClientRect().top;
+        vineReveal.style.top = lineY + 'px';
+        playBtn.style.top = (lineY + 96) + 'px';
+        return;
+      }
+      if (!barWrapEl) return;
       const lineY = barWrapEl.getBoundingClientRect().bottom - card.getBoundingClientRect().top;
       vineReveal.style.top = lineY + 'px';
       playBtn.style.top = (lineY + 96) + 'px'; // 96 = the circle's cy in the SVG above
@@ -7697,6 +7931,45 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       });
     }
 
+    // phone: the bar already reads as a horizontal strip (siblings sit
+    // off to either side at SLOT_WIDTH, see positionBar above) -- letting
+    // a thumb drag step through it directly, not just tapping a name one
+    // at a time, matches what it already looks like it should do. .program-
+    // bar is in TOUCH_SWIPE_EXEMPT_SELECTOR (see its own list) so the
+    // page's own vertical section-swipe freeze never engages here at all;
+    // this owns the gesture completely on its own instead.
+    (function(){
+      let touchStartX = null;
+      let touchDragging = false;
+      bar.addEventListener('touchstart', function(evt){
+        if (!evt.touches[0]) return;
+        touchStartX = evt.touches[0].clientX;
+        touchDragging = false;
+      }, { passive:true });
+      bar.addEventListener('touchmove', function(evt){
+        if (touchStartX === null || !evt.touches[0]) return;
+        // small threshold before committing to "this is a drag, not a
+        // tap" -- past it, prevent the browser's own native horizontal
+        // scroll/selection from fighting this gesture for the rest of it
+        if (!touchDragging && Math.abs(evt.touches[0].clientX - touchStartX) < 6) return;
+        touchDragging = true;
+        evt.preventDefault();
+      }, { passive:false });
+      bar.addEventListener('touchend', function(evt){
+        if (touchStartX === null) return;
+        const endX = evt.changedTouches[0] ? evt.changedTouches[0].clientX : touchStartX;
+        const dx = endX - touchStartX;
+        touchStartX = null;
+        if (!touchDragging || Math.abs(dx) < 30) return; // a tap (or too small a drag) -- let the item's own click handle it
+        // dragging left pulls the next program in from the right (same
+        // direction its own idle offset already sits at, see positionBar)
+        const targetIdx = currentIndex + (dx < 0 ? 1 : -1);
+        if (targetIdx < 0 || targetIdx >= programs.length) return;
+        currentIndex = targetIdx;
+        applyEntry(programs[currentIndex]);
+      }, { passive:true });
+    })();
+
     function applyEntry(entry, opts){
       const myToken = ++requestToken;
 
@@ -7764,7 +8037,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         if (myToken !== requestToken) return;
         artistBio.textContent = data.text;
         refreshBioScrollVisibility(); // a long bio now scrolls inside its own fixed-height box instead of growing the card, see bioTextClip above
-        currentArtistLinks = extractArtistLinks(data);
+        currentArtistLinks = extractLinks(data);
         // the real bio text almost never matches "Lädt…"'s length, so the
         // card's locked-in height (measured back when this was still the
         // placeholder -- see remeasureCardHeight/lockHeight) is usually
@@ -7936,23 +8209,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
           modalArtistPhotoEl.alt = artistCurrentEl.textContent;
           modalArtistPhotoEl.src = artistImage.src;
         }
-        if (modalArtistLinksEl){
-          modalArtistLinksEl.innerHTML = '';
-          Object.keys(currentArtistLinks).forEach(function(key){
-            const icon = ARTIST_LINK_ICONS[key];
-            if (!icon) return;
-            const a = document.createElement('a');
-            a.className = 'modal-artist-link';
-            a.href = currentArtistLinks[key];
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.innerHTML =
-              '<span class="modal-artist-link-icon"><svg viewBox="0 0 24 24">' + icon.svg + '</svg></span>' +
-              '<span class="modal-artist-link-caption">' + icon.label + '</span>';
-            modalArtistLinksEl.appendChild(a);
-          });
-          if (modalArtistEmptyEl) modalArtistEmptyEl.classList.toggle('visible', modalArtistLinksEl.children.length === 0);
-        }
+        renderLinkRow(modalArtistLinksEl, modalArtistEmptyEl, currentArtistLinks);
         modalArtistCredentials.classList.add('active');
         document.body.style.overflow = 'hidden';
         document.documentElement.style.overflow = 'hidden';
@@ -8185,37 +8442,23 @@ if (summeTextEl && wordmarkWrap && contactSection) {
       });
     });
 
-    // phone: neither edition auto-opens -- both editions start as plain
-    // idle/collapsed cards (the "Unsere Szene, Unser Sound" link opens
+    // neither edition auto-opens on load, on phone or desktop -- every
+    // edition starts as a plain idle/collapsed card, all visible and
+    // clickable at once (the "Unsere Szene, Unser Sound" link opens
     // Industrial Noise specifically once clicked, see __openEditionBySlug
-    // below). Desktop keeps the previous "first edition open by default" look.
-    const isPhoneBoot = window.matchMedia('(max-width:640px)').matches;
-    editions.forEach(function(edition, idx){
+    // below). Desktop used to start with the first edition already open
+    // by default; changed by request so every edition is equally
+    // reachable from the very first paint instead of one already hogging
+    // the row.
+    editions.forEach(function(edition){
       const instance = mountEdition(edition.slug, edition.programs, edition.colors);
-      if (idx === 0 && !isPhoneBoot){
-        // first edition starts open by default; the rest start as
-        // hidden siblings alongside it (no transition -- this is the
-        // initial state, not a user-triggered toggle)
-        activeInstance = instance;
-        container.classList.add('has-active');
-        instance.wrap.classList.add('wrap-active');
-        // mountEdition's own lockHeight() call already ran (inside
-        // mountEdition, before wrap-active existed yet), same ordering
-        // gap as the hidden-sibling one below -- re-run it now that the
-        // class is actually set, so the phone-only "fill the screen"
-        // height (see lockHeight) is computed for the edition that
-        // starts open too, not just ones opened later by a real click
-        instance.lockHeight();
-        instance.playVineReveal(); // visible immediately, no opening animation to wait out
-      } else {
-        instance.wrap.classList.add('card-collapsed');
-        // only actually "hidden behind" something if some other instance
-        // is genuinely open (desktop's idx 0) -- on phone activeInstance
-        // is never set here, so both stay plain idle/collapsed, neither
-        // hidden nor active, exactly like the "nothing open yet" state
-        // requestClose() already leaves behind after a real close.
-        if (activeInstance) instance.wrap.classList.add('wrap-hidden-sibling');
-      }
+      instance.wrap.classList.add('card-collapsed');
+      // only actually "hidden behind" something if some other instance is
+      // genuinely open -- activeInstance is never set during this loop
+      // anymore, so this never fires at boot now, but stays correct if
+      // this loop is ever reached with one already active for some other
+      // reason.
+      if (activeInstance) instance.wrap.classList.add('wrap-hidden-sibling');
     });
     // phone only: mountEdition's own lockHeight() call (inside it, before
     // this loop gets a chance to add wrap-hidden-sibling above) already
@@ -8254,11 +8497,92 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const modalArtistCredentials = document.getElementById('modalArtistCredentials');
   const allModals = [modalPreorder, modalContact, modalNewsletter, modalImpressum, modalArtistCredentials].filter(Boolean);
 
+  // Kontakt/Newsletter link rows: instagram + email icons (see LINK_ICONS/
+  // renderLinkRow above), sourced from their own JSON files rather than
+  // hardcoded, so the links can be changed without touching markup.
+  // "In Kontakt treten" and "Informiert bleiben" are kept as separate
+  // files (rather than one shared one) since nothing requires their
+  // link sets to stay identical going forward.
+  const modalContactLinksEl = document.getElementById('modalContactLinks');
+  const modalContactEmptyEl = document.getElementById('modalContactEmpty');
+  fetch('texts/contact_send.json')
+    .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+    .then(function(data){ renderLinkRow(modalContactLinksEl, modalContactEmptyEl, extractLinks(data), 'Kontaktanfrage'); })
+    .catch(function(){ renderLinkRow(modalContactLinksEl, modalContactEmptyEl, {}); });
+
+  const modalNewsletterLinksEl = document.getElementById('modalNewsletterLinks');
+  const modalNewsletterEmptyEl = document.getElementById('modalNewsletterEmpty');
+  fetch('texts/contact_receive.json')
+    .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+    .then(function(data){ renderLinkRow(modalNewsletterLinksEl, modalNewsletterEmptyEl, extractLinks(data)); })
+    .catch(function(){ renderLinkRow(modalNewsletterLinksEl, modalNewsletterEmptyEl, {}); });
+
+  // phone: up/down + slider for the Impressum text, same look as the
+  // Artist tab's bio-text-nav and the Controls tab's info-box nav --
+  // self-contained (own mousedown/touchstart drag handling, not the
+  // shared sliderDrag/sliderFracFromEvent those use) since those live in
+  // a completely different top-level IIFE and aren't reachable from here.
+  let refreshImpressumScrollNav = function(){};
+  (function(){
+    const scrollEl = document.querySelector('.impressum-scroll');
+    const navEl = document.querySelector('.impressum-scroll-nav');
+    const upBtn = document.querySelector('.impressum-scroll-up');
+    const downBtn = document.querySelector('.impressum-scroll-down');
+    const slider = document.querySelector('.impressum-scroll-slider');
+    const thumb = slider && slider.querySelector('.bio-text-slider-thumb');
+    if (!scrollEl || !navEl || !upBtn || !downBtn || !slider || !thumb) return;
+    const STEP = 40;
+    function scrollMax(){ return Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight); }
+    refreshImpressumScrollNav = function(){
+      const max = scrollMax();
+      navEl.classList.toggle('impressum-scroll-nav-hidden', max <= 0);
+      const frac = max > 0 ? scrollEl.scrollTop / max : 0;
+      thumb.style.top = (frac * 100).toFixed(2) + '%';
+      upBtn.disabled = scrollEl.scrollTop <= 0;
+      downBtn.disabled = scrollEl.scrollTop >= max;
+      slider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
+    };
+    scrollEl.addEventListener('scroll', refreshImpressumScrollNav);
+    function suppressFocusScroll(evt){ evt.preventDefault(); }
+    upBtn.addEventListener('mousedown', suppressFocusScroll);
+    downBtn.addEventListener('mousedown', suppressFocusScroll);
+    upBtn.addEventListener('click', function(){ scrollEl.scrollTop -= STEP; });
+    downBtn.addEventListener('click', function(){ scrollEl.scrollTop += STEP; });
+    function fracFromEvent(evt){
+      const rect = slider.getBoundingClientRect();
+      if (rect.height <= 0) return 0;
+      return Math.max(0, Math.min(1, (evt.clientY - rect.top) / rect.height));
+    }
+    function applyFrac(frac){ scrollEl.scrollTop = frac * scrollMax(); }
+    let dragging = false;
+    function startDrag(evt){
+      dragging = true;
+      applyFrac(fracFromEvent(evt));
+    }
+    slider.addEventListener('mousedown', function(evt){ evt.preventDefault(); startDrag(evt); });
+    slider.addEventListener('touchstart', function(evt){
+      if (!evt.touches[0]) return;
+      evt.preventDefault();
+      startDrag(evt.touches[0]);
+    }, { passive:false });
+    window.addEventListener('mousemove', function(evt){ if (dragging) applyFrac(fracFromEvent(evt)); });
+    window.addEventListener('mouseup', function(){ dragging = false; });
+    window.addEventListener('touchmove', function(evt){
+      if (!dragging || !evt.touches[0]) return;
+      applyFrac(fracFromEvent(evt.touches[0]));
+    }, { passive:true });
+    window.addEventListener('touchend', function(){ dragging = false; });
+  })();
+
   function openModal(modal){
     if (!modal) return;
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
+    // only meaningful once the modal is actually visible -- display:none
+    // measures a zero-height scroll area, same reasoning as the Artist
+    // tab's own bio-text-nav (see updateBioTextHeightForPhone)
+    if (modal === modalImpressum) refreshImpressumScrollNav();
   }
   function closeModal(modal){
     if (!modal) return;
@@ -8475,8 +8799,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // scrolling the text like it looks like it should.
   const TOUCH_SWIPE_EXEMPT_SELECTOR =
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
-    '.why-text, .bio-text-clip, ' +
-    '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, ' +
+    '.why-text, .bio-text-clip, .object-info-inner, .control-info-scroll-nav, ' +
+    '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, .program-bar, ' +
     '.logo-box, #pedalsLabel, #sloganMain, #summeText, .why-mobile-tab, .card-page-btn';
   // the *real scrollable text* subset of the exempt selector above --
   // .pedal-poti/.particle-slider/#sloganMain etc "own their own gesture"
@@ -8485,26 +8809,55 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   // should: scroll it internally right up until it's already at its own
   // top/bottom, and only *then* does continuing the same drag hand off
   // to the normal section-jump -- see touchend below.
-  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .blog-item-content';
+  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .blog-item-content, .object-info-inner';
+  // the subset of the exempt selector above that's *only* a plain tap
+  // target -- no drag gesture of its own at all (unlike .pedal-poti/
+  // .particle-slider/etc, which have real touchmove handling elsewhere
+  // that this freeze would otherwise fight). These were exempted purely
+  // so a quick tap's own synthetic click isn't swallowed by this
+  // listener's preventDefault -- but that also meant an actual *drag*
+  // starting on one of them (e.g. a text-selection-style drag on the
+  // slogan) got the browser's native unmanaged scroll instead of ever
+  // being tracked as a swipe, which could leave the page's own section-
+  // index permanently out of sync with wherever that native scroll ended
+  // up -- reading as "the snapping randomly stopped working" from then on.
+  const TOUCH_TAP_ONLY_SELECTOR =
+    '.logo-box, #pedalsLabel, #sloganMain, #summeText, .why-mobile-tab, .card-page-btn';
   let touchStartY = null;
   let touchSwipeExempt = false;
+  let touchTapOnly = false;
+  let touchDragEngaged = false;
   let touchExemptScrollEl = null;
   let touchIsPhone = false;
   window.addEventListener('touchstart', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
     touchSwipeExempt = !!(e.target.closest && e.target.closest(TOUCH_SWIPE_EXEMPT_SELECTOR));
+    touchTapOnly = !!(e.target.closest && e.target.closest(TOUCH_TAP_ONLY_SELECTOR));
+    touchDragEngaged = false;
     touchExemptScrollEl = (e.target.closest && e.target.closest(TOUCH_SCROLL_BOUNDARY_SELECTOR)) || null;
     touchIsPhone = window.matchMedia(PHONE_QUERY).matches;
     touchStartY = e.touches[0].clientY;
   }, { passive:true });
 
   // phone only: freeze the page for the whole drag -- see the block
-  // comment above for why. No-ops entirely for an exempt target (a poti/
-  // slider/etc that owns its own gesture) or on desktop.
+  // comment above for why. No-ops entirely for an exempt target that
+  // genuinely owns its own gesture (a poti/slider/etc) or on desktop.
   window.addEventListener('touchmove', function(e){
-    if (!touchIsPhone || touchSwipeExempt || touchStartY === null) return;
+    if (!touchIsPhone || touchStartY === null) return;
     if (document.querySelector('.modal-overlay.active') || isJumping || pageAnimationActive) return;
     if (!e.touches[0]) return;
+    if (touchSwipeExempt && !touchTapOnly) return;
+    if (touchTapOnly && !touchDragEngaged){
+      // still looks like it could just be a tap -- leave it alone (see
+      // TOUCH_TAP_ONLY_SELECTOR's own comment) until the finger has
+      // actually moved enough to call it a drag instead, at which point
+      // this behaves exactly like a normal (non-exempt) target for the
+      // rest of the gesture, same freeze-and-commit-on-release as
+      // anywhere else on the page.
+      if (Math.abs(e.touches[0].clientY - touchStartY) < 10) return;
+      touchDragEngaged = true;
+      touchSwipeExempt = false;
+    }
     e.preventDefault();
   }, { passive:false });
 
