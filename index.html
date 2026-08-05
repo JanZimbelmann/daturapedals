@@ -730,6 +730,29 @@
     white-space:pre-line;
     text-align:left;
   }
+  /* shown in place of .video-frame when scripts.json says there's no
+     video to embed yet (see the Video/Script tabs script) -- same look
+     as the script text beside it, just centered since there's nothing
+     else sharing the panel with it */
+  .video-noVideo-text{
+    display:none;
+    height:100%;
+    box-sizing:border-box;
+    padding:2rem;
+    margin:0;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-size:0.9rem;
+    line-height:1.8;
+    color:var(--grey-3);
+  }
+  .video-panel.no-video .video-frame{
+    display:none;
+  }
+  .video-panel.no-video .video-noVideo-text{
+    display:flex;
+  }
 
   .pedal-viewer{
     position:relative;
@@ -3906,10 +3929,13 @@
     </div>
     <div class="video-panels">
       <div class="video-panel active" id="panelVideo">
-        <div class="video-frame">
+        <!-- src/hidden state both come from texts/scripts.json, filled in
+             once that's fetched (see the Video/Script tabs script) -- no
+             src here up front so there's never a flash of a stale/wrong
+             video before it resolves. -->
+        <div class="video-frame" id="videoFrame">
           <iframe
             id="videoIframe"
-            src="https://www.youtube.com/embed/L7dzsyUZFYU?enablejsapi=1"
             title="YouTube video"
             loading="lazy"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -3917,6 +3943,10 @@
           </iframe>
           <div class="video-scroll-guard" id="videoScrollGuard"></div>
         </div>
+        <!-- shown instead of .video-frame above when scripts.json's own
+             hideVideo is true, or its videoUrl is missing/empty -- see
+             .video-panel.no-video's own CSS -->
+        <p class="video-noVideo-text" id="noVideoText"></p>
       </div>
       <div class="video-panel video-script-panel" id="panelScript">
         <p class="video-script-text" id="scriptText">Lädt…</p>
@@ -4971,7 +5001,34 @@ const whySection = document.getElementById('whySection');
   const panelScript = document.getElementById('panelScript');
   const videoIframe = document.getElementById('videoIframe');
   const scriptTextEl = document.getElementById('scriptText');
-  if (!tabVideoBtn || !tabScriptBtn || !panelVideo || !panelScript || !videoIframe || !scriptTextEl) return;
+  const noVideoTextEl = document.getElementById('noVideoText');
+  if (!tabVideoBtn || !tabScriptBtn || !panelVideo || !panelScript || !videoIframe || !scriptTextEl || !noVideoTextEl) return;
+
+  // both the video (link + whether to actually show it) and the read-
+  // along script text live in the same texts/scripts.json now -- fetched
+  // once, up front (not lazily on first tab click like the script text
+  // used to be), since the video's own presence has to be decided before
+  // it would otherwise start loading. hideVideo is a manual override;
+  // a missing/empty videoUrl hides it either way, same end result either
+  // reason it happened.
+  fetch('texts/scripts.json')
+    .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+    .then(function(data){
+      const hasVideo = !!(data && data.videoUrl && String(data.videoUrl).trim());
+      const hideVideo = !!(data && data.hideVideo) || !hasVideo;
+      panelVideo.classList.toggle('no-video', hideVideo);
+      if (hideVideo){
+        noVideoTextEl.textContent = (data && data.noVideoText) || 'A video describing the pedals is currently in production.';
+      } else {
+        videoIframe.src = data.videoUrl;
+      }
+      scriptTextEl.textContent = (data && data.text) || 'Script nicht gefunden';
+    })
+    .catch(function(){
+      panelVideo.classList.add('no-video');
+      noVideoTextEl.textContent = 'A video describing the pedals is currently in production.';
+      scriptTextEl.textContent = 'Script nicht gefunden';
+    });
 
   // phone: .video-panels' own aspect-ratio (16:9, sized off its *width*)
   // makes sense on a wide desktop viewport, but on a narrow phone screen
@@ -4999,7 +5056,6 @@ const whySection = document.getElementById('whySection');
   sizeVideoBoxForPhone();
   window.addEventListener('resize', sizeVideoBoxForPhone);
 
-  let scriptLoaded = false;
   let videoPlaying = false; // embed doesn't autoplay, so it starts paused
 
   function sendPlayerCommand(func){
@@ -5030,14 +5086,6 @@ const whySection = document.getElementById('whySection');
     panelScript.classList.add('active');
     panelVideo.classList.remove('active');
     pauseVideo();
-
-    if (!scriptLoaded){
-      scriptLoaded = true;
-      fetch('texts/scripts.txt')
-        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
-        .then(function(text){ scriptTextEl.textContent = text.trim(); })
-        .catch(function(){ scriptTextEl.textContent = 'Script nicht gefunden'; });
-    }
   }
 
   tabVideoBtn.addEventListener('click', showVideo);
@@ -6902,26 +6950,58 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const sideTitle = wrap.querySelector('.spotlight-side-title');
     const card = wrap.querySelector('.spotlight-box');
     const cardClip = wrap.querySelector('.spotlight-card-clip');
+    // wrap is a flex row (side box + card-clip) with align-items:stretch,
+    // so the card/clip's own height normally just follows wrap's -- which
+    // makes wrap.getBoundingClientRect().height circular the instant
+    // wrap's *own* inline height is what's being cleared/re-measured:
+    // wrap's auto height is supposed to come from the card's real content,
+    // but the card is simultaneously trying to stretch to match wrap's own
+    // (not-yet-settled) height. Chromium resolves that ambiguity by
+    // falling back to whatever wrap's previous height happened to be
+    // rather than genuinely re-measuring the content -- so a taller-than-
+    // expected bio (or anything else that changes height after the card's
+    // already open) never actually grew the box to fit on its own, only
+    // once some *unrelated* change (switching programs) forced a real
+    // layout pass some other way. Forcing the card's own height to auto
+    // first breaks that circularity outright: its real content-driven
+    // height no longer depends on wrap at all.
+    function measureNaturalCardHeight(){
+      // phone has its own, entirely separate height system
+      // (phoneActiveHeight fills the viewport rather than measuring
+      // "natural" content), and several of its own boxes deliberately
+      // size themselves to fill whatever room is left in the viewport
+      // (e.g. the Artist tab's bio-text-clip, see
+      // updateBioTextHeightForPhone) -- forcing *this* element's own
+      // height to auto to measure it, while one of ITS children is
+      // already sized to fill the screen, just measures that same
+      // screen-filling height right back, wildly inflating sharedCardHeight
+      // (which only ever grows) from then on. Desktop has no such self-
+      // inflating children, so only it uses this technique; phone keeps
+      // measuring the wrap directly, same as always.
+      if (window.matchMedia('(max-width:640px)').matches){
+        return wrap.getBoundingClientRect().height;
+      }
+      const prevCardHeight = card.style.height;
+      card.style.height = 'auto';
+      const natural = card.getBoundingClientRect().height;
+      card.style.height = prevCardHeight;
+      return natural;
+    }
     // re-measures this card's true natural height and re-locks it (see
     // applySharedHeight/lockHeight further down) -- needed anywhere
     // content can change height *after* the card is already open, since
     // lockHeight()'s own measureOpenHeight() has a fast path that just
-    // returns getBoundingClientRect().height unchanged in that case
-    // (correct for everything it was originally written for, where an
-    // already-open card's height never changes on its own -- wrong here).
-    // Clearing the locked height first lets the box size itself to
-    // whatever's actually showing right now before re-measuring.
+    // returns the (circular, see measureNaturalCardHeight above) rect
+    // height unchanged in that case (correct for everything it was
+    // originally written for, where an already-open card's height never
+    // changes on its own -- wrong here).
     function remeasureCardHeight(){
       // nothing meaningful to measure while collapsed (content this asks
       // about happens to update for every edition, not just the visible
       // one) -- lockHeight()'s own measureOpenHeight already handles
       // getting the right height once this instance actually opens
       if (wrap.classList.contains('card-collapsed')) return;
-      const prevHeight = wrap.style.height;
-      wrap.style.height = '';
-      const natural = wrap.getBoundingClientRect().height;
-      wrap.style.height = prevHeight;
-      wrap.style.height = applySharedHeight(natural) + 'px';
+      wrap.style.height = applySharedHeight(measureNaturalCardHeight()) + 'px';
     }
     sideTitle.textContent = folderNameToTitle(editionSlug);
     if (colors){
@@ -8246,7 +8326,10 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
        the full history of why this animation is shaped this way.) */
     function measureOpenHeight(){
       const wasCollapsed = wrap.classList.contains('card-collapsed');
-      if (!wasCollapsed) return wrap.getBoundingClientRect().height;
+      // measureNaturalCardHeight (not a plain wrap rect read) -- see its
+      // own comment on why reading wrap's height directly here is
+      // circular with the card/clip stretching to match it
+      if (!wasCollapsed) return measureNaturalCardHeight();
       // momentarily force the open layout, with transitions suppressed,
       // to measure its true natural height without any visible flash --
       // needed the first time a never-yet-opened card is about to open,
@@ -8271,7 +8354,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       card.style.transition = 'none';
       if (cardClip) cardClip.style.transition = 'none';
       wrap.classList.remove('card-collapsed');
-      const h = wrap.getBoundingClientRect().height;
+      const h = measureNaturalCardHeight();
       wrap.classList.add('card-collapsed');
       void wrap.offsetHeight; // force reflow so the re-added class is committed before transitions return
       wrap.style.transition = prevWrapT;
