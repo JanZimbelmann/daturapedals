@@ -846,7 +846,21 @@
     justify-content:flex-start;
   }
   .why-left{
-    border-right:1px solid var(--grey-2);
+    position:relative;
+  }
+  /* not a plain border-right -- that stretches to match why-right's own
+     height (why-left/why-right both fill this row's full height), which
+     ran the line all the way down past the fixed section-nav-down
+     overlay's own footprint at the very bottom of the viewport. Stopping
+     it well short of bottom:0 instead keeps it clear of that button. */
+  .why-left::after{
+    content:'';
+    position:absolute;
+    top:0;
+    right:0;
+    bottom:60px;
+    width:1px;
+    background:var(--grey-2);
   }
   .why-title{
     font-family:'Anton', sans-serif;
@@ -2729,8 +2743,12 @@
       overflow:hidden;
       /* bottom raised again (3rem -> 4.5rem) -- still overlapping some
          phones' own browser chrome (a fuller options/tab bar, not just a
-         slim gesture indicator) at the previous value */
-      padding:1.5rem 0.5rem 4.5rem;
+         slim gesture indicator) at the previous value. Top raised too
+         (1.5rem -> 3.25rem) -- the fixed section-nav-up overlay (see
+         .section-nav-btn, 44px tall on phone) otherwise sat right on top
+         of the first edition's own top edge, since this section aligns
+         its content flush to the top (see align-items below). */
+      padding:3.25rem 0.5rem 4.5rem;
       /* base rule vertically centers its content (align-items:center)
          inside a min-height:100vh box -- fine on desktop where the
          section-jump also centers, but on phone the section-jump aligns
@@ -2989,8 +3007,11 @@
       text-align:left;
       max-width:160px;
       position:absolute;
-      top:50%;
-      left:0;
+      /* nudged off dead-center: a bit right (left:0 -> 10px) and a bit
+         higher (top:50% -> 42%) reads better for a short, one-line name
+         than sitting exactly centered on the circle's own middle */
+      top:42%;
+      left:10px;
       transform:translateY(-50%);
     }
     .artist-nav-row{
@@ -3273,7 +3294,7 @@
          layout) left a noticeable gap above the diagram before it ever
          reached this now top-aligned tab (see .card-page-controls.active
          above) -- trimmed so the pedal itself sits right under the tabs. */
-      padding:0.5rem 1.75rem 0.5rem 0.4rem;
+      padding:0.5rem 1.75rem 0.5rem 0.9rem;
       /* this block is flex-direction:column (see the shared base rule),
          so justify-content actually governs its *vertical* placement --
          align-items is the one that controls horizontal position here.
@@ -3295,7 +3316,7 @@
        this block's own reduced left padding above, so growing this just
        eats into the gap toward the logo rather than re-centering it). */
     .card-page-controls .pedal-diagram{
-      max-width:196px;
+      max-width:215px;
     }
     /* stand-in for desktop's program-bar separator line -- the vine-
        reveal animation (see triggerVineReveal/positionVineReveal) always
@@ -3310,12 +3331,17 @@
       display:block;
       position:absolute;
       top:0.85rem;
-      /* right edge lands exactly on the play button's own left edge (see
-         .spotlight-center-play's matching right:1.5rem + its 58px width
-         below) -- hangs the button off the actual end of the line instead
-         of stopping short of it or running past it into empty space. */
-      right:calc(1.5rem + 58px);
-      left:68%;
+      /* right:0 -- runs all the way to this box's own real right wall
+         (passing underneath the button, same as the top cut-line running
+         under the artist circle's own masking buttons elsewhere) rather
+         than stopping short at the button's left edge. Width picks the
+         *left* edge up from there: exactly far enough back to land on
+         the vine SVG's own left edge (right:calc(1.5rem - 21px), 100px
+         wide -- see .vine-reveal below -- so its own left edge sits
+         1.5rem + 79px in from this wall), so the line reads as starting
+         right where the animation itself starts. */
+      right:0;
+      width:calc(1.5rem + 79px);
       height:1px;
       background:var(--grey-2);
     }
@@ -3449,6 +3475,19 @@
        above) needs to actually show before anything's been picked. */
     .card-page-controls .object-info-inner > .spotlight-title:not(.no-selection-yet){
       display:none;
+    }
+    /* the placeholder message (before anything's been pressed) is the
+       *only* content in the box at that point -- left-aligned like a
+       real title looked lopsided, all bunched against the left edge with
+       the whole right half of the box sitting empty. Centered instead,
+       both axes, since there's nothing else in the box competing for
+       that space at this point. */
+    .card-page-controls .object-info-inner > .spotlight-title.no-selection-yet{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
     }
     /* 2 columns instead of the shared single-column list, and no fixed
        page-window height -- every param renders at once now (see
@@ -4505,11 +4544,22 @@ function updateLocationHash(idx){
   if ((location.hash || '') === newHash) return;
   history.replaceState(null, '', newHash || (location.pathname + location.search));
 }
+// reassigned once the section-paging IIFE actually builds the buttons --
+// a plain no-op until then so calling this early (nothing does, but see
+// its own reasoning below) can never throw
+let refreshSectionNavButtonsGlobal = function(){};
 function syncPageIndex(el){
   const idx = pageSections.indexOf(el);
   if (idx !== -1){
     currentPageIndex = idx;
     updateLocationHash(idx);
+    // every hero CTA (openSlogan/openPedals/openSubslogan/openSumme) jumps
+    // straight here + snapSectionIntoView, never through jumpToIndex --
+    // which is otherwise the *only* place the up/down overlay buttons'
+    // disabled state gets refreshed. Without this, clicking one of those
+    // links landed on a real later section while the top button stayed
+    // stuck disabled (invisible) from whatever it was at page load.
+    refreshSectionNavButtonsGlobal();
   }
 }
 
@@ -5033,7 +5083,10 @@ const whySection = document.getElementById('whySection');
   }
   function refreshThumb(){
     const max = scrollMax();
-    const frac = max > 0 ? whyTextEl.scrollTop / max : 0;
+    // clamped -- native rubber-band overscroll can push scrollTop briefly
+    // past [0, max] on a real touch device, which without this would push
+    // the thumb clean past the track's own end instead of just pinning there
+    const frac = max > 0 ? Math.max(0, Math.min(1, whyTextEl.scrollTop / max)) : 0;
     if (whyTextSliderThumb) whyTextSliderThumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
     if (whyTextUpBtn) whyTextUpBtn.disabled = whyTextEl.scrollTop <= 0;
     if (whyTextDownBtn) whyTextDownBtn.disabled = whyTextEl.scrollTop >= max;
@@ -7215,7 +7268,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         // in the fixed-height box as it is, so a nav that's always there
         // would mostly just be pointing at nothing.
         navEl.classList.toggle('control-info-scroll-nav-hidden', max <= 0);
-        const frac = max > 0 ? scrollEl.scrollTop / max : 0;
+        // clamped -- see the identical comment on why-text's own refreshThumb
+        const frac = max > 0 ? Math.max(0, Math.min(1, scrollEl.scrollTop / max)) : 0;
         thumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
         upBtn.disabled = scrollEl.scrollTop <= 0;
         downBtn.disabled = scrollEl.scrollTop >= max;
@@ -7490,6 +7544,23 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       if (pageName === 'artist'){
         updateBioTextHeightForPhone();
         refreshBioNavState();
+        // remeasureCardHeight above can itself be the very first thing
+        // that ever changes wrap.style.height (see .spotlight-wrap's own
+        // 0.45s height transition) -- e.g. right after first opening this
+        // edition and switching straight to Artist, before that transition
+        // has rendered even one frame. updateBioTextHeightForPhone just
+        // measured this section's geometry against that still-mid-
+        // transition layout, baking in a wrong height (and therefore a
+        // wrong scroll range for the slider) that only a later, unrelated
+        // remeasure -- switching artist/program, which calls
+        // refreshBioScrollVisibility well after everything's settled --
+        // happened to correct. Redoing both once the transition is
+        // guaranteed done catches it the first time too, no switch
+        // required.
+        setTimeout(function(){
+          updateBioTextHeightForPhone();
+          refreshBioNavState();
+        }, 500);
       }
       // same reasoning -- .controls-vine-anchor (what the vine/button now
       // hang off on phone, see positionVineReveal) also measures a zero
@@ -7957,7 +8028,11 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       }
       function refreshBioScrollThumb(){
         const max = bioScrollMax();
-        const frac = max > 0 ? bioTextClip.scrollTop / max : 0;
+        // clamped -- native rubber-band overscroll can push scrollTop
+        // briefly past [0, max] on a real touch device (most noticeable
+        // dragging past either end), which without this would push the
+        // thumb clean past the track's own end instead of just pinning there
+        const frac = max > 0 ? Math.max(0, Math.min(1, bioTextClip.scrollTop / max)) : 0;
         // not a plain frac*100% -- the thumb is centered on its own `top`
         // via transform:translate(-50%,-50%) (see .bio-text-slider-thumb),
         // so at frac 0 or 1 that would push half the thumb clean past the
@@ -8834,7 +8909,9 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     refreshImpressumScrollNav = function(){
       const max = scrollMax();
       navEl.classList.toggle('impressum-scroll-nav-hidden', max <= 0);
-      const frac = max > 0 ? scrollEl.scrollTop / max : 0;
+      // clamped -- see the identical comment on the Artist tab's own
+      // refreshBioScrollThumb
+      const frac = max > 0 ? Math.max(0, Math.min(1, scrollEl.scrollTop / max)) : 0;
       thumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
       upBtn.disabled = scrollEl.scrollTop <= 0;
       downBtn.disabled = scrollEl.scrollTop >= max;
@@ -9013,6 +9090,9 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     if (sectionNavDown) sectionNavDown.disabled = currentPageIndex >= pageSections.length - 1;
   }
   refreshSectionNavButtons();
+  // see syncPageIndex's own comment -- this is what lets it also refresh
+  // these buttons for jumps that never go through jumpToIndex at all
+  refreshSectionNavButtonsGlobal = refreshSectionNavButtons;
   if (sectionNavUp){
     sectionNavUp.addEventListener('click', function(){
       if (isJumping || pageAnimationActive) return;
