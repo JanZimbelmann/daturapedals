@@ -1365,8 +1365,11 @@
     color:var(--edition-fg, var(--white));
     white-space:nowrap;
     user-select:none;
-    transform:rotate(-90deg);
-    transform-origin:center;
+    /* stacked top-to-bottom, each letter itself still upright -- not a
+       whole horizontal line rotated 90deg, which read fine visually but
+       meant actually reading it required tilting your head sideways */
+    writing-mode:vertical-rl;
+    text-orientation:upright;
     transition:color 0.25s ease;
   }
 
@@ -2474,6 +2477,31 @@
                           of introducing its own mismatched glow color */
   }
 
+  /* switch 3 flips both buttons' interaction mode (toggle vs momentary,
+     see buttonsToggleMode) -- a subtle overshoot pop + a brief glow on
+     both buttons makes that mode-switch itself read as an event, not
+     just a silent style change nobody's looking at right that second */
+  .pedal-button.burst{
+    transform-box:fill-box;
+    transform-origin:center;
+    animation:pedal-button-burst 0.4s cubic-bezier(.22,1.8,.36,1);
+  }
+  .pedal-button.burst .button-outer,
+  .pedal-button.burst .button-inner{
+    animation:pedal-button-burst-glow 0.4s ease-out;
+  }
+  @keyframes pedal-button-burst{
+    0%{ transform:scale(1); }
+    35%{ transform:scale(1.28); }
+    60%{ transform:scale(0.96); }
+    100%{ transform:scale(1); }
+  }
+  @keyframes pedal-button-burst-glow{
+    0%{ filter:drop-shadow(0 0 0 transparent); }
+    35%{ filter:drop-shadow(0 0 4px var(--edition-fg, var(--white))); }
+    100%{ filter:drop-shadow(0 0 0 transparent); }
+  }
+
   @media (max-width:640px){
     /* the hero's own font-size clamps already shrink every line quite a
        bit on a narrow phone screen, and the margins between them were
@@ -2816,7 +2844,7 @@
       color:var(--edition-bg, var(--black));
     }
     .spotlight-side-title{
-      transform:none;
+      writing-mode:horizontal-tb;
       letter-spacing:0.25em;
     }
     /* the universal (desktop) rule collapses a hidden sibling's WIDTH to
@@ -3031,15 +3059,15 @@
     .card-page-artist .artist-circle-wrap::after{
       content:'';
       position:absolute;
-      /* not left:100% (the wrap's own right edge) -- the circle is cropped
-         14px above this line (see .card-page-artist .artist-circle-wrap's
-         142px height vs. the image's own 170px), so at this exact height
-         the circle's rounded edge is still visibly short of that edge.
-         132px is where the circle's own curve actually crosses this
-         horizontal line (radius 85, 71px below the image's vertical
-         center: 85 + sqrt(85^2 - 71^2) ≈ 132), so the line now starts
-         flush with the circle's real boundary instead of floating past it. */
-      left:132px;
+      /* the circle's own curve crosses this horizontal line at TWO points
+         (radius 85, 71px below the image's vertical center: 85 ±
+         sqrt(85^2 - 71^2) ≈ 85 ± 46.7, i.e. roughly x=38 and x=132) --
+         starting at the *left* one (38px) rather than the right (132px)
+         means the confined portion between them now actually crosses the
+         circle's own visible curve first, matching how the top cut-line
+         crosses the image (see .artist-circle-clip::after), before this
+         same line continues on rightward past the circle same as before. */
+      left:38px;
       bottom:0;
       width:200vw;
       height:1px;
@@ -3098,11 +3126,16 @@
        extension -- these buttons are about "who else this artist worked
        with", which reads more like a footnote under the name than
        something that needs to share the top line with "In Kooperation
-       mit:". */
+       mit:". Sitting *on* that line (not just near it, see bottom:0 +
+       the translate below) is what makes each button's own opaque
+       background (see .collab-button:not(.active) further down) actually
+       read as erasing a piece of the line behind it, the same "text
+       breaking a line" look as .collab-divider-text above. */
     .card-page-artist .collab-buttons{
       position:absolute;
       left:0;
-      bottom:0.3rem;
+      bottom:0;
+      transform:translateY(50%);
       margin-right:0;
     }
     /* the bottom cut-line's rightward extension (see
@@ -3240,11 +3273,19 @@
          layout) left a noticeable gap above the diagram before it ever
          reached this now top-aligned tab (see .card-page-controls.active
          above) -- trimmed so the pedal itself sits right under the tabs. */
-      padding:0.5rem 1.75rem 0.5rem 0.75rem;
-      /* was center -- shifted left instead, freeing up the right-hand
-         side of this row for the sound-preview button + its vine-reveal
-         animation (see .controls-vine-anchor and its own siblings below) */
+      padding:0.5rem 1.75rem 0.5rem 0.4rem;
+      /* this block is flex-direction:column (see the shared base rule),
+         so justify-content actually governs its *vertical* placement --
+         align-items is the one that controls horizontal position here.
+         Was center (inherited from that same base rule); overridden to
+         flex-start instead, freeing up the right-hand side of this row
+         for the sound-preview button + its vine-reveal animation (see
+         .controls-vine-anchor and its own siblings below). justify-
+         content:flex-start kept alongside it so the panel also sits
+         flush under the tabs rather than vertically centered in
+         whatever extra height this column ends up with. */
       justify-content:flex-start;
+      align-items:flex-start;
     }
     /* the pedal's own 220px max-width (base rule) plus this tab's already-
        narrow available width left no real room beside it for the sound-
@@ -3254,7 +3295,7 @@
        this block's own reduced left padding above, so growing this just
        eats into the gap toward the logo rather than re-centering it). */
     .card-page-controls .pedal-diagram{
-      max-width:172px;
+      max-width:196px;
     }
     /* stand-in for desktop's program-bar separator line -- the vine-
        reveal animation (see triggerVineReveal/positionVineReveal) always
@@ -3283,10 +3324,19 @@
        own separator line runs the card's full width; here they instead
        hang from .controls-vine-anchor above, which only spans the gap to
        the right of the diagram, so they're shifted out to sit roughly
-       centered *on that line* instead of the whole card. */
+       centered *on that line* instead of the whole card. Not the same
+       right:1.5rem for both -- the vine SVG's own box is 100px wide vs.
+       the button's 58px, so lining up their *right edges* left the vine's
+       actual center (and the zig-zag/circle drawn inside it) sitting
+       21px further left than the button's center instead of directly
+       above it (positionVineReveal already aligns them vertically, via
+       the button's own inline top). Shifting the vine's right inward by
+       that same 21px (half of 100px minus half of 58px) lines up both
+       centers instead, so the animation reads as ending exactly where
+       the button then appears, not next to it. */
     .card-page-controls .vine-reveal{
       left:auto;
-      right:1.5rem;
+      right:calc(1.5rem - 21px);
       transform:none;
     }
     .card-page-controls .spotlight-center-play{
@@ -3911,34 +3961,45 @@
     left:0;
     right:0;
     width:100%;
-    height:30px;
+    height:52px;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:rgba(5,5,5,0.55);
+    /* a soft fade rather than a hard-edged bar -- reads as an ambient
+       affordance built into the page's own darkness at rest, not a UI
+       chrome strip slapped on top of the content */
+    background:none;
     color:var(--grey-3);
     border:none;
     font-family:'IBM Plex Mono', monospace;
-    font-size:0.75rem;
+    font-size:1.2rem;
     cursor:pointer;
     user-select:none;
     z-index:40;
-    opacity:0.7;
-    transition:opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+    opacity:0.85;
+    transition:opacity 0.25s ease, color 0.25s ease;
+  }
+  .section-nav-up{
+    top:0;
+    background:linear-gradient(to bottom, rgba(5,5,5,0.7), rgba(5,5,5,0) 90%);
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .section-nav-down{
+    bottom:0;
+    background:linear-gradient(to top, rgba(5,5,5,0.7), rgba(5,5,5,0) 90%);
+    border-bottom:1px solid rgba(255,255,255,0.08);
   }
   .section-nav-btn:hover{
     opacity:1;
     color:var(--white);
-    background:rgba(5,5,5,0.8);
+    text-shadow:0 0 10px rgba(255,255,255,0.5);
   }
   .section-nav-btn:disabled{
     opacity:0;
     pointer-events:none;
   }
-  .section-nav-up{ top:0; }
-  .section-nav-down{ bottom:0; }
   @media (max-width:640px){
-    .section-nav-btn{ height:26px; font-size:0.7rem; }
+    .section-nav-btn{ height:44px; font-size:1.05rem; }
   }
 </style>
 </head>
@@ -4973,7 +5034,7 @@ const whySection = document.getElementById('whySection');
   function refreshThumb(){
     const max = scrollMax();
     const frac = max > 0 ? whyTextEl.scrollTop / max : 0;
-    if (whyTextSliderThumb) whyTextSliderThumb.style.top = (frac * 100).toFixed(2) + '%';
+    if (whyTextSliderThumb) whyTextSliderThumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
     if (whyTextUpBtn) whyTextUpBtn.disabled = whyTextEl.scrollTop <= 0;
     if (whyTextDownBtn) whyTextDownBtn.disabled = whyTextEl.scrollTop >= max;
     if (whyTextSlider) whyTextSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
@@ -7155,7 +7216,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         // would mostly just be pointing at nothing.
         navEl.classList.toggle('control-info-scroll-nav-hidden', max <= 0);
         const frac = max > 0 ? scrollEl.scrollTop / max : 0;
-        thumb.style.top = (frac * 100).toFixed(2) + '%';
+        thumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
         upBtn.disabled = scrollEl.scrollTop <= 0;
         downBtn.disabled = scrollEl.scrollTop >= max;
         slider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
@@ -7417,8 +7478,19 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       remeasureCardHeight();
       // bio-text-clip was measuring a zero rect while this tab was
       // display:none -- only correct to size it now that it's actually
-      // the visible page (see updateBioTextHeightForPhone's own comment)
-      if (pageName === 'artist') updateBioTextHeightForPhone();
+      // the visible page (see updateBioTextHeightForPhone's own comment).
+      // refreshBioNavState has to follow right after: if the bio itself
+      // loaded (see refreshBioScrollVisibility) while this tab was still
+      // hidden, its "does this even need a scrollbar" check ran against
+      // that same bogus zero-height box and could easily have landed on
+      // "no" for a bio that's actually long enough to need one --
+      // recomputing it now, against the just-corrected real height, is
+      // what actually catches that instead of leaving the nav stuck
+      // hidden for the rest of this card's life.
+      if (pageName === 'artist'){
+        updateBioTextHeightForPhone();
+        refreshBioNavState();
+      }
       // same reasoning -- .controls-vine-anchor (what the vine/button now
       // hang off on phone, see positionVineReveal) also measures a zero
       // rect until this tab is actually the visible one
@@ -7606,6 +7678,21 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // only lit while actually held down
       let buttonsToggleMode = true;
 
+      // both buttons pop with an overshoot enlarge + brief glow -- see
+      // switchIndex === 2 below, wherever it's actually triggered
+      let burstTimer = null;
+      function burstButtons(){
+        buttonEls.forEach(function(btn){
+          btn.classList.remove('burst');
+          void btn.getBoundingClientRect(); // force reflow so a rapid re-toggle restarts the animation instead of no-op'ing
+          btn.classList.add('burst');
+        });
+        clearTimeout(burstTimer);
+        burstTimer = setTimeout(function(){
+          buttonEls.forEach(function(btn){ btn.classList.remove('burst'); });
+        }, 400);
+      }
+
       // switches: click toggles between the left and right resting position
       diagram.querySelectorAll('.pedal-switch').forEach(function(sw){
         const thumb = sw.querySelector('.switch-thumb');
@@ -7635,6 +7722,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
             // switching into momentary mode shouldn't leave a button
             // stuck lit from whatever toggle state it was left in
             if (!buttonsToggleMode) buttonEls.forEach(function(b){ b.classList.remove('pressed'); });
+            burstButtons();
           }
           // only switch 1 (index 0) has a known store mapping (key "2") --
           // switch 3 (index 2) picks button mode (val still passed through
@@ -7802,7 +7890,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       resetPedalControls = function(){
         switchResets.forEach(function(fn){ fn(); });
         potiResets.forEach(function(fn){ fn(); });
-        buttonEls.forEach(function(btn){ btn.classList.remove('pressed'); });
+        clearTimeout(burstTimer);
+        buttonEls.forEach(function(btn){ btn.classList.remove('pressed'); btn.classList.remove('burst'); });
       };
       } catch(e) { console.error('Pedal diagram setup failed:', e); }
     }
@@ -7835,6 +7924,13 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // rect), so this is called from setActivePage specifically when
     // switching *to* 'artist', not on some generic timer/observer.
     let updateBioTextHeightForPhone = function(){};
+    // separate from refreshBioScrollVisibility below -- that one also
+    // resets scrollTop to 0, right for "a new bio just loaded" but wrong
+    // for "just switching back to a tab whose bio was already scrolled".
+    // This just recomputes whether the nav is needed + where its thumb
+    // sits, safe to call any time the box's real height might have
+    // changed out from under it.
+    let refreshBioNavState = function(){};
     if (bioTextClip && bioTextNav && bioTextUpBtn && bioTextDownBtn && bioTextSlider && bioTextSliderThumb){
       const BIO_SCROLL_STEP = 40; // px per button click -- roughly a line and a bit
       updateBioTextHeightForPhone = function(){
@@ -7862,11 +7958,22 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       function refreshBioScrollThumb(){
         const max = bioScrollMax();
         const frac = max > 0 ? bioTextClip.scrollTop / max : 0;
-        bioTextSliderThumb.style.top = (frac * 100).toFixed(2) + '%';
+        // not a plain frac*100% -- the thumb is centered on its own `top`
+        // via transform:translate(-50%,-50%) (see .bio-text-slider-thumb),
+        // so at frac 0 or 1 that would push half the thumb clean past the
+        // track's own top/bottom edge instead of stopping flush with it.
+        // Clamping the *range* top can travel to (thumb radius on either
+        // end) rather than the full 0-100% keeps it inside the track at
+        // both extremes.
+        bioTextSliderThumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
         bioTextUpBtn.disabled = bioTextClip.scrollTop <= 0;
         bioTextDownBtn.disabled = bioTextClip.scrollTop >= max;
         bioTextSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
       }
+      refreshBioNavState = function(){
+        bioTextNav.classList.toggle('bio-text-nav-hidden', bioScrollMax() <= 0);
+        refreshBioScrollThumb();
+      };
       // called after every bio text swap -- a short bio needs no
       // scrollbar at all (same "only render the nav if it's actually
       // needed" principle as the params page-nav), and switching artists
@@ -7875,8 +7982,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       refreshBioScrollVisibility = function(){
         updateBioTextHeightForPhone();
         bioTextClip.scrollTop = 0;
-        bioTextNav.classList.toggle('bio-text-nav-hidden', bioScrollMax() <= 0);
-        refreshBioScrollThumb();
+        refreshBioNavState();
       };
       bioTextClip.addEventListener('scroll', refreshBioScrollThumb);
       // mousedown, not click -- see the identical comment on the params
@@ -8729,7 +8835,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const max = scrollMax();
       navEl.classList.toggle('impressum-scroll-nav-hidden', max <= 0);
       const frac = max > 0 ? scrollEl.scrollTop / max : 0;
-      thumb.style.top = (frac * 100).toFixed(2) + '%';
+      thumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
       upBtn.disabled = scrollEl.scrollTop <= 0;
       downBtn.disabled = scrollEl.scrollTop >= max;
       slider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
