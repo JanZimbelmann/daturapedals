@@ -851,12 +851,14 @@
   /* not a plain border-right -- that stretches to match why-right's own
      height (why-left/why-right both fill this row's full height), which
      ran the line all the way down past the fixed section-nav-down
-     overlay's own footprint at the very bottom of the viewport. Stopping
-     it well short of bottom:0 instead keeps it clear of that button. */
+     overlay's own footprint at the very bottom of the viewport, AND all
+     the way up past section-nav-up's own footprint at the very top.
+     Stopping it well short of both edges instead keeps it clear of
+     either button. */
   .why-left::after{
     content:'';
     position:absolute;
-    top:0;
+    top:60px;
     right:0;
     bottom:60px;
     width:1px;
@@ -3334,14 +3336,12 @@
       /* right:0 -- runs all the way to this box's own real right wall
          (passing underneath the button, same as the top cut-line running
          under the artist circle's own masking buttons elsewhere) rather
-         than stopping short at the button's left edge. Width picks the
-         *left* edge up from there: exactly far enough back to land on
-         the vine SVG's own left edge (right:calc(1.5rem - 21px), 100px
-         wide -- see .vine-reveal below -- so its own left edge sits
-         1.5rem + 79px in from this wall), so the line reads as starting
-         right where the animation itself starts. */
+         than stopping short at the button's left edge. Width shortened
+         (was 1.5rem + 79px, reaching all the way back to the vine SVG's
+         own left edge) -- read as extending too far left toward the
+         pedal diagram, so it's pulled in to a shorter stretch instead. */
       right:0;
-      width:calc(1.5rem + 79px);
+      width:calc(1.5rem + 40px);
       height:1px;
       background:var(--grey-2);
     }
@@ -6841,10 +6841,13 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     if (!sectionEl) return shared;
     const cs = getComputedStyle(sectionEl);
     const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-    // a further 28px on top of the section's own padding -- filling the
+    // a further 8px on top of the section's own padding -- filling the
     // *entire* remaining viewport read as a little too tall/cramped
-    // against the browser chrome above and below it
-    const EXTRA_BOTTOM_GAP = 28;
+    // against the browser chrome above and below it (was 28, but that
+    // then read as too short/cramped the other way once combined with
+    // .spotlight's own top padding also having grown since, for the
+    // fixed section-nav-up overlay's clearance)
+    const EXTRA_BOTTOM_GAP = 8;
     return Math.max(shared, window.innerHeight - padY - EXTRA_BOTTOM_GAP);
   }
   function applySharedHeight(natural){
