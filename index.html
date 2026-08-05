@@ -507,11 +507,19 @@
   .settled .wordmark-wrap{
     animation: fade-in 0.6s ease forwards;
   }
-  .settled .pedals-label{
+  /* #stage (not just .settled) in these two selectors specifically --
+     boosts specificity above .slogan-main:hover/.pedals-label:hover (see
+     their own mobile-only "neutralize stuck tap-hover" rule below), which
+     otherwise ties with plain .settled .pedals-label/.slogan-main and wins
+     on source order, canceling this reveal animation entirely (snapping
+     back to the base opacity:0) the instant a tap leaves either element
+     in sticky :hover -- reads as the whole hero fading to black instead
+     of scattering/bouncing its letters like it should. */
+  #stage.settled .pedals-label{
     animation: fade-in 0.6s ease forwards;
     animation-delay: 0.1s;
   }
-  .settled .slogan-main{
+  #stage.settled .slogan-main{
     animation: fade-in 0.6s ease forwards;
     animation-delay: 0.2s;
   }
@@ -2781,9 +2789,6 @@
       background:var(--edition-fg, var(--white));
       border-color:var(--edition-fg, var(--white));
     }
-    .spotlight-wrap.wrap-active .spotlight-side-title{
-      color:var(--edition-bg, var(--black));
-    }
     /* :hover doesn't mean anything on a touch device -- worse, a tap on
        an element that still has real :hover styles is exactly the
        situation where mobile browsers make the first tap only trigger
@@ -2800,6 +2805,15 @@
     }
     .spotlight-side-box:hover .spotlight-side-title{
       color:var(--edition-fg, var(--white));
+    }
+    /* same specificity as the hover-reset rule just above (2 classes/
+       pseudo either way), so source order alone decided the winner --
+       restated here, after it, so the reversed title color actually wins
+       once the card is genuinely open, instead of losing to :hover's own
+       reset the moment a real device applies :hover "stuck" after the tap
+       that opened it (a well-known mobile Safari/Chrome behavior). */
+    .spotlight-wrap.wrap-active .spotlight-side-title{
+      color:var(--edition-bg, var(--black));
     }
     .spotlight-side-title{
       transform:none;
@@ -3017,7 +3031,15 @@
     .card-page-artist .artist-circle-wrap::after{
       content:'';
       position:absolute;
-      left:100%;
+      /* not left:100% (the wrap's own right edge) -- the circle is cropped
+         14px above this line (see .card-page-artist .artist-circle-wrap's
+         142px height vs. the image's own 170px), so at this exact height
+         the circle's rounded edge is still visibly short of that edge.
+         132px is where the circle's own curve actually crosses this
+         horizontal line (radius 85, 71px below the image's vertical
+         center: 85 + sqrt(85^2 - 71^2) ≈ 132), so the line now starts
+         flush with the circle's real boundary instead of floating past it. */
+      left:132px;
       bottom:0;
       width:200vw;
       height:1px;
@@ -3039,6 +3061,13 @@
       align-items:center;
       height:auto;
       padding:0;
+      /* the row's own top edge sits on the line (top:0), but its content
+         (the text) is vertically centered *within* the row itself -- so
+         without this, the text's optical center ends up roughly half a
+         line-height below the actual line instead of sitting on it.
+         Shifting the whole row up by half of its own (content-driven)
+         height puts that same center point exactly on top:0 instead. */
+      transform:translateY(-50%);
     }
     .card-page-artist .collab-divider-left-group,
     .card-page-artist .collab-divider-right-group{
@@ -3082,7 +3111,7 @@
        the line out from behind it, the same "paint over it" trick as
        .collab-divider-text above, rather than the line visibly crossing
        through every button. */
-    .card-page-artist .collab-button{
+    .card-page-artist .collab-button:not(.active){
       background-color:var(--edition-bg, var(--black));
     }
     /* .bio-text-row's margin-right (reserved space for the Mod boxes
@@ -3095,16 +3124,6 @@
        long bio has nowhere else to go without one. */
     .bio-text-row{
       margin-right:0;
-    }
-    /* kept visible here even once a bio's short enough to fit without
-       scrolling (the base rule's own .bio-text-nav-hidden normally hides
-       it entirely then) -- the up/down buttons already disable themselves
-       correctly when there's nothing left to scroll to (see
-       refreshBioScrollThumb), so this just keeps the affordance a
-       constant, expected part of the Artist tab rather than something
-       that silently appears/disappears per artist. */
-    .card-page-artist .bio-text-nav.bio-text-nav-hidden{
-      display:flex;
     }
     /* phone-only: the 3 tabs + one page at a time, built by moving the
        real elements into these slots (see syncMobileLayout) -- see the
@@ -3221,7 +3240,7 @@
          layout) left a noticeable gap above the diagram before it ever
          reached this now top-aligned tab (see .card-page-controls.active
          above) -- trimmed so the pedal itself sits right under the tabs. */
-      padding:0.5rem 1.75rem;
+      padding:0.5rem 1.75rem 0.5rem 0.75rem;
       /* was center -- shifted left instead, freeing up the right-hand
          side of this row for the sound-preview button + its vine-reveal
          animation (see .controls-vine-anchor and its own siblings below) */
@@ -3230,9 +3249,12 @@
     /* the pedal's own 220px max-width (base rule) plus this tab's already-
        narrow available width left no real room beside it for the sound-
        preview button without the two overlapping -- scaled down enough
-       here specifically to clear it. */
+       here specifically to clear it, but still as large as it can be
+       without the two touching (the diagram sits flush left now, see
+       this block's own reduced left padding above, so growing this just
+       eats into the gap toward the logo rather than re-centering it). */
     .card-page-controls .pedal-diagram{
-      max-width:128px;
+      max-width:172px;
     }
     /* stand-in for desktop's program-bar separator line -- the vine-
        reveal animation (see triggerVineReveal/positionVineReveal) always
@@ -3247,8 +3269,12 @@
       display:block;
       position:absolute;
       top:0.85rem;
-      right:1.5rem;
-      left:60%;
+      /* right edge lands exactly on the play button's own left edge (see
+         .spotlight-center-play's matching right:1.5rem + its 58px width
+         below) -- hangs the button off the actual end of the line instead
+         of stopping short of it or running past it into empty space. */
+      right:calc(1.5rem + 58px);
+      left:68%;
       height:1px;
       background:var(--grey-2);
     }
@@ -3265,7 +3291,7 @@
     }
     .card-page-controls .spotlight-center-play{
       left:auto;
-      right:3rem;
+      right:1.5rem;
       transform:translateY(-50%);
     }
     .card-page-controls .spotlight-center-play:hover{
@@ -3872,6 +3898,48 @@
     color:var(--grey-3);
     min-height:1.2em;
   }
+
+  /* section-jump overlay: an explicit up/down alternative to scrolling
+     (see the "section paging" IIFE, jumpToIndex). Full-width so it's an
+     obvious, easy tap target, but only a slim strip so it never
+     meaningfully covers real content underneath -- z-index kept well
+     below .modal-overlay's 2000 specifically so an open modal's own
+     full-viewport backdrop naturally covers (and blocks clicks on) these
+     too, with no extra show/hide bookkeeping needed for that case. */
+  .section-nav-btn{
+    position:fixed;
+    left:0;
+    right:0;
+    width:100%;
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(5,5,5,0.55);
+    color:var(--grey-3);
+    border:none;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.75rem;
+    cursor:pointer;
+    user-select:none;
+    z-index:40;
+    opacity:0.7;
+    transition:opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+  .section-nav-btn:hover{
+    opacity:1;
+    color:var(--white);
+    background:rgba(5,5,5,0.8);
+  }
+  .section-nav-btn:disabled{
+    opacity:0;
+    pointer-events:none;
+  }
+  .section-nav-up{ top:0; }
+  .section-nav-down{ bottom:0; }
+  @media (max-width:640px){
+    .section-nav-btn{ height:26px; font-size:0.7rem; }
+  }
 </style>
 </head>
 <body>
@@ -4310,7 +4378,7 @@
     <p class="modal-text modal-link-empty" id="modalNewsletterEmpty">Keine Links verfügbar.</p>
     <form class="newsletter-form" id="newsletterForm">
       <input type="email" id="newsletterEmail" placeholder="deine@email.de" required>
-      <button type="submit">Versenden</button>
+      <button type="submit">Zum Newsletter anmelden</button>
     </form>
     <p class="newsletter-note" id="newsletterNote"></p>
   </div>
@@ -4333,6 +4401,16 @@
   </div>
 </div>
 
+<!-- section-jump overlay: an explicit alternative to scrolling/swiping,
+     see the "section paging" IIFE for the actual jump logic these two
+     reuse (jumpToIndex) -- full width so it's an easy, obvious target on
+     phone, but each is just a slim strip (not a big overlay) so it never
+     meaningfully covers real content. Disabled (not hidden) at either end
+     of the page rather than removed, so the affordance stays put instead
+     of the page appearing to shift under repeated taps. -->
+<button type="button" class="section-nav-btn section-nav-up" id="sectionNavUp" aria-label="Zum vorherigen Abschnitt">▲</button>
+<button type="button" class="section-nav-btn section-nav-down" id="sectionNavDown" aria-label="Zum nächsten Abschnitt">▼</button>
+
 <script>
 const stage = document.getElementById('stage');
 const flash = document.getElementById('flash');
@@ -4342,9 +4420,36 @@ let subsloganGeneration = 0; // bumped to cancel an in-flight letter-blowup sequ
 // section paging state -- populated once all section elements exist below
 let pageSections = [];
 let currentPageIndex = 0;
+// keyed by each section's own element id rather than array position, so
+// this stays correct regardless of pageSections' actual build order
+const SECTION_HASH_BY_ID = {
+  stage: '',
+  videoSection: 'video',
+  pedalsSection: 'pedals',
+  spotlightSection: 'editions',
+  whySection: 'why',
+  contactSection: 'contact'
+};
+// replaceState, not pushState -- every scroll/swipe/CTA passing through
+// here would otherwise spam a new history entry, making the browser's
+// own back button page through sections instead of leaving the site.
+// This still means a real, shareable #section link (see the deep-link
+// check in the section-paging IIFE) always matches whatever's on screen.
+function updateLocationHash(idx){
+  const sec = pageSections[idx];
+  if (!sec) return;
+  const slug = SECTION_HASH_BY_ID[sec.id];
+  if (slug === undefined) return;
+  const newHash = slug ? '#' + slug : '';
+  if ((location.hash || '') === newHash) return;
+  history.replaceState(null, '', newHash || (location.pathname + location.search));
+}
 function syncPageIndex(el){
   const idx = pageSections.indexOf(el);
-  if (idx !== -1) currentPageIndex = idx;
+  if (idx !== -1){
+    currentPageIndex = idx;
+    updateLocationHash(idx);
+  }
 }
 
 // global animation lock: while any click-triggered interaction (door
@@ -6622,7 +6727,11 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     if (!sectionEl) return shared;
     const cs = getComputedStyle(sectionEl);
     const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-    return Math.max(shared, window.innerHeight - padY);
+    // a further 28px on top of the section's own padding -- filling the
+    // *entire* remaining viewport read as a little too tall/cramped
+    // against the browser chrome above and below it
+    const EXTRA_BOTTOM_GAP = 28;
+    return Math.max(shared, window.innerHeight - padY - EXTRA_BOTTOM_GAP);
   }
   function applySharedHeight(natural){
     sharedCardHeight = Math.max(sharedCardHeight, natural);
@@ -8734,6 +8843,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // down (freezing the drag) -- declared up here since both need it
   const PHONE_QUERY = '(max-width:640px)';
 
+  // captured before anything below ever calls updateLocationHash (which
+  // would otherwise overwrite a real incoming #section link with the
+  // page's own resting-at-the-top hash before this ever gets to read it)
+  const initialSlug = (location.hash || '').replace('#', '');
+  const initialSlugIdx = initialSlug
+    ? pageSections.findIndex(function(sec){ return SECTION_HASH_BY_ID[sec.id] === initialSlug; })
+    : -1;
+
   function nearestSectionIndex(){
     let bestIdx = 0;
     let bestDist = Infinity;
@@ -8747,10 +8864,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     return bestIdx;
   }
   currentPageIndex = nearestSectionIndex();
+  // skip the usual hash sync when a real deep link is about to jump
+  // elsewhere in a moment anyway -- avoids a visible flash of the hash
+  // briefly clearing then immediately being set again
+  if (initialSlugIdx <= 0) updateLocationHash(currentPageIndex);
 
   function jumpToIndex(idx, onDone){
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
     currentPageIndex = idx;
+    updateLocationHash(idx);
+    refreshSectionNavButtons();
     const target = pageSections[idx];
     // phone: always block:'start', full stop -- centering a section
     // that's taller than the viewport (a long bio, a long "why" text, an
@@ -8771,6 +8894,40 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const isPhone = window.matchMedia(PHONE_QUERY).matches;
     const block = (target === spotlightSection && !isPhone) ? 'center' : 'start';
     snapSectionIntoView(target, block, onDone);
+  }
+
+  // explicit up/down overlay, an alternative to scrolling/swiping (see
+  // the section-nav-btn markup/CSS) -- disabled rather than hidden at
+  // either end of the page, same reasoning as the bio/control-info nav
+  // buttons disabling themselves at their own scroll limits.
+  const sectionNavUp = document.getElementById('sectionNavUp');
+  const sectionNavDown = document.getElementById('sectionNavDown');
+  function refreshSectionNavButtons(){
+    if (sectionNavUp) sectionNavUp.disabled = currentPageIndex <= 0;
+    if (sectionNavDown) sectionNavDown.disabled = currentPageIndex >= pageSections.length - 1;
+  }
+  refreshSectionNavButtons();
+  if (sectionNavUp){
+    sectionNavUp.addEventListener('click', function(){
+      if (isJumping || pageAnimationActive) return;
+      isJumping = true;
+      jumpToIndex(currentPageIndex - 1, function(){ isJumping = false; });
+    });
+  }
+  if (sectionNavDown){
+    sectionNavDown.addEventListener('click', function(){
+      if (isJumping || pageAnimationActive) return;
+      isJumping = true;
+      jumpToIndex(currentPageIndex + 1, function(){ isJumping = false; });
+    });
+  }
+
+  // deep link: a real #section URL (shared or bookmarked, see
+  // initialSlugIdx above) lands on this exact section once everything's
+  // settled, rather than always starting cold at the top -- given a
+  // moment first so it doesn't fight the intro's own animation/scroll-lock
+  if (initialSlugIdx > 0){
+    setTimeout(function(){ jumpToIndex(initialSlugIdx); }, 900);
   }
 
   let isJumping = false;
