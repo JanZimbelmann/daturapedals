@@ -3379,6 +3379,18 @@
          positioned ancestor to do that */
       position:relative !important;
       width:auto !important;
+      /* the base (desktop) rule's right:14px -- part of its side-by-side
+         offset scheme with Mod 1's own box -- isn't overridden by the
+         position/width !importants above, and position:relative still
+         honors it. Whenever neither .expanded/.swapped/.shift-front is
+         set (the resting state right after a program switch resets
+         things, see resetPedalObjectInfo/syncBoxLayout), that 14px was
+         quietly shifting this box left until pressing a control added
+         .expanded (right:0) and corrected it back. Forced to 0 here so
+         it never applies in the first place -- this box is always the
+         only one shown on phone, never actually side-by-side with
+         anything. */
+      right:0 !important;
       flex-shrink:0;
       background:var(--grey-1);
       border-top:1px solid var(--grey-2);
@@ -4548,6 +4560,10 @@ function updateLocationHash(idx){
 // a plain no-op until then so calling this early (nothing does, but see
 // its own reasoning below) can never throw
 let refreshSectionNavButtonsGlobal = function(){};
+// reassigned once the editions IIFE actually mounts its instances -- see
+// the visualViewport resize handler further down for why this needs to
+// be callable from outside that IIFE's own scope
+let resyncEditionHeightsGlobal = function(){};
 function syncPageIndex(el){
   const idx = pageSections.indexOf(el);
   if (idx !== -1){
@@ -6871,6 +6887,18 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     });
     return sharedCardHeight;
   }
+  // re-applies phoneActiveHeight (against window.innerHeight *right now*,
+  // not whatever it was back when the currently-open card first locked
+  // its own height) to whichever instance is active on phone -- otherwise
+  // a real mobile browser's own address-bar chrome collapsing/expanding
+  // between two different edition opens (never re-triggered for a card
+  // that's already open and just sitting there) leaves the first one
+  // opened locked to a stale, shorter-or-taller window.innerHeight than
+  // the second, reading as "every edition is a different height" even
+  // though phoneActiveHeight's own math is identical for both. See the
+  // visualViewport resize handler (a different IIFE, hence exposing this
+  // globally) for where this actually gets called from.
+  resyncEditionHeightsGlobal = function(){ applySharedHeight(sharedCardHeight); };
 
   // FLIP (First-Last-Invert-Play): the tabs' actual left/right movement
   // during an open/close is a byproduct of several *different* elements'
@@ -8604,9 +8632,37 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // requestOpen for every other one, opened later by the user)
     applyEntry(programs[currentIndex], { skipVineReveal: true });
 
+    // reports the play attempt's real outcome in the info box (the same
+    // box that otherwise shows a control's own params) -- pressing this
+    // button used to fail completely silently whenever a program had no
+    // example file yet, giving no feedback at all either way.
+    function showSoundStatusMessage(msg){
+      pendingLabel = 'Sound-Beispiel';
+      pendingStoreKey = null;
+      pendingVal = null;
+      renderBoxTitles();
+      openMatchingBox();
+      syncBoxLayout();
+      refreshControlScrollNavs(true);
+      const html = '<p class="control-info-empty">' + msg + '</p>';
+      const detail0 = wrap.querySelector('.object-info-detail-0');
+      const detail1 = wrap.querySelector('.object-info-detail-1');
+      if (detail0) detail0.innerHTML = html;
+      if (detail1) detail1.innerHTML = html;
+    }
     function playCurrentWav(){
       const audio = new Audio(currentWav);
-      audio.play().catch(function(){ /* ignored -- e.g. file missing or autoplay blocked */ });
+      const playPromise = audio.play();
+      if (playPromise && playPromise.then){
+        playPromise.then(function(){
+          showSoundStatusMessage('Das aktuelle Programm spielt gerade ein Sound-Beispiel ab.');
+        }).catch(function(){
+          // e.g. file missing (most programs don't have one yet) or
+          // autoplay blocked -- either way, worth actually saying so
+          // instead of the button just silently doing nothing
+          showSoundStatusMessage('Für dieses Programm ist aktuell kein Sound-Beispiel verfügbar.');
+        });
+      }
     }
     if (playBtn) playBtn.addEventListener('click', playCurrentWav);
 
@@ -9413,6 +9469,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       clearTimeout(vvResizeTimer);
       vvResizeTimer = setTimeout(function(){
         if (isJumping || pageAnimationActive) return;
+        // an already-open edition's own height was locked against
+        // window.innerHeight back when it was first opened -- this same
+        // chrome collapse/expand that just moved the scroll offset can
+        // also mean that number is now stale (see resyncEditionHeightsGlobal's
+        // own comment), so it's re-applied here too, not just the scroll fix below
+        resyncEditionHeightsGlobal();
         const target = pageSections[currentPageIndex];
         if (!target) return;
         const isPhone = window.matchMedia(PHONE_QUERY).matches;
