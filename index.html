@@ -2633,6 +2633,10 @@
       min-height:0;
       overflow:hidden;
       flex-direction:column;
+      /* clears the fixed section-nav-up overlay's own footprint at the
+         very top of the viewport (same reasoning/value as .spotlight's
+         own top padding) -- the tab row otherwise started right under it */
+      padding-top:3.25rem;
     }
     .why-mobile-tabs{
       display:flex;
@@ -2895,6 +2899,17 @@
       flex:0 0 auto;
       height:0;
       min-height:0;
+      /* the base rule's margin-bottom:6px (spacing between stacked idle
+         tabs) isn't zeroed by :last-child unless this collapsed wrap
+         actually IS the last one in DOM order -- when it isn't (e.g.
+         edition 0 collapsed while edition 1 is the one open), its own
+         leftover 6px was still pushing whatever comes after it down by
+         that much, landing that edition's open card a few px lower than
+         when edition 0 itself is the one open instead (nothing precedes
+         it then, so there's no stray margin to push it down at all).
+         Zeroed here unconditionally so every edition's open card lands
+         at the exact same position regardless of which one it is. */
+      margin-bottom:0;
     }
     .spotlight-wrap.wrap-active .spotlight-card-clip{
       width:100%;
@@ -4051,6 +4066,21 @@
   }
   @media (max-width:640px){
     .section-nav-btn{ height:44px; font-size:1.05rem; }
+    /* a little clear of the true screen edge -- right at bottom:0 sat
+       close enough to a real phone's own gesture bar/home indicator to
+       feel cramped against it */
+    .section-nav-down{ bottom:10px; }
+    /* a real gap between each top-level section on phone -- every section
+       is exactly one dvh tall, so without this the *next* one's own top
+       edge sits flush against the current one's bottom, and any
+       imprecision in where a jump/scroll actually lands reads as "the
+       next section is peeking in at the bottom". html/body's own
+       background is already the same black every section uses, so the
+       gap itself is invisible, just breathing room -- not on the last
+       section, nothing needs to follow it. */
+    #stage, #videoSection, #pedalsSection, #spotlightSection, #whySection{
+      margin-bottom:28px;
+    }
   }
 </style>
 </head>
