@@ -729,14 +729,93 @@
     height:100%;
     box-sizing:border-box;
     padding:2rem;
-    overflow-y:auto;
   }
+  .video-script-row{
+    display:flex;
+    align-items:stretch;
+    gap:0.6rem;
+    height:100%;
+  }
+  /* fixed-height scrollbox + up/down/slider nav, same pattern as
+     .why-text/.why-text-nav (see that section's own comment) -- scrolls
+     internally via native overflow-y:auto rather than growing the panel,
+     since the video/script box is a fixed 16:9 size regardless of
+     content. Mouse-wheel scrolling here is handed off to this native
+     overflow rather than hijacked into a page-jump -- see the
+     .video-script-text exemption in the section-paging wheel handler. */
   .video-script-text{
     font-size:0.9rem;
     line-height:1.8;
     color:var(--grey-3);
     white-space:pre-line;
     text-align:left;
+    flex:1;
+    min-width:0;
+    height:100%;
+    overflow-y:auto;
+    scrollbar-width:none; /* Firefox -- .video-script-nav draws the one visible scrollbar */
+    padding-right:0.3rem;
+    overscroll-behavior:contain;
+  }
+  .video-script-text::-webkit-scrollbar{
+    display:none; /* Chrome/Safari equivalent of scrollbar-width:none above */
+  }
+  .video-script-nav{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0.4rem;
+    flex-shrink:0;
+  }
+  .video-script-nav.video-script-nav-hidden{
+    display:none; /* text fits without scrolling -- nothing to page through */
+  }
+  .video-script-nav-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    width:1rem;
+    height:1rem;
+    padding:0;
+    background:transparent;
+    border:1px solid var(--grey-2);
+    color:var(--white);
+    font-size:0.55rem;
+    line-height:1;
+    cursor:pointer;
+    user-select:none;
+    transition:border-color 0.2s ease, opacity 0.2s ease;
+  }
+  .video-script-nav-btn:hover{
+    border-color:var(--white);
+  }
+  .video-script-nav-btn:disabled{
+    opacity:0.3;
+    cursor:default;
+  }
+  .video-script-nav-btn:disabled:hover{
+    border-color:var(--grey-2);
+  }
+  .video-script-slider{
+    position:relative;
+    flex:1;
+    min-height:1.4rem;
+    width:0.3rem;
+    background:var(--grey-1);
+    border-radius:0.15rem;
+    cursor:pointer;
+  }
+  .video-script-slider-thumb{
+    position:absolute;
+    left:50%;
+    top:0;
+    width:0.6rem;
+    height:0.6rem;
+    border-radius:50%;
+    background:var(--white);
+    transform:translate(-50%, -50%);
+    pointer-events:none;
   }
   /* shown in place of .video-frame when scripts.json says there's no
      video to embed yet (see the Video/Script tabs script) -- same look
@@ -4159,7 +4238,16 @@
         <p class="video-noVideo-text" id="noVideoText"></p>
       </div>
       <div class="video-panel video-script-panel" id="panelScript">
-        <p class="video-script-text" id="scriptText">Lädt…</p>
+        <div class="video-script-row">
+          <p class="video-script-text" id="scriptText">Lädt…</p>
+          <div class="video-script-nav" id="scriptTextNav">
+            <button type="button" class="video-script-nav-btn video-script-nav-up" aria-label="Text nach oben scrollen">▲</button>
+            <div class="video-script-slider" id="scriptTextSlider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+              <div class="video-script-slider-thumb"></div>
+            </div>
+            <button type="button" class="video-script-nav-btn video-script-nav-down" aria-label="Text nach unten scrollen">▼</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -5267,7 +5355,81 @@ const whySection = document.getElementById('whySection');
   const videoIframe = document.getElementById('videoIframe');
   const scriptTextEl = document.getElementById('scriptText');
   const noVideoTextEl = document.getElementById('noVideoText');
+  const scriptTextNav = document.getElementById('scriptTextNav');
+  const scriptTextUpBtn = document.querySelector('.video-script-nav-up');
+  const scriptTextDownBtn = document.querySelector('.video-script-nav-down');
+  const scriptTextSlider = document.getElementById('scriptTextSlider');
+  const scriptTextSliderThumb = scriptTextSlider ? scriptTextSlider.querySelector('.video-script-slider-thumb') : null;
   if (!tabVideoBtn || !tabScriptBtn || !panelVideo || !panelScript || !videoIframe || !scriptTextEl || !noVideoTextEl) return;
+
+  // fixed-height scrollbox + up/down/slider nav, same pattern as
+  // .why-text/.why-text-nav -- self-contained here (own local drag flag)
+  // since this panel only ever has the one slider, no need for a
+  // cross-instance arbiter.
+  let scriptDragging = false;
+  function scriptSliderFracFromEvent(track, evt){
+    const rect = track.getBoundingClientRect();
+    if (rect.height <= 0) return 0;
+    return Math.max(0, Math.min(1, (evt.clientY - rect.top) / rect.height));
+  }
+  function scriptScrollMax(){
+    return Math.max(0, scriptTextEl.scrollHeight - scriptTextEl.clientHeight);
+  }
+  function refreshScriptThumb(){
+    const max = scriptScrollMax();
+    const frac = max > 0 ? Math.max(0, Math.min(1, scriptTextEl.scrollTop / max)) : 0;
+    if (scriptTextSliderThumb) scriptTextSliderThumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
+    if (scriptTextUpBtn) scriptTextUpBtn.disabled = scriptTextEl.scrollTop <= 0;
+    if (scriptTextDownBtn) scriptTextDownBtn.disabled = scriptTextEl.scrollTop >= max;
+    if (scriptTextSlider) scriptTextSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
+  }
+  // called once real text is in, and again whenever the Script tab
+  // becomes visible -- panelScript is display:none while the Video tab
+  // is active, and scrollHeight/clientHeight both read as 0 while
+  // hidden, so a measurement taken before this panel is ever shown would
+  // wrongly conclude there's nothing to scroll
+  function refreshScriptVisibility(){
+    scriptTextEl.scrollTop = 0;
+    if (scriptTextNav) scriptTextNav.classList.toggle('video-script-nav-hidden', scriptScrollMax() <= 0);
+    refreshScriptThumb();
+  }
+  if (scriptTextNav && scriptTextUpBtn && scriptTextDownBtn && scriptTextSlider && scriptTextSliderThumb){
+    const SCRIPT_SCROLL_STEP = 60; // px per button click
+    scriptTextEl.addEventListener('scroll', refreshScriptThumb);
+    // mousedown, not click -- suppresses the browser's default "scroll
+    // the newly focused button into view", same as the why-text nav buttons
+    function suppressScriptFocusScroll(evt){ evt.preventDefault(); }
+    scriptTextUpBtn.addEventListener('mousedown', suppressScriptFocusScroll);
+    scriptTextDownBtn.addEventListener('mousedown', suppressScriptFocusScroll);
+    scriptTextUpBtn.addEventListener('click', function(){ scriptTextEl.scrollTop -= SCRIPT_SCROLL_STEP; });
+    scriptTextDownBtn.addEventListener('click', function(){ scriptTextEl.scrollTop += SCRIPT_SCROLL_STEP; });
+    function applyScriptFrac(frac){ scriptTextEl.scrollTop = frac * scriptScrollMax(); }
+    function startScriptDrag(evt){
+      applyScriptFrac(scriptSliderFracFromEvent(scriptTextSlider, evt));
+      scriptDragging = true;
+    }
+    scriptTextSlider.addEventListener('mousedown', function(evt){ evt.preventDefault(); startScriptDrag(evt); });
+    scriptTextSlider.addEventListener('touchstart', function(evt){
+      if (!evt.touches[0]) return;
+      evt.preventDefault();
+      startScriptDrag(evt.touches[0]);
+    }, { passive:false });
+    window.addEventListener('mousemove', function(evt){ if (scriptDragging) applyScriptFrac(scriptSliderFracFromEvent(scriptTextSlider, evt)); });
+    window.addEventListener('mouseup', function(){ scriptDragging = false; });
+    window.addEventListener('touchmove', function(evt){
+      if (!scriptDragging || !evt.touches[0]) return;
+      applyScriptFrac(scriptSliderFracFromEvent(scriptTextSlider, evt.touches[0]));
+    }, { passive:true });
+    window.addEventListener('touchend', function(){ scriptDragging = false; });
+    // width changes can reflow the text and change its scrollHeight (the
+    // box's own height stays fixed at 100% of the aspect-ratio parent, so
+    // unlike why-text this never needs to re-measure that) -- doesn't
+    // reset scrollTop, same reasoning as the why-text resize handler
+    window.addEventListener('resize', function(){
+      if (scriptTextNav) scriptTextNav.classList.toggle('video-script-nav-hidden', scriptScrollMax() <= 0);
+      refreshScriptThumb();
+    });
+  }
 
   // both the video (link + whether to actually show it) and the read-
   // along script text live in the same texts/scripts.json now -- fetched
@@ -5288,11 +5450,13 @@ const whySection = document.getElementById('whySection');
         videoIframe.src = data.videoUrl;
       }
       scriptTextEl.textContent = (data && data.text) || 'Script nicht gefunden';
+      refreshScriptVisibility();
     })
     .catch(function(){
       panelVideo.classList.add('no-video');
       noVideoTextEl.textContent = 'A video describing the pedals is currently in production.';
       scriptTextEl.textContent = 'Script nicht gefunden';
+      refreshScriptVisibility();
     });
 
   // phone: .video-panels' own aspect-ratio (16:9, sized off its *width*)
@@ -5351,6 +5515,10 @@ const whySection = document.getElementById('whySection');
     panelScript.classList.add('active');
     panelVideo.classList.remove('active');
     pauseVideo();
+    // panelScript was display:none until the classList change just above,
+    // so any earlier measurement of scriptTextEl's scroll range was taken
+    // while it read as 0/0 -- re-measure now that it's actually visible
+    refreshScriptVisibility();
   }
 
   tabVideoBtn.addEventListener('click', showVideo);
@@ -9244,6 +9412,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     if (e.target.closest && e.target.closest('.bio-text-clip')) return;
     // and the "Warum das Ganze?" text box (see .why-text), same reasoning
     if (e.target.closest && e.target.closest('.why-text')) return;
+    // and the video/script panel's own script text (see .video-script-text)
+    if (e.target.closest && e.target.closest('.video-script-text')) return;
 
     // block ALL native scrolling while paging is active -- only the
     // accumulated delta below decides *when* to jump, not whether the
@@ -9314,7 +9484,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // scrolling the text like it looks like it should.
   const TOUCH_SWIPE_EXEMPT_SELECTOR =
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
-    '.why-text, .bio-text-clip, .object-info-inner, .control-info-scroll-nav, ' +
+    '.why-text, .bio-text-clip, .video-script-text, .object-info-inner, .control-info-scroll-nav, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, .program-bar, ' +
     '.logo-box, #pedalsLabel, #sloganMain, #summeText, .why-mobile-tab, .card-page-btn';
   // the *real scrollable text* subset of the exempt selector above --
@@ -9324,7 +9494,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // should: scroll it internally right up until it's already at its own
   // top/bottom, and only *then* does continuing the same drag hand off
   // to the normal section-jump -- see touchend below.
-  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .blog-item-content, .object-info-inner';
+  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .video-script-text, .blog-item-content, .object-info-inner';
   // the subset of the exempt selector above that's *only* a plain tap
   // target -- no drag gesture of its own at all (unlike .pedal-poti/
   // .particle-slider/etc, which have real touchmove handling elsewhere
