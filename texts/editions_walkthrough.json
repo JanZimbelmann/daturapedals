@@ -1,0 +1,11 @@
+[
+  "Every pedal ships as different Editions, each built around a genre or scene, made together with musicians from it.",
+  "Each Edition holds several Programs: individual sounds, each made with one specific artist.",
+  "A Program is either a Synthesizer (creates its own sound) or an Effect (transforms whatever comes in).",
+  "Every Program has its own simulated pedal: real knobs and switches.",
+  "Touching a knob or switch, like this one, opens its info box down here. Watch the numbers change as it moves.",
+  "Two switches are special. This one flips every control to a second, hidden set of sounds.",
+  "The other special switch changes how the buttons behave: hold one down to sustain the sound, or press once to latch it on.",
+  "Press play to hear what this Program actually sounds like.",
+  "See who made it, and their other collaborations, under Artist."
+]

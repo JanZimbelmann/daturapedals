@@ -716,10 +716,29 @@
      page, which made section-jump scrolling feel unreliable over the
      video. This restores normal page scrolling; a click still passes
      through to the video underneath (briefly disabled on press so the
-     click itself isn't swallowed), so play/pause/fullscreen still work. */
+     click itself isn't swallowed), so play/pause still works in one
+     click (see the mousedown handler below). Stops short of the very
+     bottom of the player rather than using inset:0 -- that's where
+     YouTube's own control bar (seek bar, volume, settings, captions,
+     fullscreen) lives, and those buttons live inside the iframe's own
+     cross-origin document, so a real click needs its mousedown *and*
+     mouseup to both land there directly; routing the first one through
+     this guard is exactly what needed a second click to actually
+     register. Leaving that strip fully unguarded means one real click
+     reaches them, at the minor cost of the page not scroll-jumping if
+     the wheel happens to be over that thin strip specifically. */
   .video-scroll-guard{
     position:absolute;
-    inset:0;
+    top:0;
+    left:0;
+    right:0;
+    /* percentage, not a fixed px, since .video-frame is always exactly
+       16:9 (see .video-panels) -- this keeps the same fraction of the
+       player excluded regardless of how large that box renders. Measured
+       against YouTube's actual control cluster (seek bar + time/
+       fullscreen/settings/captions row), which sits roughly 20% up from
+       the bottom edge. */
+    bottom:20%;
     z-index:1;
     background:transparent;
     cursor:pointer;
@@ -1337,6 +1356,7 @@
 
   /* ---------- artist/program spotlight section ---------- */
   .spotlight{
+    position:relative; /* anchors .editions-help-btn to this section's own box */
     display:flex;
     align-items:center;
     justify-content:center;
@@ -1513,6 +1533,42 @@
      side box's edges rather than hidden behind it. */
   .spotlight-box.sliding-out{
     opacity:0;
+  }
+
+  /* idle-only help trigger for the guided tour (see #editionsTourOverlay) --
+     positioned relative to the section, not the row, so it stays put
+     regardless of how wide the idle tab row happens to be */
+  .editions-help-btn{
+    position:absolute;
+    top:1.5rem;
+    right:1.5rem;
+    width:2rem;
+    height:2rem;
+    /* above .section-nav-up's own full-width, full-page-top invisible bar
+       (z-index:40) -- without this its click was swallowed by that bar
+       instead, jumping to the previous section rather than opening the tour */
+    z-index:41;
+    border-radius:50%;
+    border:1px solid var(--white);
+    background:transparent;
+    color:var(--white);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.95rem;
+    line-height:1;
+    cursor:pointer;
+    user-select:none;
+    /* top/left animate too -- JS moves this between its two real spots
+       (see positionHelpButton): the section's own top-right corner while
+       an edition is open, or the idle row's own middle-right once it
+       isn't. Left auto by default (right:1.5rem is what actually
+       positions it there); JS switches to left-based positioning only
+       for the idle spot, see its own comment. */
+    transition:top 0.35s ease, left 0.35s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .editions-help-btn:hover{
+    background:var(--white);
+    color:var(--black);
+    transform:scale(1.15);
   }
   /* horizontal bar of program names -- the selected one is always
      recentered in the bar and enlarged; every slot is a fixed width so
@@ -3846,6 +3902,151 @@
     padding-right:1.5rem;
   }
 
+  /* guided tour (#editionsTourOverlay): overrides .modal-overlay's own
+     centered-solid-box look (see that class) with a free-form dim+cutout
+     instead -- .tour-highlight is positioned per-step to exactly match
+     whatever real element that step is talking about (see the tour
+     script), and the huge spread on its own box-shadow is what dims
+     everything else on the page in a single box, without needing an
+     actual clip-path cutout. */
+  .editions-tour-overlay{
+    background:transparent; /* the dim comes from .tour-highlight's box-shadow spread instead */
+    display:block; /* undoes .modal-overlay's centering flex -- both children position themselves */
+    padding:0;
+  }
+  .tour-highlight{
+    position:fixed;
+    border:1px dashed var(--white);
+    border-radius:6px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.8);
+    pointer-events:none;
+    /* animates between steps' targets -- top/left/width/height are all
+       set from JS per step */
+    transition:top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease, opacity 0.3s ease;
+  }
+  /* the pedal-simulation half of a paired step (see positionForPair) gets
+     this instead of the plain dashed border above -- a genuine dash-dot
+     line (not just another dashed box) so it visually reads as its own
+     distinct kind of thing being called out, not a second copy of
+     whatever the other cutout in the pair is. border-image doesn't
+     combine with border-radius, so this drops to square corners while
+     it's on; toggled by JS (see positionForPair), never present on an
+     ordinary single-target step. */
+  .tour-highlight.tour-highlight-dashdot{
+    border-radius:0;
+    border-style:solid;
+    border-width:2px;
+    border-image-source:repeating-linear-gradient(90deg,
+      var(--white) 0 7px, transparent 7px 11px,
+      var(--white) 11px 14px, transparent 14px 20px);
+    border-image-slice:1;
+    border-image-repeat:round;
+  }
+  /* a step that wants to spotlight two real elements at once (see
+     positionForPair) uses this second cutout alongside the main one --
+     same look, own box-shadow spread (the two combine into one dim
+     covering everything outside either cutout, since both spreads are
+     the same huge radius). Hidden (0 size, display:none) for every
+     ordinary single-target step. */
+  .tour-highlight-b{
+    position:fixed;
+    display:none;
+    border:1px dashed var(--white);
+    border-radius:6px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.8);
+    pointer-events:none;
+    transition:top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease, opacity 0.3s ease;
+  }
+  /* the short dashed line "hanging" the two cutouts above together into
+     one reads-as-one-thing pair, rather than two boxes that just happen
+     to be near each other */
+  .tour-connector{
+    position:fixed;
+    display:none;
+    width:0;
+    border-left:1px dashed var(--white);
+    pointer-events:none;
+    transition:top 0.4s ease, left 0.4s ease, height 0.4s ease, opacity 0.3s ease;
+  }
+  .tour-caption{
+    position:fixed;
+    width:calc(100% - 3rem);
+    max-width:360px;
+    border:1px solid var(--white);
+    background:var(--black);
+    color:var(--white);
+    font-family:'IBM Plex Mono', monospace;
+    padding:1.2rem 1.2rem 1rem;
+    transition:top 0.4s ease, left 0.4s ease;
+  }
+  .tour-caption-text{
+    font-size:0.9rem;
+    line-height:1.6;
+    margin:0 0 1rem;
+    /* clears .tour-close (top-right corner of this same box) -- without
+       this, a long enough caption's first line or two ran underneath it
+       instead of wrapping around it, same fix as .modal-text's own
+       padding-right for the same reason */
+    padding-right:1.6rem;
+  }
+  .tour-caption-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:0.8rem;
+  }
+  .tour-step-count{
+    font-size:0.75rem;
+    color:var(--grey-3);
+    margin:0;
+  }
+  .tour-btn{
+    flex:0 0 auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.8rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    background:transparent;
+    border:1px solid var(--white);
+    color:var(--white);
+    padding:0.4rem 0.9rem;
+    cursor:pointer;
+    user-select:none;
+    transition:background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  }
+  .tour-btn:hover{
+    background:var(--white);
+    color:var(--black);
+  }
+  .tour-btn:disabled{
+    opacity:0.3;
+    cursor:default;
+  }
+  .tour-btn:disabled:hover{
+    background:transparent;
+    color:var(--white);
+  }
+  .tour-close{
+    position:absolute;
+    top:-1px;
+    right:-1px;
+    width:2rem;
+    height:2rem;
+    border:1px solid var(--white);
+    background:var(--black);
+    color:var(--white);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1rem;
+    cursor:pointer;
+    user-select:none;
+    transition:background 0.2s ease, color 0.2s ease;
+  }
+  .tour-close:hover{
+    background:var(--white);
+    color:var(--black);
+  }
   /* artist credentials modal: name + a row of icon links, filled in per
      artist by JS (see openCredentials) */
   /* laid out as a centered "profile card": big photo on top, name
@@ -4264,7 +4465,35 @@
 
 <section class="spotlight" id="spotlightSection">
   <div class="spotlight-wraps" id="spotlightWraps"></div>
+  <!-- idle-only: hidden the moment any edition opens (see
+       #spotlightWraps.has-active in the CSS) -- starts the guided tour
+       (editionsTourOverlay below), which points at real, live pieces of
+       the first edition's card rather than just describing them in prose -->
+  <button type="button" class="editions-help-btn" id="editionsHelpBtn" aria-label="Erklären, wie Editionen und Pedale funktionieren" title="Click for a guide to what this is">?</button>
 </section>
+
+<!-- guided tour: walks through what an Edition/Program/pedal simulation
+     actually is by dimming the page and spotlighting the real element
+     each step is talking about, rather than a static wall of text. Reuses
+     .modal-overlay (see its own CSS) purely so this automatically gets
+     the same "block page-scroll/paging while open" treatment already
+     applied everywhere via `.modal-overlay.active` checks -- its actual
+     look (dim + cutout instead of a centered solid box) is overridden by
+     .editions-tour-overlay's own rules just below that class's. -->
+<div class="modal-overlay editions-tour-overlay" id="editionsTourOverlay">
+  <div class="tour-highlight" id="tourHighlight"></div>
+  <div class="tour-highlight-b" id="tourHighlightB"></div>
+  <div class="tour-connector" id="tourConnector"></div>
+  <div class="tour-caption" id="tourCaption">
+    <p class="tour-caption-text" id="tourCaptionText"></p>
+    <div class="tour-caption-row">
+      <button type="button" class="tour-btn tour-btn-back" id="tourBackBtn">Back</button>
+      <p class="tour-step-count" id="tourStepCount"></p>
+      <button type="button" class="tour-btn tour-btn-next" id="tourNextBtn">Next</button>
+    </div>
+    <button type="button" class="tour-close" id="tourCloseBtn" aria-label="Tour schließen">&times;</button>
+  </div>
+</div>
 
 <template id="editionCardTemplate">
   <div class="spotlight-wrap">
@@ -9012,7 +9241,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       getActivePage: function(){
         const activeBtn = wrap.querySelector('.card-page-btn.active');
         return activeBtn ? activeBtn.dataset.page : null;
-      }
+      },
+      resetPedalObjectInfo: resetPedalObjectInfo
     };
     instances.push(instance);
 
@@ -9111,6 +9341,531 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   }).catch(function(e){
     console.error('Failed to load editions:', e);
   });
+
+  /* ---------- guided tour: explains editions/programs/the pedal
+     simulation by dimming the page and spotlighting the real element
+     each step is talking about, rather than a static wall of text.
+     Lives inside this same IIFE (not a separate one) purely to close
+     over `instances`/`requestOpen`/`requestClose` above -- opening/
+     closing the edition it walks through has to go through the exact
+     same machinery any other card-open does, not a parallel path. ---------- */
+  (function initEditionsTour(){
+    const helpBtn = document.getElementById('editionsHelpBtn');
+    const overlay = document.getElementById('editionsTourOverlay');
+    const highlightEl = document.getElementById('tourHighlight');
+    const highlightBEl = document.getElementById('tourHighlightB');
+    const connectorEl = document.getElementById('tourConnector');
+    const captionEl = document.getElementById('tourCaption');
+    const captionTextEl = document.getElementById('tourCaptionText');
+    const stepCountEl = document.getElementById('tourStepCount');
+    const backBtn = document.getElementById('tourBackBtn');
+    const nextBtn = document.getElementById('tourNextBtn');
+    const closeBtn = document.getElementById('tourCloseBtn');
+    if (!helpBtn || !overlay || !highlightEl || !highlightBEl || !connectorEl ||
+        !captionEl || !captionTextEl || !stepCountEl || !backBtn || !nextBtn || !closeBtn) return;
+
+    // the button stays visible whether or not an edition is open (it no
+    // longer hides itself on open -- clicking it always starts the tour
+    // fresh regardless), but sits in two different real spots depending
+    // on that: the section's own top-right corner (its plain CSS default
+    // -- see .editions-help-btn) while a card is open, since that corner
+    // is clear either way, or the idle row's own middle-right once
+    // nothing is open, so it reads as belonging to the row of tabs
+    // rather than floating disconnected above them.
+    function positionHelpButton(){
+      if (container.classList.contains('has-active')){
+        // back to the plain CSS default spot -- clearing these lets the
+        // stylesheet's own top:1.5rem;right:1.5rem take over again
+        helpBtn.style.top = '';
+        helpBtn.style.left = '';
+        helpBtn.style.right = '';
+        return;
+      }
+      const sectionRect = spotlightSection.getBoundingClientRect();
+      const rowRect = container.getBoundingClientRect();
+      helpBtn.style.right = 'auto';
+      helpBtn.style.left = (rowRect.right - sectionRect.left + 16) + 'px';
+      helpBtn.style.top = (rowRect.top - sectionRect.top + rowRect.height / 2 - helpBtn.offsetHeight / 2) + 'px';
+    }
+    positionHelpButton();
+    window.addEventListener('resize', positionHelpButton);
+    // the row's own open/close FLIP (see flipSideBoxes) and card
+    // slide are what actually move it between these two states --
+    // watching has-active directly catches every path that toggles it
+    // (the tour's own open/close, but also a plain click on any side
+    // box), rather than this button needing its own copy of that logic.
+    // Re-run once more after that animation's own duration so the final,
+    // settled position is used instead of wherever the row was mid-flight
+    // the instant the class itself changed. childList is also watched,
+    // not just the class attribute: the very first call above runs before
+    // the editions bootstrap's own async fetch has actually mounted
+    // anything into this row, so that first position is against an empty
+    // (zero-size) row -- this is what actually catches the real one, the
+    // moment mountEdition's cards are appended in.
+    new MutationObserver(function(){
+      positionHelpButton();
+      setTimeout(positionHelpButton, CARD_MS + 100);
+    }).observe(container, { attributes: true, attributeFilter: ['class'], childList: true });
+
+    // step 0 targets the idle tab row itself, before anything opens --
+    // every other step resolves its selector against the one edition
+    // instance this run opens (see resolveTarget). `page`, when set, is
+    // the mobile card-page (see setActivePage) that step's content
+    // physically lives on once phone's layout relocates it there (see
+    // syncMobileLayout) -- calling setActivePage is harmless on desktop,
+    // where the tabs it drives are just inert/hidden. `secondarySelector`
+    // pairs this step's own `selector` with a second real element (see
+    // positionForPair) instead of a single cutout. `potiSweepSelector`
+    // (see startPotiSweep) simulates a real drag on that poti back and
+    // forth for as long as this step is showing -- the real drag, not a
+    // cosmetic rotation, so the info box's own numbers genuinely change
+    // live, same as if someone were actually turning it. `resetInfoBox`
+    // collapses whichever object-info box is open (see
+    // instance.resetPedalObjectInfo) once this step lands, so the
+    // Artist tab isn't shown with a leftover pedal info box still open
+    // behind it.
+    const STEPS = [
+      // the FIRST edition's own tab specifically, not the whole idle row
+      // -- querySelector's first-match-in-DOM-order behavior is exactly
+      // right here since it's also the one instances[0] (below) is about
+      // to auto-open, so the other editions fading into the dim reads as
+      // "everything but the one we're about to open," not as if the
+      // whole row were equally the point
+      { selector: '.spotlight-side-box', open: false },
+      { selector: '.program-bar', open: true },
+      { selector: '.program-type-title', open: true, page: 'info' },
+      { selector: '.pedal-diagram-panel', open: true, page: 'controls' },
+      { selector: '.pedal-diagram-panel', open: true, page: 'controls', secondarySelector: '.bio-panel-object.expanded', potiSweepSelector: '.pedal-poti[data-index="0"]', captionLeftOfPrimary: true },
+      { selector: '.pedal-switch[data-index="1"]', open: true, page: 'controls' },
+      { selector: '.pedal-switch[data-index="2"]', open: true, page: 'controls' },
+      { selector: '.spotlight-center-play', open: true, page: 'controls' },
+      { selector: '.spotlight-bottom-row', open: true, page: 'artist', resetInfoBox: true }
+    ];
+
+    let stepTexts = null;
+    let stepIndex = 0;
+    let tourInstance = null; // the edition instance this run opened, if any
+    let active = false;
+    let resizeHandler = null;
+    // bumped by every goToStep/finish call; each async step below (page
+    // switch, trigger click, open/close animation) captures the
+    // generation current when IT started and checks it again before
+    // actually touching the DOM. A quick Back-then-Next (or repeated
+    // back-and-forth) starts a new chain before the previous one's
+    // timers have fired -- without this check, that old chain's own
+    // renderStep still runs, sometimes *after* the new one's, measuring
+    // a stale mid-transition rect and overwriting the correct position
+    // with a wrong one. This is what "drifts further left every time you
+    // go back and forth" actually was.
+    let renderGeneration = 0;
+    // true from the moment goToStep starts until renderStep actually
+    // lands -- Back/Next both no-op while this is set. This is what
+    // actually stops a quick Back-then-Next from corrupting anything:
+    // starting a *new* open/close before the site's own tab-row FLIP
+    // animation (see flipSideBoxes) has visually finished recentering
+    // makes flipSideBoxes itself measure a still-mid-flight "before" rect
+    // for the NEXT flip, computing a wrong transform for it -- a genuine
+    // bug in the underlying open/close animation once two of them
+    // overlap, not something a delay on this file's own measurement can
+    // paper over. Not letting a second one start until the first is
+    // fully done avoids ever creating that overlap in the first place.
+    let transitioning = false;
+
+    function fetchTexts(){
+      if (stepTexts) return Promise.resolve(stepTexts);
+      return fetch('texts/editions_walkthrough.json')
+        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+        .then(function(data){ stepTexts = data; return data; })
+        .catch(function(){
+          stepTexts = STEPS.map(function(){ return 'Erklärung nicht gefunden'; });
+          return stepTexts;
+        });
+    }
+
+    function resolveTarget(step){
+      if (!step.open) return document.querySelector(step.selector);
+      return tourInstance ? tourInstance.wrap.querySelector(step.selector) : null;
+    }
+
+    // smallest rect containing both -- used to decide where the caption
+    // goes when a step is spotlighting two real elements at once (see
+    // positionForPair), so it clears whichever of the pair is nearer
+    // rather than risking an overlap with just one of them
+    function unionRect(a, b){
+      const left = Math.min(a.left, b.left);
+      const top = Math.min(a.top, b.top);
+      const right = Math.max(a.right, b.right);
+      const bottom = Math.max(a.bottom, b.bottom);
+      return { left: left, top: top, right: right, bottom: bottom, width: right - left, height: bottom - top };
+    }
+
+    // pads a real rect out to a cutout box and applies it to one of the
+    // two highlight elements
+    function applyHighlightRect(el, rect){
+      const pad = 8;
+      el.style.display = 'block';
+      el.style.top = (rect.top - pad) + 'px';
+      el.style.left = (rect.left - pad) + 'px';
+      el.style.width = (rect.width + pad * 2) + 'px';
+      el.style.height = (rect.height + pad * 2) + 'px';
+    }
+
+    // picks whichever side (below/above `rect`) actually has room for the
+    // caption's own real height, rather than always defaulting to one
+    // side and letting it run off-screen for a target near an edge
+    function positionCaptionNear(rect){
+      const pad = 8;
+      const captionRect = captionEl.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const spaceBelow = vh - (rect.bottom + pad);
+      const spaceAbove = rect.top - pad;
+      let top;
+      if (spaceBelow >= captionRect.height + 16 || spaceBelow >= spaceAbove){
+        top = Math.min(rect.bottom + pad + 16, vh - captionRect.height - 16);
+      } else {
+        top = Math.max(16, rect.top - pad - 16 - captionRect.height);
+      }
+      let left = rect.left + rect.width / 2 - captionRect.width / 2;
+      left = Math.max(16, Math.min(left, vw - captionRect.width - 16));
+      captionEl.style.top = top + 'px';
+      captionEl.style.left = left + 'px';
+    }
+
+    // ordinary, single-target steps -- the usual one cutout
+    function positionFor(rect){
+      highlightEl.classList.remove('tour-highlight-dashdot');
+      highlightBEl.style.display = 'none';
+      connectorEl.style.display = 'none';
+      applyHighlightRect(highlightEl, rect);
+      positionCaptionNear(rect);
+    }
+
+    // caption to the left of rectA (the pedal simulation half of the
+    // pair, see positionForPair), rather than above/below either cutout
+    // -- that side is otherwise empty on desktop (the card's own
+    // description block sits there, but this step already dims it same
+    // as everything else not part of the pair), and starting the box
+    // level with rectA's own top lets it naturally run down far enough
+    // to sit alongside rectB (the info box) below it too, reading as
+    // "explaining this whole pair" rather than pointing at just one of them.
+    function positionCaptionLeftOf(rectA){
+      const pad = 8;
+      const captionRect = captionEl.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const left = Math.max(16, rectA.left - pad - 16 - captionRect.width);
+      const top = Math.max(16, Math.min(rectA.top - pad, vh - captionRect.height - 16));
+      captionEl.style.left = left + 'px';
+      captionEl.style.top = top + 'px';
+    }
+
+    // a step spotlighting two real elements together (see
+    // secondarySelector) as two separate cutouts joined by a short
+    // dashed line, rather than one box stretched to cover both (which,
+    // for two elements far apart with empty space between, would dim
+    // that empty space too, reading as spotlighting the gap rather than
+    // the two actual things). `rectA` is expected above `rectB`
+    // (matches this card's own layout: the pedal diagram sits above the
+    // object-info box), so the connector hangs straight down between
+    // them. `rectA` (the pedal simulation) gets the dash-dot border
+    // (see .tour-highlight-dashdot) instead of the plain dashed one,
+    // since it's being called out as its own distinct kind of thing
+    // rather than a second copy of whatever rectB is.
+    function positionForPair(rectA, rectB, captionLeftOfA){
+      highlightEl.classList.add('tour-highlight-dashdot');
+      applyHighlightRect(highlightEl, rectA);
+      applyHighlightRect(highlightBEl, rectB);
+      const pad = 8;
+      const aBottom = rectA.bottom + pad;
+      const bTop = rectB.top - pad;
+      connectorEl.style.display = 'block';
+      connectorEl.style.left = (rectA.left + rectA.width / 2) + 'px';
+      connectorEl.style.top = aBottom + 'px';
+      connectorEl.style.height = Math.max(0, bTop - aBottom) + 'px';
+      if (captionLeftOfA) positionCaptionLeftOf(rectA);
+      else positionCaptionNear(unionRect(rectA, rectB));
+    }
+
+    let potiSweepEl = null;
+    let potiSweepToken = 0; // bumped on every start/stop -- an in-flight
+      // rAF loop checks this and quietly stops itself once it's no
+      // longer the current one, instead of two loops ever running at
+      // once (that "two independent loops each nudging the angle their
+      // own way" is what read as the poti wobbling erratically instead
+      // of moving in one clean direction)
+    // ends a running sweep (if any) and releases the simulated drag it
+    // was holding. window's own mouseup listener (see the poti's real
+    // drag wiring) is what actually ends that drag state; dispatching it
+    // here works regardless of which poti is currently mid-sweep. Also
+    // clears the control's own "active" highlight directly rather than
+    // only trusting that dispatch to reach it -- belt and suspenders, so
+    // moving on to a different tooltip always visibly deselects this one.
+    function stopPotiSweep(){
+      potiSweepToken++;
+      window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      if (potiSweepEl){
+        potiSweepEl.classList.remove('poti-active');
+        potiSweepEl = null;
+      }
+    }
+    // drives one poti through a real drag, smoothly all the way from its
+    // bottom-left rest position to bottom-right, a short pause, then
+    // smoothly back -- repeating for as long as this step is showing.
+    // Timed against actual elapsed time (rAF + performance.now, not a
+    // fixed-step setTimeout counter) so the motion itself reads as one
+    // continuous, steady sweep regardless of frame rate. This dispatches
+    // genuine mousedown/mousemove/mouseup events at the real screen
+    // coordinates each angle maps to, rather than faking the rotation
+    // with a CSS transform, specifically so it runs through the
+    // control's own real drag handling (see the pedal-poti wiring above)
+    // and its info box's numbers genuinely update live, the same as an
+    // actual person turning it would produce.
+    function startPotiSweep(potiEl){
+      stopPotiSweep();
+      const diagram = potiEl.closest('.pedal-diagram');
+      if (!diagram) return;
+      const token = ++potiSweepToken;
+      potiSweepEl = potiEl;
+      const cx = parseFloat(potiEl.getAttribute('data-cx'));
+      const cy = parseFloat(potiEl.getAttribute('data-cy'));
+      const R = 20; // arbitrary distance from the pivot -- angle is all that matters, see angleFromPointer
+      function pointForFrac(frac){
+        const deg = -135 + frac * 270; // POTI_MIN_DEG..POTI_MAX_DEG
+        const rad = deg * Math.PI / 180;
+        const px = cx + R * Math.sin(rad);
+        const py = cy - R * Math.cos(rad);
+        const rect = diagram.getBoundingClientRect();
+        const viewBox = diagram.viewBox.baseVal;
+        return {
+          clientX: rect.left + (px - viewBox.x) * (rect.width / viewBox.width),
+          clientY: rect.top + (py - viewBox.y) * (rect.height / viewBox.height)
+        };
+      }
+      function moveTo(frac){
+        const pt = pointForFrac(frac);
+        window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: pt.clientX, clientY: pt.clientY }));
+      }
+      const p0 = pointForFrac(0);
+      potiEl.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: p0.clientX, clientY: p0.clientY }));
+
+      const SWEEP_MS = 1400, PAUSE_MS = 550;
+      let phase = 'right', phaseStart = performance.now();
+      function frame(now){
+        if (token !== potiSweepToken) return; // superseded -- see its own declaration
+        const elapsed = now - phaseStart;
+        if (phase === 'right'){
+          moveTo(Math.min(1, elapsed / SWEEP_MS));
+          if (elapsed >= SWEEP_MS){ phase = 'pause-right'; phaseStart = now; }
+        } else if (phase === 'pause-right'){
+          if (elapsed >= PAUSE_MS){ phase = 'left'; phaseStart = now; }
+        } else if (phase === 'left'){
+          moveTo(Math.max(0, 1 - elapsed / SWEEP_MS));
+          if (elapsed >= SWEEP_MS){ phase = 'pause-left'; phaseStart = now; }
+        } else {
+          if (elapsed >= PAUSE_MS){ phase = 'right'; phaseStart = now; }
+        }
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function renderStep(){
+      const step = STEPS[stepIndex];
+      const target = resolveTarget(step);
+      if (!target){
+        // shouldn't normally happen (each step's own prerequisites are
+        // already satisfied by the time this runs) -- bail to a clean
+        // closed state rather than leaving the highlight stuck on a
+        // stale rect pointing at nothing
+        finish();
+        return;
+      }
+      const gen = renderGeneration; // see the delayed place() below
+      captionTextEl.textContent = (stepTexts && stepTexts[stepIndex]) || '';
+      stepCountEl.textContent = (stepIndex + 1) + ' / ' + STEPS.length;
+      backBtn.disabled = stepIndex === 0;
+      nextBtn.disabled = false;
+      nextBtn.textContent = stepIndex === STEPS.length - 1 ? 'Done' : 'Next';
+
+      // stopped unconditionally first so leaving this step -- forward,
+      // back, or closing the tour entirely -- always ends any sweep in
+      // progress, regardless of which step it's leaving to. Started
+      // BEFORE measuring anything below: this is what actually opens the
+      // info box a paired step (secondarySelector) wants to spotlight --
+      // measuring for that pair before this ran was finding nothing open
+      // yet and silently falling back to a single cutout.
+      stopPotiSweep();
+      if (step.potiSweepSelector && tourInstance){
+        const potiEl = tourInstance.wrap.querySelector(step.potiSweepSelector);
+        if (potiEl) startPotiSweep(potiEl);
+      }
+
+      if (step.resetInfoBox && tourInstance) tourInstance.resetPedalObjectInfo();
+
+      function place(){
+        if (gen !== renderGeneration) return; // superseded before this fired
+        const secondary = step.secondarySelector && tourInstance ? tourInstance.wrap.querySelector(step.secondarySelector) : null;
+        if (secondary){
+          positionForPair(target.getBoundingClientRect(), secondary.getBoundingClientRect(), step.captionLeftOfPrimary);
+        } else {
+          positionFor(target.getBoundingClientRect());
+        }
+        // this step has now actually landed -- see transitioning's own
+        // declaration for why this is the one place that clears it
+        transitioning = false;
+      }
+      // a step that just opened its own info box (via the sweep above)
+      // needs that box's own width/right CSS transition to actually
+      // finish before the second cutout can be measured against its
+      // real, settled size -- rather than guessing a fixed delay for
+      // that (fragile: it's whatever .bio-panel-object's own transition
+      // duration happens to be, which this file has no business assuming),
+      // poll its width until it stops changing between two checks, then
+      // place. Caps out at ~1.2s so a genuinely stuck box (shouldn't
+      // happen) still doesn't leave this step waiting forever.
+      if (step.secondarySelector && step.potiSweepSelector && tourInstance){
+        const watched = tourInstance.wrap.querySelector(step.secondarySelector);
+        let lastWidth = watched ? watched.getBoundingClientRect().width : 0;
+        let stableCount = 0;
+        let attempts = 0;
+        (function pollUntilStable(){
+          if (gen !== renderGeneration) return;
+          const w = watched ? watched.getBoundingClientRect().width : 0;
+          stableCount = Math.abs(w - lastWidth) < 0.5 ? stableCount + 1 : 0;
+          lastWidth = w;
+          attempts++;
+          if (stableCount >= 2 || attempts >= 20){ place(); return; }
+          setTimeout(pollUntilStable, 60);
+        })();
+      } else {
+        place();
+      }
+    }
+
+    // switches to a step's own mobile page (if any) and fires its own
+    // trigger click (if any) before finally rendering -- shared by every
+    // path below so a page switch and a trigger click always get the same
+    // settle time to animate regardless of which direction got us here.
+    // `gen` is the generation THIS call belongs to (captured by the
+    // caller before any waiting started) -- each async continuation
+    // re-checks it's still current before touching anything, so a
+    // superseded call (a later click already moved the tour on) quietly
+    // stops instead of rendering a stale step on top of the real one.
+    function settleThenRender(step, gen){
+      function afterPage(){
+        if (gen !== renderGeneration) return;
+        if (step.triggerSelector){
+          const triggerEl = tourInstance && tourInstance.wrap.querySelector(step.triggerSelector);
+          // dispatchEvent, not .click() -- the pedal's controls are SVG
+          // <g> elements, which (unlike HTML elements) have no .click()
+          // method at all; this is what their own real listeners expect
+          // (plain 'click', see the pedal-switch wiring), so it triggers
+          // the exact same handler a real touch would.
+          if (triggerEl) triggerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          // lets the touched control's own info box finish opening (see
+          // .bio-panel-object's own width/right transition) before this
+          // step measures it -- measuring immediately after the click
+          // would catch it mid-animation, same class of bug as the
+          // tab-row recentering below
+          setTimeout(function(){ if (gen === renderGeneration) renderStep(); }, 400);
+        } else {
+          renderStep();
+        }
+      }
+      if (step.page){
+        tourInstance.setActivePage(step.page);
+        setTimeout(afterPage, 150);
+      } else {
+        afterPage();
+      }
+    }
+
+    // brings the live open/tab state in line with what `index` needs,
+    // THEN renders -- kept separate from renderStep since getting there
+    // can involve an async open/close animation (see CARD_MS), but
+    // landing on an already-correct state (most Next/Back presses within
+    // the same open edition) shouldn't wait on one
+    function goToStep(index){
+      if (transitioning) return; // see its own declaration for why
+      transitioning = true;
+      const step = STEPS[index];
+      stepIndex = index;
+      const gen = ++renderGeneration; // see its own declaration for why
+      const isOpen = !!tourInstance;
+      if (step.open && !isOpen){
+        tourInstance = instances[0];
+        if (!tourInstance){ finish(); return; }
+        requestOpen(tourInstance);
+        // requestOpen's own two animations run one after the other, not
+        // together: the idle tab row's re-center FLIP (CARD_MS) has to
+        // fully finish before the card's own open transition (another
+        // CARD_MS) even starts (see requestOpen's own "if (tabsAreMoving)
+        // setTimeout(openNow, CARD_MS)"). Waiting only one CARD_MS here
+        // measured the card's contents (like .program-bar) before the
+        // card had actually finished opening -- still mid-slide, at
+        // whatever position that animation happened to be at -- which is
+        // what read as "believes the row is further left than it really
+        // ends up."
+        setTimeout(function(){
+          if (gen !== renderGeneration) return;
+          settleThenRender(step, gen);
+        }, CARD_MS * 2 + 60);
+        return;
+      }
+      if (!step.open && isOpen){
+        const closing = tourInstance;
+        tourInstance = null;
+        // waits for the idle tab row's own re-centering FLIP animation
+        // (see flipSideBoxes, triggered inside requestClose) to actually
+        // finish before measuring it -- requestClose's own callback fires
+        // the instant that re-center STARTS, not once it's visually
+        // settled, so rendering immediately here was measuring a still
+        // mid-flight rect.
+        requestClose(closing, function(){
+          setTimeout(function(){
+            if (gen !== renderGeneration) return;
+            renderStep();
+          }, CARD_MS + 60);
+        });
+        return;
+      }
+      if (step.open){ settleThenRender(step, gen); return; }
+      renderStep();
+    }
+
+    function start(){
+      fetchTexts().then(function(){
+        active = true;
+        tourInstance = null;
+        overlay.classList.add('active');
+        goToStep(0);
+        resizeHandler = function(){ if (active) renderStep(); };
+        window.addEventListener('resize', resizeHandler);
+      });
+    }
+
+    function finish(){
+      active = false;
+      renderGeneration++; // invalidates any transition still in flight
+      transitioning = false; // don't leave a later start() permanently blocked
+      overlay.classList.remove('active');
+      stopPotiSweep();
+      if (resizeHandler){ window.removeEventListener('resize', resizeHandler); resizeHandler = null; }
+      // per product decision: leave whatever edition/program the tour
+      // opened exactly as it is rather than auto-closing it back to idle
+      // -- the user lands right where the tour left off
+      tourInstance = null;
+    }
+
+    helpBtn.addEventListener('click', start);
+    closeBtn.addEventListener('click', finish);
+    nextBtn.addEventListener('click', function(){
+      if (stepIndex >= STEPS.length - 1){ finish(); return; }
+      goToStep(stepIndex + 1);
+    });
+    backBtn.addEventListener('click', function(){
+      if (stepIndex > 0) goToStep(stepIndex - 1);
+    });
+  })();
 })();
 
 /* ---------- modals: Pre-Order / Kontakt / Newsletter ---------- */
