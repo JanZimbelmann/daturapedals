@@ -3940,10 +3940,26 @@
     stroke-width:1.5px;
     stroke-dasharray:6,5;
   }
+  /* the pair step's own control-to-info-box pointer (see updateArrow) --
+     hidden (empty d) on every other step */
+  .tour-arrow-path{
+    stroke:var(--white);
+    stroke-width:1.5px;
+    stroke-dasharray:5,5;
+    transition:opacity 0.2s ease;
+  }
+  .tour-arrow-head{
+    fill:var(--white);
+  }
   .tour-caption{
     position:fixed;
+    display:none; /* shown directly by JS (see showHoverPreview/start/finish), independent of #editionsTourOverlay's own opacity -- see its own markup comment for why */
     width:calc(100% - 3rem);
     max-width:360px;
+    /* above .modal-overlay's own 2000 -- this is a sibling of one now
+       (see its own markup comment), not a child, so it needs its own
+       stacking high enough to still sit on top of that dim */
+    z-index:2001;
     border:1px solid var(--white);
     background:var(--black);
     color:var(--white);
@@ -4469,19 +4485,40 @@
         <rect x="0" y="0" width="100%" height="100%" fill="white"/>
         <path id="tourNotchHole" fill="black"/>
       </mask>
+      <!-- arrowhead for #tourArrowPath below -- orient="auto-start-reverse"
+           points it along the path's own direction at whichever end it's
+           attached to (its end, here, since it's only ever set via
+           marker-end) -->
+      <marker id="tourArrowHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path class="tour-arrow-head" d="M0,0 L10,5 L0,10 Z"/>
+      </marker>
     </defs>
     <rect class="tour-notch-dim" x="0" y="0" width="100%" height="100%" mask="url(#tourNotchMask)"/>
     <path id="tourNotchOutline" class="tour-notch-outline" fill="none"/>
+    <!-- the pair step's own "touch this, it opens down there" pointer --
+         a curved dashed line from whichever control is currently active
+         (see updateArrow) to the info box, only ever shown on that one
+         step. Same SVG as the notch above so it always renders on top of
+         that dim, not fighting it for stacking order. -->
+    <path id="tourArrowPath" class="tour-arrow-path" fill="none" marker-end="url(#tourArrowHead)"/>
   </svg>
-  <div class="tour-caption" id="tourCaption">
-    <p class="tour-caption-text" id="tourCaptionText"></p>
-    <div class="tour-caption-row">
-      <button type="button" class="tour-btn tour-btn-back" id="tourBackBtn">Back</button>
-      <p class="tour-step-count" id="tourStepCount"></p>
-      <button type="button" class="tour-btn tour-btn-next" id="tourNextBtn">Next</button>
-    </div>
-    <button type="button" class="tour-close" id="tourCloseBtn" aria-label="Tour schließen">&times;</button>
+</div>
+<!-- a sibling of the dim/highlight overlay above, not a child of it --
+     its own display is controlled directly (see showHoverPreview/start/
+     finish), independent of that overlay's own opacity/active toggle.
+     That split is what actually lets this be shown on its own, just from
+     hovering the (?) button, before the dim+highlight (and the scroll
+     lock that goes with them) ever engage -- a child of an opacity:0
+     ancestor can't un-invisible itself no matter what its own opacity
+     says, so this has to live outside it to work that way at all. -->
+<div class="tour-caption" id="tourCaption">
+  <p class="tour-caption-text" id="tourCaptionText"></p>
+  <div class="tour-caption-row">
+    <button type="button" class="tour-btn tour-btn-back" id="tourBackBtn">Back</button>
+    <p class="tour-step-count" id="tourStepCount"></p>
+    <button type="button" class="tour-btn tour-btn-next" id="tourNextBtn">Next</button>
   </div>
+  <button type="button" class="tour-close" id="tourCloseBtn" aria-label="Tour schließen">&times;</button>
 </div>
 
 <template id="editionCardTemplate">
@@ -9345,13 +9382,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const notchSvgEl = document.getElementById('tourNotchSvg');
     const notchHoleEl = document.getElementById('tourNotchHole');
     const notchOutlineEl = document.getElementById('tourNotchOutline');
+    const arrowPathEl = document.getElementById('tourArrowPath');
     const captionEl = document.getElementById('tourCaption');
     const captionTextEl = document.getElementById('tourCaptionText');
     const stepCountEl = document.getElementById('tourStepCount');
     const backBtn = document.getElementById('tourBackBtn');
     const nextBtn = document.getElementById('tourNextBtn');
     const closeBtn = document.getElementById('tourCloseBtn');
-    if (!helpBtn || !overlay || !highlightEl || !notchSvgEl || !notchHoleEl || !notchOutlineEl ||
+    if (!helpBtn || !overlay || !highlightEl || !notchSvgEl || !notchHoleEl || !notchOutlineEl || !arrowPathEl ||
         !captionEl || !captionTextEl || !stepCountEl || !backBtn || !nextBtn || !closeBtn) return;
 
     // stays visible and in its one fixed spot (the section's own
@@ -9487,6 +9525,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // ordinary, single-target steps -- the usual one cutout
     function positionFor(rect, captionLeft){
       notchSvgEl.style.display = 'none';
+      arrowPathEl.style.opacity = '0';
       applyHighlightRect(highlightEl, rect);
       if (captionLeft) positionCaptionLeftOf(rect);
       else positionCaptionNear(rect);
@@ -9545,6 +9584,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       notchHoleEl.setAttribute('d', d);
       notchOutlineEl.setAttribute('d', d);
       notchSvgEl.style.display = 'block';
+      updateArrow();
       if (captionLeftOfA) positionCaptionLeftOf(rectA);
       else positionCaptionNear(unionRect(rectA, rectB));
     }
@@ -9589,6 +9629,10 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       if (!diagram) return;
       const token = ++potiSweepToken;
       potiSweepEl = potiEl;
+      // a fresh sweep always starts back on the default source -- see
+      // activeControlEl's own declaration for why this is what actually
+      // makes "leave and come back" reset the arrow too, not just the motion
+      activeControlEl = null;
       const cx = parseFloat(potiEl.getAttribute('data-cx'));
       const cy = parseFloat(potiEl.getAttribute('data-cy'));
       const R = 20; // arbitrary distance from the pivot -- angle is all that matters, see angleFromPointer
@@ -9631,6 +9675,62 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       }
       requestAnimationFrame(frame);
     }
+
+    // which control the pair step's own arrow currently points from (see
+    // updateArrow) -- null means "whatever this step's potiSweepSelector
+    // is" (the default, poti 1), set to a real element once a genuine
+    // press moves it elsewhere. Reset to null every time the pair step
+    // is freshly (re)entered, so it always starts back on the default.
+    let activeControlEl = null;
+
+    // draws (or hides) the pair step's own curved dashed pointer from
+    // whichever control is currently active to the info box it opens.
+    // Only ever shown on the one step that has both a secondarySelector
+    // and a potiSweepSelector -- every other step just hides it.
+    function updateArrow(){
+      const step = STEPS[stepIndex];
+      if (!tourInstance || !step.secondarySelector || !step.potiSweepSelector){
+        arrowPathEl.style.opacity = '0';
+        return;
+      }
+      const sourceEl = activeControlEl || tourInstance.wrap.querySelector(step.potiSweepSelector);
+      const targetEl = tourInstance.wrap.querySelector(step.secondarySelector);
+      if (!sourceEl || !targetEl){ arrowPathEl.style.opacity = '0'; return; }
+      const s = sourceEl.getBoundingClientRect();
+      const t = targetEl.getBoundingClientRect();
+      const sx = s.left + s.width / 2, sy = s.top + s.height / 2;
+      const tx = t.left + t.width / 2, ty = t.top;
+      // control point pulled upward from the straight midpoint -- what
+      // actually makes this a curve instead of a straight dashed line
+      const mx = (sx + tx) / 2, my = Math.min(sy, ty) - 40;
+      arrowPathEl.setAttribute('d',
+        'M' + sx.toFixed(1) + ',' + sy.toFixed(1) +
+        ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) +
+        ' ' + tx.toFixed(1) + ',' + ty.toFixed(1));
+      arrowPathEl.style.opacity = '1';
+    }
+
+    // a genuine (real, not this file's own simulated) press on any
+    // control while the pair step is showing does two things at once:
+    // stops the automatic sweep (someone's actually turning it now, it
+    // shouldn't keep fighting them for control) and moves the arrow to
+    // point from whatever they just touched instead of wherever it
+    // defaulted to. Capture phase, and checked here rather than wired
+    // per-step, so it doesn't need setup/teardown as steps change --
+    // the step/tourInstance/secondarySelector checks below are what
+    // actually scope it to only the one step this matters for.
+    function onRealControlPress(evt){
+      if (!evt.isTrusted || !active || !tourInstance) return;
+      const step = STEPS[stepIndex];
+      if (!step.secondarySelector || !step.potiSweepSelector) return;
+      const control = evt.target.closest && evt.target.closest('.pedal-poti, .pedal-switch, .pedal-button');
+      if (!control || !tourInstance.wrap.contains(control)) return;
+      stopPotiSweep();
+      activeControlEl = control;
+      updateArrow();
+    }
+    window.addEventListener('mousedown', onRealControlPress, true);
+    window.addEventListener('touchstart', onRealControlPress, true);
 
     function renderStep(){
       const step = STEPS[stepIndex];
@@ -9809,8 +9909,10 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     function start(){
       fetchTexts().then(function(){
         active = true;
+        previewMode = false;
         tourInstance = null;
         overlay.classList.add('active');
+        captionEl.style.display = 'block'; // already true if start() followed a hover, but harmless either way
         // the section-paging wheel/touch/keydown handlers already skip
         // their own jump-to-next-section logic while any .modal-overlay
         // is active (this one included), but that's all they do --
@@ -9832,6 +9934,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       renderGeneration++; // invalidates any transition still in flight
       transitioning = false; // don't leave a later start() permanently blocked
       overlay.classList.remove('active');
+      captionEl.style.display = 'none';
       document.documentElement.style.overflow = '';
       stopPotiSweep();
       if (resizeHandler){ window.removeEventListener('resize', resizeHandler); resizeHandler = null; }
@@ -9841,16 +9944,55 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       tourInstance = null;
     }
 
+    // hovering the button shows this same caption box early, as a "0 / N"
+    // preview, before any of the real tour's dim/highlight/scroll-lock
+    // engage -- purely the caption (see its own markup comment for how
+    // that's possible), positioned near the button itself rather than
+    // near anything on the page, since nothing real is being pointed at
+    // yet. Pressing the button then (see helpBtn's click handler below)
+    // just calls start() as normal, which re-renders this same element
+    // with step 1's real content/position -- the caption's own top/left
+    // transition (see its CSS) is what turns that into it visibly
+    // travelling from here to there, instead of a hard cut.
+    let previewMode = false;
+    function showHoverPreview(){
+      if (active || previewMode) return; // real tour already running, or already showing
+      previewMode = true;
+      captionTextEl.textContent = (stepTexts && stepTexts.length) ? stepTexts[0] : 'A quick guide to how Editions and the pedal simulation work.';
+      stepCountEl.textContent = '0 / ' + STEPS.length;
+      backBtn.disabled = true;
+      nextBtn.disabled = false;
+      nextBtn.textContent = 'Next';
+      captionEl.style.display = 'block';
+      positionCaptionNear(helpBtn.getBoundingClientRect());
+      // fetched now (not waited on) so the real text is already cached
+      // and ready the instant start() actually runs -- the preview text
+      // above is a generic placeholder used only until this resolves,
+      // shown instantly rather than waiting on the fetch first
+      fetchTexts();
+    }
+    function hideHoverPreview(){
+      if (!previewMode) return;
+      previewMode = false;
+      captionEl.style.display = 'none';
+    }
+    helpBtn.addEventListener('mouseenter', showHoverPreview);
+    helpBtn.addEventListener('mouseleave', hideHoverPreview);
+    helpBtn.addEventListener('focus', showHoverPreview);
+    helpBtn.addEventListener('blur', hideHoverPreview);
+
     helpBtn.addEventListener('click', function(){
       // the button stays visible and clickable even with a card open
       // (see its own CSS) -- pressing it there closes that card back to
       // idle instead of starting the tour on top of it, since the tour
       // itself always wants to start from a clean idle state anyway
       if (activeInstance){ requestClose(activeInstance); return; }
+      previewMode = false;
       start();
     });
     closeBtn.addEventListener('click', finish);
     nextBtn.addEventListener('click', function(){
+      if (previewMode){ previewMode = false; start(); return; }
       if (stepIndex >= STEPS.length - 1){ finish(); return; }
       goToStep(stepIndex + 1);
     });
