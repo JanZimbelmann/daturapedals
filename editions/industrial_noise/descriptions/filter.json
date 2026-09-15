@@ -2,5 +2,8 @@
   "program": "Filter",
   "artist": "Grodock",
   "type": "fx",
-  "text": "Filters 4 frequency bands..."
+  "text": {
+    "de": "Filtert 4 Frequenzbänder...",
+    "en": "Filters 4 frequency bands..."
+  }
 }

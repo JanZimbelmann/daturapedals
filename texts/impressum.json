@@ -1,0 +1,51 @@
+{
+  "heading": { "de": "Impressum", "en": "Legal Notice" },
+  "sections": [
+    {
+      "title": { "de": "Angaben gemäß § 5 TMG", "en": "Information according to § 5 TMG (German Telemedia Act)" },
+      "text": {
+        "de": "Datura Pedals GbR\nMusterstraße 12\n04109 Leipzig\nDeutschland",
+        "en": "Datura Pedals GbR\nMusterstraße 12\n04109 Leipzig\nGermany"
+      }
+    },
+    {
+      "title": { "de": "Vertreten durch", "en": "Represented by" },
+      "text": {
+        "de": "Max Mustermann, Erika Musterfrau",
+        "en": "Max Mustermann, Erika Musterfrau"
+      }
+    },
+    {
+      "title": { "de": "Kontakt", "en": "Contact" },
+      "text": {
+        "de": "Telefon: +49 (0) 341 123456\nE-Mail: daturapedals@gmail.com",
+        "en": "Phone: +49 (0) 341 123456\nEmail: daturapedals@gmail.com"
+      }
+    },
+    {
+      "title": { "de": "Umsatzsteuer-ID", "en": "VAT ID" },
+      "text": {
+        "de": "Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000",
+        "en": "VAT identification number according to §27a of the German VAT Act: DE000000000"
+      }
+    },
+    {
+      "title": { "de": "Redaktionell verantwortlich", "en": "Editorially responsible" },
+      "text": {
+        "de": "Max Mustermann, Musterstraße 12, 04109 Leipzig",
+        "en": "Max Mustermann, Musterstraße 12, 04109 Leipzig, Germany"
+      }
+    },
+    {
+      "title": { "de": "EU-Streitschlichtung", "en": "EU Dispute Resolution" },
+      "text": {
+        "de": "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.",
+        "en": "The European Commission provides a platform for online dispute resolution (ODR): https://ec.europa.eu/consumers/odr/. Our email address can be found above in this legal notice."
+      }
+    }
+  ],
+  "note": {
+    "de": "Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.",
+    "en": "This is placeholder text. Please replace it with the actual details."
+  }
+}

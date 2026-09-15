@@ -2,5 +2,8 @@
   "program": "Beat",
   "artist": "MVROWI",
   "type": "synth",
-  "text": "4 to the floor4 to the floor4 to the floor4 to the floor"
+  "text": {
+    "de": "4 to the floor4 to the floor4 to the floor4 to the floor",
+    "en": "4 to the floor4 to the floor4 to the floor4 to the floor"
+  }
 }

@@ -2,5 +2,8 @@
   "program": "Panic Attack",
   "artist": "Der Verlorene Faden",
   "type": "fx",
-  "text": "glitch pedal with feedback..."
+  "text": {
+    "de": "Glitch-Pedal mit Feedback...",
+    "en": "glitch pedal with feedback..."
+  }
 }

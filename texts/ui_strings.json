@@ -1,0 +1,68 @@
+{
+  "common": {
+    "close": { "de": "Schließen", "en": "Close" },
+    "noLinks": { "de": "Keine Links verfügbar.", "en": "No links available." },
+    "scrollUp": { "de": "Nach oben scrollen", "en": "Scroll up" },
+    "scrollDown": { "de": "Nach unten scrollen", "en": "Scroll down" },
+    "scrollPosition": { "de": "Scrollposition", "en": "Scroll position" }
+  },
+  "video": {
+    "tabVideo": { "de": "Video", "en": "Video" },
+    "tabScript": { "de": "Script", "en": "Script" },
+    "scrollTextUp": { "de": "Text nach oben scrollen", "en": "Scroll text up" },
+    "scrollTextDown": { "de": "Text nach unten scrollen", "en": "Scroll text down" }
+  },
+  "editionsHelp": {
+    "ariaLabel": { "de": "Erklären, wie Editionen und Pedale funktionieren", "en": "Explain how Editions and pedals work" },
+    "title": { "de": "Für eine Anleitung klicken", "en": "Click for a guide to what this is" }
+  },
+  "tour": {
+    "back": { "de": "Zurück", "en": "Back" },
+    "close": { "de": "Tour schließen", "en": "Close tour" }
+  },
+  "editionCard": {
+    "toggle": { "de": "Karte ein-/ausklappen", "en": "Expand/collapse card" },
+    "tabOverview": { "de": "Overview", "en": "Overview" },
+    "tabOverviewAria": { "de": "Allgemeine Infos zu diesem Pedal anzeigen", "en": "Show general info about this pedal" },
+    "tabArtist": { "de": "Artist", "en": "Artist" },
+    "tabArtistAria": { "de": "Künstler-Bio, Foto und Kooperationen anzeigen", "en": "Show artist bio, photo and collaborations" },
+    "tabControls": { "de": "Controls", "en": "Controls" },
+    "tabControlsAria": { "de": "Bedienelemente und Mod-Infos des Pedals anzeigen", "en": "Show the pedal's controls and mod info" },
+    "playSound": { "de": "Sound abspielen", "en": "Play sound" },
+    "collabWith": { "de": "In Kooperation mit:", "en": "In collaboration with:" },
+    "showArtistLinks": { "de": "Links des Künstlers anzeigen", "en": "Show artist's links" },
+    "bioLabel": { "de": "Bio:", "en": "Bio:" },
+    "bioScrollUp": { "de": "Bio nach oben scrollen", "en": "Scroll bio up" },
+    "bioScrollPosition": { "de": "Bio-Scrollposition", "en": "Bio scroll position" },
+    "bioScrollDown": { "de": "Bio nach unten scrollen", "en": "Scroll bio down" },
+    "toggleMod0": { "de": "Objektinfo (Mod 0) ein-/ausklappen", "en": "Expand/collapse object info (Mod 0)" },
+    "toggleMod1": { "de": "Objektinfo (Mod 1) ein-/ausklappen", "en": "Expand/collapse object info (Mod 1)" }
+  },
+  "why": {
+    "mobileTab": { "de": "Warum das Ganze?", "en": "Why all this?" },
+    "mobileBlogTab": { "de": "Blog", "en": "Blog" },
+    "heading": { "de": "Warum das Ganze?", "en": "Why all this?" }
+  },
+  "blog": {
+    "newerEntry": { "de": "Neuerer Eintrag", "en": "Newer entry" },
+    "olderEntry": { "de": "Älterer Eintrag", "en": "Older entry" }
+  },
+  "particleSlider": {
+    "ariaLabel": { "de": "Anzahl der Partikel", "en": "Number of particles" }
+  },
+  "preorder": {
+    "bodyText": { "de": "Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.", "en": "We aren't currently accepting pre-orders. Please get in touch with us and stay up to date." }
+  },
+  "contact": {
+    "button": { "de": "In Kontakt Treten", "en": "Get in Touch" }
+  },
+  "newsletter": {
+    "button": { "de": "Informiert bleiben", "en": "Stay Informed" },
+    "emailPlaceholder": { "de": "deine@email.de", "en": "your@email.com" },
+    "submit": { "de": "Zum Newsletter anmelden", "en": "Sign up for the newsletter" }
+  },
+  "sectionNav": {
+    "prev": { "de": "Zum vorherigen Abschnitt", "en": "Go to the previous section" },
+    "next": { "de": "Zum nächsten Abschnitt", "en": "Go to the next section" }
+  }
+}

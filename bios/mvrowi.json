@@ -1,5 +1,8 @@
 {
-  "text": "MVROWI hat lange seine eignen Synthesizer mit Rasberry PIs und Holz zusammen gelötet und gezimmert, um sie im Anschluss mit einer aus den 90er Jahren stammenden programmiersprache (Supercollider) und seinen eigenen Algorithmen zu programmieren. Dazu ausgestattet mit einer Gitarre und inspiriert von einer Mischung aus Black Metal und Breakcore entstehen melancholische Melodien, welche dann live in ihre Einzelteile zerlegt werden und zu einem neuen Bild, einem Hoffnungsvollerem Bild zusammegesetzt werden.",
+  "text": {
+    "de": "MVROWI hat lange seine eignen Synthesizer mit Rasberry PIs und Holz zusammen gelötet und gezimmert, um sie im Anschluss mit einer aus den 90er Jahren stammenden programmiersprache (Supercollider) und seinen eigenen Algorithmen zu programmieren. Dazu ausgestattet mit einer Gitarre und inspiriert von einer Mischung aus Black Metal und Breakcore entstehen melancholische Melodien, welche dann live in ihre Einzelteile zerlegt werden und zu einem neuen Bild, einem Hoffnungsvollerem Bild zusammegesetzt werden.",
+    "en": "MVROWI spent a long time soldering and building their own synthesizers out of Raspberry Pis and wood, then programming them using a programming language from the 90s (Supercollider) and their own algorithms. Equipped with a guitar and inspired by a mix of black metal and breakcore, this produces melancholic melodies, which are then taken apart live into their individual pieces and reassembled into a new, more hopeful picture."
+  },
   "links":{
     "youtube": "https://www.youtube.com/@mvrowi",
     "instagram": "https://www.instagram.com/mvrowi/",

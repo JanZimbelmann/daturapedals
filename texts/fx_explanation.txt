@@ -1,1 +1,0 @@
-An Effects pedal transforms the input into something new.

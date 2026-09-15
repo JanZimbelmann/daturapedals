@@ -1,11 +1,38 @@
 [
-  "This is one of the Editions. Every pedal ships as different Editions, each built around a genre or scene, made together with musicians from it.",
-  "Each Edition holds several Programs: individual sounds, each made with one specific artist.",
-  "A Program is either a Synthesizer (creates its own sound) or an Effect (transforms whatever comes in).",
-  "Every Program has its own simulated pedal: real knobs and switches.",
-  "Touching a knob or switch, like this one, opens its info box down here. Watch the numbers change as it moves.",
-  "Two switches are special. This one flips every control to a second, hidden set of sounds.",
-  "The other special switch changes how the buttons behave: hold one down to sustain the sound, or press once to latch it on.",
-  "Press play to hear what this Program actually sounds like.",
-  "See who made it, and their other collaborations, under Artist."
+  {
+    "de": "Das hier ist eine der Editionen. Jedes Pedal gibt es als verschiedene Editionen, jede rund um ein Genre oder eine Szene gebaut, gemeinsam mit Musiker:innen daraus entwickelt.",
+    "en": "This is one of the Editions. Every pedal ships as different Editions, each built around a genre or scene, made together with musicians from it."
+  },
+  {
+    "de": "Jede Edition enthält mehrere Programs: einzelne Sounds, jeweils mit einer bestimmten Künstlerin oder einem bestimmten Künstler entwickelt.",
+    "en": "Each Edition holds several Programs: individual sounds, each made with one specific artist."
+  },
+  {
+    "de": "Ein Program ist entweder ein Synthesizer (erzeugt einen eigenen Sound) oder ein Effekt (verwandelt das, was reinkommt).",
+    "en": "A Program is either a Synthesizer (creates its own sound) or an Effect (transforms whatever comes in)."
+  },
+  {
+    "de": "Jedes Program hat sein eigenes simuliertes Pedal: echte Regler und Schalter.",
+    "en": "Every Program has its own simulated pedal: real knobs and switches."
+  },
+  {
+    "de": "Berührst du einen Regler oder Schalter, wie diesen hier, öffnet sich unten seine Infobox. Beobachte, wie sich die Zahlen bei der Bewegung ändern.",
+    "en": "Touching a knob or switch, like this one, opens its info box down here. Watch the numbers change as it moves."
+  },
+  {
+    "de": "Zwei Schalter sind besonders. Dieser hier schaltet jeden Regler auf ein zweites, verstecktes Sound-Set um.",
+    "en": "Two switches are special. This one flips every control to a second, hidden set of sounds."
+  },
+  {
+    "de": "Der andere besondere Schalter verändert, wie sich die Buttons verhalten: gedrückt halten für Sustain, oder einmal drücken zum Einrasten.",
+    "en": "The other special switch changes how the buttons behave: hold one down to sustain the sound, or press once to latch it on."
+  },
+  {
+    "de": "Drück Play, um zu hören, wie dieses Program tatsächlich klingt.",
+    "en": "Press play to hear what this Program actually sounds like."
+  },
+  {
+    "de": "Sieh unter Artist, wer es gemacht hat, und welche anderen Kollaborationen es gibt.",
+    "en": "See who made it, and their other collaborations, under Artist."
+  }
 ]

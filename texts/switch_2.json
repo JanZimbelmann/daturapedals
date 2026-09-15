@@ -1,4 +1,10 @@
 {
-  "left": "Mod 0 is active:\npotentiometers, buttons and switches use their normal mapping.",
-  "right": "Mod 1 is active:\npotentiometers, buttons and switches use their alternative mapping."
+  "left": {
+    "de": "Mod 0 ist aktiv:\nPotentiometer, Buttons und Schalter nutzen ihre normale Belegung.",
+    "en": "Mod 0 is active:\npotentiometers, buttons and switches use their normal mapping."
+  },
+  "right": {
+    "de": "Mod 1 ist aktiv:\nPotentiometer, Buttons und Schalter nutzen ihre alternative Belegung.",
+    "en": "Mod 1 is active:\npotentiometers, buttons and switches use their alternative mapping."
+  }
 }

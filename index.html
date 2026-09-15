@@ -554,6 +554,68 @@
   .summe-text:hover{
     color:var(--white);
   }
+  /* DE/EN language pad -- a pill with a sliding filled thumb over
+     whichever side is current (see #langToggle's own JS). Same visual
+     language as the rest of the hero (thin white border, transparent
+     resting fill, monospace), sized to read as a small control rather
+     than a headline element. */
+  .lang-toggle{
+    position:relative;
+    display:flex;
+    /* auto left/right, not just margin-top -- .wordmark-wrap centers its
+       other children via text-align:center, which only affects inline
+       content, not a block-level flex container with a fixed width like
+       this one; centering it the same way as everything above it needs
+       its own auto margins */
+    margin:1rem auto 0;
+    width:4.4rem;
+    height:1.6rem;
+    border:1px solid var(--white);
+    border-radius:999px;
+    cursor:pointer;
+    user-select:none;
+    opacity:0.85;
+    transition:opacity 0.25s ease;
+  }
+  .lang-toggle:hover{
+    opacity:1;
+  }
+  .lang-toggle-thumb{
+    position:absolute;
+    top:1px;
+    left:1px;
+    width:calc(50% - 1px);
+    height:calc(100% - 2px);
+    background:var(--white);
+    border-radius:999px;
+    /* left, not transform -- this pad is small enough (and never
+       resized) that the extra reflow cost doesn't matter, and left is
+       simpler to reason about against the two fixed 50% halves below */
+    transition:left 0.25s cubic-bezier(.65,0,.35,1);
+  }
+  .lang-toggle[data-active="en"] .lang-toggle-thumb{
+    left:calc(50% + 0px);
+  }
+  .lang-toggle-option{
+    position:relative;
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    letter-spacing:0.06em;
+    color:var(--white);
+    transition:color 0.25s ease;
+  }
+  /* whichever side the thumb currently covers needs to flip to dark
+     text to stay readable against that now-white background -- matches
+     the same hover-invert treatment used elsewhere on this page (e.g.
+     .spotlight-side-box:hover) */
+  .lang-toggle[data-active="de"] .lang-toggle-option[data-lang="de"],
+  .lang-toggle[data-active="en"] .lang-toggle-option[data-lang="en"]{
+    color:var(--black);
+  }
   .ray{
     position:absolute;
     background:var(--grey-2);
@@ -2246,8 +2308,8 @@
      headline -- large, and hoverable (reusing .spotlight-title-hoverable,
      the same cursor:help/underline treatment as "Synthesizer Pedal:")
      with its own tooltip explaining what a synth even is, sourced from
-     texts/synth_info.txt exactly like that title's own tooltip pulls from
-     texts/synth_explanation.txt. Its parameters are listed underneath as
+     texts/synth_info.json exactly like that title's own tooltip pulls from
+     texts/synth_explanation.json. Its parameters are listed underneath as
      a plain name/value list, paged a few rows at a time rather than
      scrolled when there are a lot of them (a poti touching 9+ params) --
      see PARAM_PAGE_SIZE/.control-info-page-nav below. */
@@ -3907,6 +3969,17 @@
     background:transparent; /* the dim comes from .tour-highlight's box-shadow spread instead */
     display:block; /* undoes .modal-overlay's centering flex -- both children position themselves */
     padding:0;
+    /* .modal-overlay's own base rule never sets this, meaning it defaults
+       to auto -- an invisible, transparent, full-viewport div still
+       blocks every click underneath it regardless. That silently ate
+       every real press meant for the pedal simulation during the pair
+       step (turning a poti, pressing a switch), and along with it the
+       real-press detection in initEditionsTour (event.target was always
+       this overlay, never the actual control, so it could never match).
+       This overlay is purely visual now -- the tour's own real click
+       targets (Next/Back/Close, the caption) all live in #tourCaption,
+       a separate sibling element with its own normal pointer-events. */
+    pointer-events:none;
   }
   .tour-highlight{
     position:fixed;
@@ -3950,6 +4023,50 @@
   }
   .tour-arrow-head{
     fill:var(--white);
+  }
+  /* one-time "look here" intro, played the first time a visitor arrives at
+     #editionsSection on a given page load (see onArriveAtEditionsGlobal) --
+     entirely independent of the real guided tour above (own overlay, own
+     state, never touches `active`/`previewMode`) so it can never collide
+     with it; the trigger site itself is what skips playing this if the
+     tour or its hover-preview happen to already be showing. */
+  .editions-attention-intro{
+    position:fixed;
+    inset:0;
+    z-index:1999; /* one below .modal-overlay's 2000 -- never meant to outrank a real modal/tour if one somehow opens mid-animation */
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.5s ease;
+  }
+  .editions-attention-intro.visible{
+    opacity:1;
+  }
+  .editions-attention-hole{
+    position:fixed;
+    border-radius:50%;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.78);
+    pointer-events:none;
+    /* top/left/width/height set from JS to match the (?) button's own
+       rect each time this plays, same technique as .tour-highlight */
+  }
+  .editions-attention-svg{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    pointer-events:none;
+  }
+  .editions-attention-arrow{
+    fill:none;
+    stroke:var(--white);
+    stroke-width:1.5px;
+    stroke-dasharray:6,7;
+    marker-end:url(#tourArrowHead); /* reuses the guided tour's own arrowhead marker -- SVG ids resolve document-wide, not just within their own <svg> */
+    animation:attentionArrowFlow 0.8s linear infinite;
+  }
+  @keyframes attentionArrowFlow{
+    from{ stroke-dashoffset:26; }
+    to{ stroke-dashoffset:0; }
   }
   .tour-caption{
     position:fixed;
@@ -4394,6 +4511,22 @@
       <span class="summe-label">Mehr als die Summe seiner Teile</span>
       <canvas class="summe-dissolve-canvas" id="summeCanvas" aria-hidden="true"></canvas>
     </p>
+    <!-- language pad: DE/EN, a sliding thumb over whichever is current.
+         Its own sibling, not nested inside .summe-text -- that element
+         is itself role="button" with its own click handler (scrolls to
+         Kontakt), and nesting a second interactive control inside it
+         would fight that for clicks. Switching languages reloads the
+         page (see setLang) rather than re-rendering everything live --
+         this site builds most of its own content from JS on load
+         (editions, bios, blog, the tour...), so a reload is what
+         guarantees every one of those is actually correct in the new
+         language, rather than needing each one rebuilt to be safely
+         re-run on demand. -->
+    <div class="lang-toggle" id="langToggle" role="button" tabindex="0" aria-label="Sprache wechseln / Switch language">
+      <span class="lang-toggle-thumb" id="langToggleThumb"></span>
+      <span class="lang-toggle-option" data-lang="de">DE</span>
+      <span class="lang-toggle-option" data-lang="en">EN</span>
+    </div>
   </div>
 </div>
 
@@ -4402,8 +4535,8 @@
 <section class="video-section" id="videoSection">
   <div class="video-box">
     <div class="video-tabs">
-      <button class="video-tab active" id="tabVideoBtn">Video</button>
-      <button class="video-tab" id="tabScriptBtn">Script</button>
+      <button class="video-tab active" id="tabVideoBtn" data-i18n="video.tabVideo">Video</button>
+      <button class="video-tab" id="tabScriptBtn" data-i18n="video.tabScript">Script</button>
     </div>
     <div class="video-panels">
       <div class="video-panel active" id="panelVideo">
@@ -4430,11 +4563,11 @@
         <div class="video-script-row">
           <p class="video-script-text" id="scriptText">Lädt…</p>
           <div class="video-script-nav" id="scriptTextNav">
-            <button type="button" class="video-script-nav-btn video-script-nav-up" aria-label="Text nach oben scrollen">▲</button>
-            <div class="video-script-slider" id="scriptTextSlider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+            <button type="button" class="video-script-nav-btn video-script-nav-up" data-i18n-aria="video.scrollTextUp" aria-label="Text nach oben scrollen">▲</button>
+            <div class="video-script-slider" id="scriptTextSlider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
               <div class="video-script-slider-thumb"></div>
             </div>
-            <button type="button" class="video-script-nav-btn video-script-nav-down" aria-label="Text nach unten scrollen">▼</button>
+            <button type="button" class="video-script-nav-btn video-script-nav-down" data-i18n-aria="video.scrollTextDown" aria-label="Text nach unten scrollen">▼</button>
           </div>
         </div>
       </div>
@@ -4457,7 +4590,7 @@
        #spotlightWraps.has-active in the CSS) -- starts the guided tour
        (editionsTourOverlay below), which points at real, live pieces of
        the first edition's card rather than just describing them in prose -->
-  <button type="button" class="editions-help-btn" id="editionsHelpBtn" aria-label="Erklären, wie Editionen und Pedale funktionieren" title="Click for a guide to what this is">?</button>
+  <button type="button" class="editions-help-btn" id="editionsHelpBtn" data-i18n-aria="editionsHelp.ariaLabel" data-i18n-title="editionsHelp.title" aria-label="Erklären, wie Editionen und Pedale funktionieren" title="Click for a guide to what this is">?</button>
 </section>
 
 <!-- guided tour: walks through what an Edition/Program/pedal simulation
@@ -4514,17 +4647,24 @@
 <div class="tour-caption" id="tourCaption">
   <p class="tour-caption-text" id="tourCaptionText"></p>
   <div class="tour-caption-row">
-    <button type="button" class="tour-btn tour-btn-back" id="tourBackBtn">Back</button>
+    <button type="button" class="tour-btn tour-btn-back" id="tourBackBtn" data-i18n="tour.back">Back</button>
     <p class="tour-step-count" id="tourStepCount"></p>
     <button type="button" class="tour-btn tour-btn-next" id="tourNextBtn">Next</button>
   </div>
-  <button type="button" class="tour-close" id="tourCloseBtn" aria-label="Tour schließen">&times;</button>
+  <button type="button" class="tour-close" id="tourCloseBtn" data-i18n-aria="tour.close" aria-label="Tour schließen">&times;</button>
+</div>
+
+<!-- one-time "look here" intro (see onArriveAtEditionsGlobal/playAttentionIntro)
+     -- own overlay, entirely separate from #editionsTourOverlay above -->
+<div class="editions-attention-intro" id="editionsAttentionIntro">
+  <div class="editions-attention-hole" id="editionsAttentionHole"></div>
+  <svg class="editions-attention-svg" id="editionsAttentionSvg" aria-hidden="true"></svg>
 </div>
 
 <template id="editionCardTemplate">
   <div class="spotlight-wrap">
 
-    <div class="spotlight-side-box" role="button" tabindex="0" aria-label="Karte ein-/ausklappen">
+    <div class="spotlight-side-box" role="button" tabindex="0" data-i18n-aria="editionCard.toggle" aria-label="Karte ein-/ausklappen">
       <p class="spotlight-side-title"></p>
     </div>
 
@@ -4542,9 +4682,9 @@
          where display:none keeps this whole block (and the moving) off,
          and everything below just renders in its normal original place. -->
     <div class="card-page-nav">
-      <button class="card-page-btn active" type="button" data-page="info" aria-label="Allgemeine Infos zu diesem Pedal anzeigen">Overview</button>
-      <button class="card-page-btn" type="button" data-page="artist" aria-label="Künstler-Bio, Foto und Kooperationen anzeigen">Artist</button>
-      <button class="card-page-btn" type="button" data-page="controls" aria-label="Bedienelemente und Mod-Infos des Pedals anzeigen">Controls</button>
+      <button class="card-page-btn active" type="button" data-page="info" data-i18n="editionCard.tabOverview" data-i18n-aria="editionCard.tabOverviewAria" aria-label="Allgemeine Infos zu diesem Pedal anzeigen">Overview</button>
+      <button class="card-page-btn" type="button" data-page="artist" data-i18n="editionCard.tabArtist" data-i18n-aria="editionCard.tabArtistAria" aria-label="Künstler-Bio, Foto und Kooperationen anzeigen">Artist</button>
+      <button class="card-page-btn" type="button" data-page="controls" data-i18n="editionCard.tabControls" data-i18n-aria="editionCard.tabControlsAria" aria-label="Bedienelemente und Mod-Infos des Pedals anzeigen">Controls</button>
     </div>
     <div class="card-page card-page-info active" data-page="info"></div>
     <div class="card-page card-page-artist" data-page="artist"></div>
@@ -4559,7 +4699,7 @@
       <div class="controls-vine-anchor"></div>
     </div>
 
-    <button class="spotlight-center-play" aria-label="Sound abspielen">
+    <button class="spotlight-center-play" data-i18n-aria="editionCard.playSound" aria-label="Sound abspielen">
       <span class="play-emblem"></span>
     </button>
     <!-- decorative only: vine-like tendrils that draw themselves in from
@@ -4652,7 +4792,7 @@
     <div class="collab-divider">
       <div class="collab-divider-left-group">
         <span class="collab-divider-line collab-divider-line-left"></span>
-        <span class="collab-divider-text">In Kooperation mit:</span>
+        <span class="collab-divider-text" data-i18n="editionCard.collabWith">In Kooperation mit:</span>
         <span class="collab-divider-line collab-divider-line-mid"></span>
       </div>
       <div class="collab-divider-right-group">
@@ -4663,7 +4803,7 @@
 
     <div class="spotlight-bottom-row">
       <div class="spotlight-circle-block">
-        <div class="artist-circle-wrap" role="button" tabindex="0" aria-label="Links des Künstlers anzeigen">
+        <div class="artist-circle-wrap" role="button" tabindex="0" data-i18n-aria="editionCard.showArtistLinks" aria-label="Links des Künstlers anzeigen">
           <div class="artist-circle-clip">
             <img class="artist-circle-img" alt="">
           </div>
@@ -4679,44 +4819,44 @@
       <div class="spotlight-bio-block">
         <div class="bio-slider">
           <div class="bio-panel bio-panel-bio">
-            <p class="spotlight-title">Bio:</p>
+            <p class="spotlight-title" data-i18n="editionCard.bioLabel">Bio:</p>
             <div class="bio-text-row">
               <div class="bio-text-clip">
                 <p class="spotlight-desc-text artist-bio">Lädt…</p>
               </div>
               <div class="bio-text-nav">
-                <button type="button" class="bio-text-nav-btn bio-text-nav-up" aria-label="Bio nach oben scrollen">▲</button>
-                <div class="bio-text-slider" role="slider" aria-label="Bio-Scrollposition" aria-valuemin="0" aria-valuemax="100">
+                <button type="button" class="bio-text-nav-btn bio-text-nav-up" data-i18n-aria="editionCard.bioScrollUp" aria-label="Bio nach oben scrollen">▲</button>
+                <div class="bio-text-slider" role="slider" data-i18n-aria="editionCard.bioScrollPosition" aria-label="Bio-Scrollposition" aria-valuemin="0" aria-valuemax="100">
                   <div class="bio-text-slider-thumb"></div>
                 </div>
-                <button type="button" class="bio-text-nav-btn bio-text-nav-down" aria-label="Bio nach unten scrollen">▼</button>
+                <button type="button" class="bio-text-nav-btn bio-text-nav-down" data-i18n-aria="editionCard.bioScrollDown" aria-label="Bio nach unten scrollen">▼</button>
               </div>
             </div>
           </div>
-          <div class="bio-panel-object" role="button" tabindex="0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
+          <div class="bio-panel-object" role="button" tabindex="0" data-i18n-aria="editionCard.toggleMod0" aria-label="Objektinfo (Mod 0) ein-/ausklappen">
             <div class="object-info-inner">
               <p class="spotlight-title"><span class="object-info-title"></span> <span class="mod-tag mod-tag-0">(Mod 0)</span></p>
               <div class="control-info-box object-info-detail-0"></div>
             </div>
             <div class="control-info-scroll-nav">
-              <button type="button" class="bio-text-nav-btn control-info-scroll-up" aria-label="Nach oben scrollen">▲</button>
-              <div class="bio-text-slider control-info-scroll-slider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+              <button type="button" class="bio-text-nav-btn control-info-scroll-up" data-i18n-aria="common.scrollUp" aria-label="Nach oben scrollen">▲</button>
+              <div class="bio-text-slider control-info-scroll-slider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
                 <div class="bio-text-slider-thumb"></div>
               </div>
-              <button type="button" class="bio-text-nav-btn control-info-scroll-down" aria-label="Nach unten scrollen">▼</button>
+              <button type="button" class="bio-text-nav-btn control-info-scroll-down" data-i18n-aria="common.scrollDown" aria-label="Nach unten scrollen">▼</button>
             </div>
           </div>
-          <div class="bio-panel-object bio-panel-object-mod1" role="button" tabindex="0" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
+          <div class="bio-panel-object bio-panel-object-mod1" role="button" tabindex="0" data-i18n-aria="editionCard.toggleMod1" aria-label="Objektinfo (Mod 1) ein-/ausklappen">
             <div class="object-info-inner">
               <p class="spotlight-title"><span class="object-info-title-mod1"></span> <span class="mod-tag mod-tag-1">(Mod 1)</span></p>
               <div class="control-info-box object-info-detail-1"></div>
             </div>
             <div class="control-info-scroll-nav">
-              <button type="button" class="bio-text-nav-btn control-info-scroll-up" aria-label="Nach oben scrollen">▲</button>
-              <div class="bio-text-slider control-info-scroll-slider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+              <button type="button" class="bio-text-nav-btn control-info-scroll-up" data-i18n-aria="common.scrollUp" aria-label="Nach oben scrollen">▲</button>
+              <div class="bio-text-slider control-info-scroll-slider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
                 <div class="bio-text-slider-thumb"></div>
               </div>
-              <button type="button" class="bio-text-nav-btn control-info-scroll-down" aria-label="Nach unten scrollen">▼</button>
+              <button type="button" class="bio-text-nav-btn control-info-scroll-down" data-i18n-aria="common.scrollDown" aria-label="Nach unten scrollen">▼</button>
             </div>
           </div>
         </div>
@@ -4731,19 +4871,19 @@
 
 <section class="why" id="whySection">
   <div class="why-mobile-tabs" id="whyMobileTabs">
-    <button type="button" class="why-mobile-tab active" data-why-tab="text">Warum das Ganze?</button>
-    <button type="button" class="why-mobile-tab" data-why-tab="blog">Blog</button>
+    <button type="button" class="why-mobile-tab active" data-why-tab="text" data-i18n="why.mobileTab">Warum das Ganze?</button>
+    <button type="button" class="why-mobile-tab" data-why-tab="blog" data-i18n="why.mobileBlogTab">Blog</button>
   </div>
   <div class="why-left">
-    <h2 class="why-title">Warum das Ganze?</h2>
+    <h2 class="why-title" data-i18n="why.heading">Warum das Ganze?</h2>
     <div class="why-text-row">
       <div class="why-text" id="whyText"><p class="why-text-para">Lädt…</p></div>
       <div class="why-text-nav" id="whyTextNav">
-        <button type="button" class="why-text-nav-btn why-text-nav-up" aria-label="Text nach oben scrollen">▲</button>
-        <div class="why-text-slider" id="whyTextSlider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+        <button type="button" class="why-text-nav-btn why-text-nav-up" data-i18n-aria="video.scrollTextUp" aria-label="Text nach oben scrollen">▲</button>
+        <div class="why-text-slider" id="whyTextSlider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
           <div class="why-text-slider-thumb"></div>
         </div>
-        <button type="button" class="why-text-nav-btn why-text-nav-down" aria-label="Text nach unten scrollen">▼</button>
+        <button type="button" class="why-text-nav-btn why-text-nav-down" data-i18n-aria="video.scrollTextDown" aria-label="Text nach unten scrollen">▼</button>
       </div>
     </div>
   </div>
@@ -4754,9 +4894,9 @@
         <div class="blog-carousel" id="blogCarousel">
           <div class="blog-region-above" id="blogRegionAbove"></div>
           <div class="blog-highlight-row" id="blogHighlightRow">
-            <button class="blog-nav blog-nav-up" id="blogNavUp" aria-label="Neuerer Eintrag">&uarr;</button>
+            <button class="blog-nav blog-nav-up" id="blogNavUp" data-i18n-aria="blog.newerEntry" aria-label="Neuerer Eintrag">&uarr;</button>
             <div class="blog-highlight-titleblock" id="blogHighlightTitleblock"></div>
-            <button class="blog-nav blog-nav-down" id="blogNavDown" aria-label="Älterer Eintrag">&darr;</button>
+            <button class="blog-nav blog-nav-down" id="blogNavDown" data-i18n-aria="blog.olderEntry" aria-label="Älterer Eintrag">&darr;</button>
           </div>
           <div class="blog-region-below" id="blogRegionBelow"></div>
         </div>
@@ -4767,14 +4907,14 @@
 
 <section class="contact" id="contactSection">
   <canvas class="contact-canvas" id="contactCanvas"></canvas>
-  <button class="preorder-btn contact-btn-top" id="contactBtnTop">In Kontakt Treten</button>
-  <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom">Informiert bleiben</button>
+  <button class="preorder-btn contact-btn-top" id="contactBtnTop" data-i18n="contact.button">In Kontakt Treten</button>
+  <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom" data-i18n="newsletter.button">Informiert bleiben</button>
   <button class="preorder-btn contact-btn-impressum" id="contactBtnImpressum">Impressum</button>
 
   <!-- particle-count fader: invisible until hovered, spans the section's
        full right edge. Exponential 10-1000 range, see the JS below -->
   <div class="particle-slider" id="particleSlider" role="slider" tabindex="0"
-       aria-label="Anzahl der Partikel" aria-valuemin="10" aria-valuemax="1000">
+       data-i18n-aria="particleSlider.ariaLabel" aria-label="Anzahl der Partikel" aria-valuemin="10" aria-valuemax="1000">
     <div class="particle-slider-track" id="particleSliderTrack">
       <div class="particle-slider-fill" id="particleSliderFill"></div>
       <div class="particle-slider-thumb" id="particleSliderThumb"></div>
@@ -4786,15 +4926,15 @@
 <!-- Pre-Order modal -->
 <div class="modal-overlay" id="modalPreorder">
   <div class="modal-box">
-    <button class="modal-close" id="modalPreorderClose" aria-label="Schließen">&times;</button>
-    <p class="modal-text">Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.</p>
+    <button class="modal-close" id="modalPreorderClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
+    <p class="modal-text" data-i18n="preorder.bodyText">Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.</p>
   </div>
 </div>
 
 <!-- Impressum modal -->
 <div class="modal-overlay" id="modalImpressum">
   <div class="modal-box modal-box-impressum">
-    <button class="modal-close" id="modalImpressumClose" aria-label="Schließen">&times;</button>
+    <button class="modal-close" id="modalImpressumClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
     <!-- everything scrollable lives in here, not on modal-box-impressum
          itself -- see .impressum-scroll's own CSS comment for why.
          .impressum-scroll-row wraps it together with the phone-only
@@ -4802,43 +4942,15 @@
          inert/hidden on desktop, where .impressum-scroll's native
          scrollbar is already enough. -->
     <div class="impressum-scroll-row">
-      <div class="impressum-scroll">
-        <h3 class="impressum-heading">Impressum</h3>
-
-        <p class="impressum-section-title">Angaben gemäß § 5 TMG</p>
-        <p class="impressum-text">
-          Datura Pedals GbR<br>
-          Musterstraße 12<br>
-          04109 Leipzig<br>
-          Deutschland
-        </p>
-
-        <p class="impressum-section-title">Vertreten durch</p>
-        <p class="impressum-text">Max Mustermann, Erika Musterfrau</p>
-
-        <p class="impressum-section-title">Kontakt</p>
-        <p class="impressum-text">
-          Telefon: +49 (0) 341 123456<br>
-          E-Mail: daturapedals@gmail.com
-        </p>
-
-        <p class="impressum-section-title">Umsatzsteuer-ID</p>
-        <p class="impressum-text">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000</p>
-
-        <p class="impressum-section-title">Redaktionell verantwortlich</p>
-        <p class="impressum-text">Max Mustermann, Musterstraße 12, 04109 Leipzig</p>
-
-        <p class="impressum-section-title">EU-Streitschlichtung</p>
-        <p class="impressum-text">Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr/. Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
-
-        <p class="impressum-note">Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.</p>
+      <div class="impressum-scroll" id="impressumScroll">
+        <!-- populated from texts/impressum.json, see the "impressum" IIFE -->
       </div>
       <div class="impressum-scroll-nav">
-        <button type="button" class="bio-text-nav-btn impressum-scroll-up" aria-label="Nach oben scrollen">▲</button>
-        <div class="bio-text-slider impressum-scroll-slider" role="slider" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+        <button type="button" class="bio-text-nav-btn impressum-scroll-up" data-i18n-aria="common.scrollUp" aria-label="Nach oben scrollen">▲</button>
+        <div class="bio-text-slider impressum-scroll-slider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
           <div class="bio-text-slider-thumb"></div>
         </div>
-        <button type="button" class="bio-text-nav-btn impressum-scroll-down" aria-label="Nach unten scrollen">▼</button>
+        <button type="button" class="bio-text-nav-btn impressum-scroll-down" data-i18n-aria="common.scrollDown" aria-label="Nach unten scrollen">▼</button>
       </div>
     </div>
   </div>
@@ -4848,9 +4960,9 @@
      modals IIFE further down -->
 <div class="modal-overlay" id="modalContact">
   <div class="modal-box">
-    <button class="modal-close" id="modalContactClose" aria-label="Schließen">&times;</button>
+    <button class="modal-close" id="modalContactClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
     <div class="modal-link-row" id="modalContactLinks"></div>
-    <p class="modal-text modal-link-empty" id="modalContactEmpty">Keine Links verfügbar.</p>
+    <p class="modal-text modal-link-empty" id="modalContactEmpty" data-i18n="common.noLinks">Keine Links verfügbar.</p>
   </div>
 </div>
 
@@ -4858,12 +4970,12 @@
      see the modals IIFE further down -- signup form (bottom) unrelated -->
 <div class="modal-overlay" id="modalNewsletter">
   <div class="modal-box">
-    <button class="modal-close" id="modalNewsletterClose" aria-label="Schließen">&times;</button>
+    <button class="modal-close" id="modalNewsletterClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
     <div class="modal-link-row" id="modalNewsletterLinks"></div>
-    <p class="modal-text modal-link-empty" id="modalNewsletterEmpty">Keine Links verfügbar.</p>
+    <p class="modal-text modal-link-empty" id="modalNewsletterEmpty" data-i18n="common.noLinks">Keine Links verfügbar.</p>
     <form class="newsletter-form" id="newsletterForm">
-      <input type="email" id="newsletterEmail" placeholder="deine@email.de" required>
-      <button type="submit">Zum Newsletter anmelden</button>
+      <input type="email" id="newsletterEmail" data-i18n-placeholder="newsletter.emailPlaceholder" placeholder="deine@email.de" required>
+      <button type="submit" data-i18n="newsletter.submit">Zum Newsletter anmelden</button>
     </form>
     <p class="newsletter-note" id="newsletterNote"></p>
   </div>
@@ -4872,7 +4984,7 @@
 <!-- Artist credentials modal: filled per-artist on open, see openCredentials -->
 <div class="modal-overlay" id="modalArtistCredentials">
   <div class="modal-box">
-    <button class="modal-close" id="modalArtistCredentialsClose" aria-label="Schließen">&times;</button>
+    <button class="modal-close" id="modalArtistCredentialsClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
     <div class="modal-artist-photo-wrap">
       <div class="artist-circle-wrap">
         <div class="artist-circle-clip">
@@ -4882,7 +4994,7 @@
     </div>
     <p class="modal-artist-name" id="modalArtistName"></p>
     <div class="modal-link-row" id="modalArtistLinks"></div>
-    <p class="modal-text modal-link-empty" id="modalArtistEmpty">Keine Links verfügbar.</p>
+    <p class="modal-text modal-link-empty" id="modalArtistEmpty" data-i18n="common.noLinks">Keine Links verfügbar.</p>
   </div>
 </div>
 
@@ -4893,10 +5005,146 @@
      meaningfully covers real content. Disabled (not hidden) at either end
      of the page rather than removed, so the affordance stays put instead
      of the page appearing to shift under repeated taps. -->
-<button type="button" class="section-nav-btn section-nav-up" id="sectionNavUp" aria-label="Zum vorherigen Abschnitt">▲</button>
-<button type="button" class="section-nav-btn section-nav-down" id="sectionNavDown" aria-label="Zum nächsten Abschnitt">▼</button>
+<button type="button" class="section-nav-btn section-nav-up" id="sectionNavUp" data-i18n-aria="sectionNav.prev" aria-label="Zum vorherigen Abschnitt">▲</button>
+<button type="button" class="section-nav-btn section-nav-down" id="sectionNavDown" data-i18n-aria="sectionNav.next" aria-label="Zum nächsten Abschnitt">▼</button>
 
 <script>
+// ---------- language: 'de' or 'en', persisted in localStorage,
+// defaulting to 'de' (this site's own default before this feature
+// existed). Read once at the very top since a handful of things below
+// (fetch URLs, static text) need to know it before anything else runs.
+// Switching languages reloads the page rather than re-rendering live --
+// see #langToggle's own markup comment for why. ----------
+function getLang(){
+  try {
+    const stored = localStorage.getItem('daturaLang');
+    if (stored === 'de' || stored === 'en') return stored;
+  } catch (e) { /* private-browsing / storage blocked -- fall through to the default */ }
+  return 'de';
+}
+function setLang(lang){
+  if (lang !== 'de' && lang !== 'en') return;
+  try { localStorage.setItem('daturaLang', lang); } catch (e) { /* ignored -- see getLang's own try/catch */ }
+  location.reload();
+}
+const CURRENT_LANG = getLang();
+// picks CURRENT_LANG out of a {de,en} object (or one already-resolved
+// plain string, for content that hasn't been split into both languages
+// yet) -- the one place every bilingual text field is actually read
+// through, so a still-missing translation reliably falls back to
+// whichever language *is* there instead of showing nothing
+function t(value){
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  return value[CURRENT_LANG] || value.de || value.en || '';
+}
+
+// hero wordmark/slogan text: translated here, synchronously, rather than
+// through texts/ui_strings.json like the rest of the site's UI chrome.
+// Reason: the letter-splitting/scatter/cradle animations further down
+// (wrapLetters, wrapPedalsLetters, the sub-slogan blowup) read each
+// element's data-text/data-blowup attribute the moment their own
+// IIFEs run, synchronously, later in this same script -- gating that on
+// a fetch would mean restructuring the whole click/scatter/scroll timing
+// chain (already tuned through many rounds of feedback, see git history)
+// to wait on a network response first. Overwriting the attributes here,
+// before any of that code ever runs, keeps every downstream consumer
+// unaware anything was translated at all. DATURA/PEDALS are left alone
+// (stylized wordmark/brand elements, not translated).
+(function applyHeroI18n(){
+  function setText(id, en){
+    const el = document.getElementById(id);
+    if (!el) return;
+    const de = el.getAttribute('data-text') || el.textContent;
+    const val = t({ de: de, en: en });
+    el.setAttribute('data-text', val);
+    el.textContent = val;
+  }
+  function setAria(id, de, en){
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('aria-label', t({ de: de, en: en }));
+  }
+  const logoBox = document.querySelector('.logo-box');
+  if (logoBox) logoBox.setAttribute('aria-label', t({ de: 'Zu den Pedalen scrollen', en: 'Scroll to the pedals' }));
+  setAria('pedalsLabel', 'Zur Pre-Order-Sektion scrollen', 'Scroll to the pre-order section');
+  setAria('sloganMain', 'Zur Kontakt-Sektion scrollen', 'Scroll to the contact section');
+  setText('sloganMain', 'Our Scene, Our Sound');
+
+  const sloganSubEl = document.getElementById('sloganSub');
+  const subAnfangEl = document.getElementById('subPartAnfang');
+  const subAvantEl = document.getElementById('subPartAvant');
+  if (sloganSubEl) sloganSubEl.setAttribute('data-text', t({ de: 'vom Anfänger bis zum Avantgardisten', en: 'from beginner to avant-gardist' }));
+  if (subAnfangEl){
+    const val = t({ de: 'vom Anfänger ', en: 'from beginner ' });
+    subAnfangEl.setAttribute('data-text', val);
+    subAnfangEl.setAttribute('data-blowup', t({ de: 'Anfänger', en: 'beginner' }));
+    subAnfangEl.textContent = val;
+    subAnfangEl.setAttribute('aria-label', t({ de: 'Anfänger-Animation abspielen', en: 'Play the beginner animation' }));
+  }
+  if (subAvantEl){
+    const val = t({ de: 'bis zum Avantgardisten', en: 'to avant-gardist' });
+    subAvantEl.setAttribute('data-text', val);
+    subAvantEl.setAttribute('data-blowup', t({ de: 'Avantguardist', en: 'avantgardist' }));
+    subAvantEl.textContent = val;
+    subAvantEl.setAttribute('aria-label', t({ de: 'Avantguardist-Animation abspielen', en: 'Play the avant-gardist animation' }));
+  }
+
+  const summeTextEl = document.getElementById('summeText');
+  if (summeTextEl) summeTextEl.setAttribute('aria-label', t({ de: 'Zur Kontakt-Sektion scrollen', en: 'Scroll to the contact section' }));
+  const summeLabelEl = summeTextEl && summeTextEl.querySelector('.summe-label');
+  if (summeLabelEl) summeLabelEl.textContent = t({ de: 'Mehr als die Summe seiner Teile', en: 'More than the sum of its parts' });
+})();
+
+// every other piece of UI chrome (buttons, aria-labels, placeholders,
+// fallback/loading text) is translated through this one small JSON file
+// + a generic data-i18n* attribute pass, rather than one-off t() calls
+// scattered everywhere -- unlike the hero cluster above, none of this is
+// read synchronously by a same-tick animation, so waiting on one small
+// fetch to resolve (typically well under a frame, same-origin) before
+// applying it is safe: the German text already baked into the markup is
+// simply what's visible for that brief window, in either language, the
+// same "flash of the still-loading state" every other fetched piece of
+// content on this site already has (see "Lädt…" placeholders).
+let UI_STRINGS = {};
+const uiStringsPromise = fetch('texts/ui_strings.json')
+  .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+  .then(function(data){ UI_STRINGS = data; return data; })
+  .catch(function(){ return {}; });
+function ui(path){
+  const parts = path.split('.');
+  let node = UI_STRINGS;
+  for (let i = 0; i < parts.length; i++){
+    if (node == null) return '';
+    node = node[parts[i]];
+  }
+  return t(node) || '';
+}
+// applies every data-i18n*-tagged element found under `root` (defaults to
+// the whole document) -- safe to call more than once on the same root
+// (e.g. once the fetch resolves, then again per freshly-cloned template
+// instance), and a blank/never-loaded UI_STRINGS just leaves whatever
+// text was already there (the German default) rather than blanking it.
+function applyUIStringsTo(root){
+  root = root || document;
+  root.querySelectorAll('[data-i18n]').forEach(function(el){
+    const val = ui(el.getAttribute('data-i18n'));
+    if (val) el.textContent = val;
+  });
+  root.querySelectorAll('[data-i18n-aria]').forEach(function(el){
+    const val = ui(el.getAttribute('data-i18n-aria'));
+    if (val) el.setAttribute('aria-label', val);
+  });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){
+    const val = ui(el.getAttribute('data-i18n-placeholder'));
+    if (val) el.setAttribute('placeholder', val);
+  });
+  root.querySelectorAll('[data-i18n-title]').forEach(function(el){
+    const val = ui(el.getAttribute('data-i18n-title'));
+    if (val) el.setAttribute('title', val);
+  });
+}
+uiStringsPromise.then(function(){ applyUIStringsTo(document); });
+
 const stage = document.getElementById('stage');
 const flash = document.getElementById('flash');
 const wordmarkWrap = document.getElementById('wordmarkWrap');
@@ -4937,6 +5185,11 @@ let refreshSectionNavButtonsGlobal = function(){};
 // the visualViewport resize handler further down for why this needs to
 // be callable from outside that IIFE's own scope
 let resyncEditionHeightsGlobal = function(){};
+// reassigned once the editions guided-tour IIFE mounts -- fired the first
+// time (per page load) `el` below is #spotlightSection itself, regardless
+// of how the visitor got there (scroll, swipe, deep link, a CTA jump) --
+// see playAttentionIntro's own comment for what it actually does
+let onArriveAtEditionsGlobal = function(){};
 function syncPageIndex(el){
   const idx = pageSections.indexOf(el);
   if (idx !== -1){
@@ -4949,6 +5202,7 @@ function syncPageIndex(el){
     // links landed on a real later section while the top button stayed
     // stuck disabled (invisible) from whatever it was at page load.
     refreshSectionNavButtonsGlobal();
+    if (el === spotlightSection) onArriveAtEditionsGlobal();
   }
 }
 
@@ -5425,6 +5679,7 @@ const whySection = document.getElementById('whySection');
   const whyTextSlider = document.getElementById('whyTextSlider');
   const whyTextSliderThumb = whyTextSlider ? whyTextSlider.querySelector('.why-text-slider-thumb') : null;
   if (!whyTextEl) return;
+  whyTextEl.textContent = t({ de: 'Lädt…', en: 'Loading…' });
 
   function renderWhyMarkdown(container, text){
     container.innerHTML = '';
@@ -5591,12 +5846,12 @@ const whySection = document.getElementById('whySection');
     if (whySectionEl) whySectionEl.classList.add('why-tab-text');
   }
 
-  fetch('texts/why.txt')
-    .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
-    .then(function(text){ renderWhyMarkdown(whyTextEl, text); refreshVisibility(); })
+  fetch('texts/why.json')
+    .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+    .then(function(data){ renderWhyMarkdown(whyTextEl, t(data)); refreshVisibility(); })
     .catch(function(){
       whyTextEl.innerHTML = '';
-      whyTextEl.appendChild(Object.assign(document.createElement('p'), { className: 'why-text-para', textContent: 'Text nicht gefunden' }));
+      whyTextEl.appendChild(Object.assign(document.createElement('p'), { className: 'why-text-para', textContent: t({ de: 'Text nicht gefunden', en: 'Text not found' }) }));
       refreshVisibility();
     });
 })();
@@ -5616,6 +5871,7 @@ const whySection = document.getElementById('whySection');
   const scriptTextSlider = document.getElementById('scriptTextSlider');
   const scriptTextSliderThumb = scriptTextSlider ? scriptTextSlider.querySelector('.video-script-slider-thumb') : null;
   if (!tabVideoBtn || !tabScriptBtn || !panelVideo || !panelScript || !videoIframe || !scriptTextEl || !noVideoTextEl) return;
+  scriptTextEl.textContent = t({ de: 'Lädt…', en: 'Loading…' });
 
   // fixed-height scrollbox + up/down/slider nav, same pattern as
   // .why-text/.why-text-nav -- self-contained here (own local drag flag)
@@ -5700,17 +5956,17 @@ const whySection = document.getElementById('whySection');
       const hideVideo = !!(data && data.hideVideo) || !hasVideo;
       panelVideo.classList.toggle('no-video', hideVideo);
       if (hideVideo){
-        noVideoTextEl.textContent = (data && data.noVideoText) || 'A video describing the pedals is currently in production.';
+        noVideoTextEl.textContent = (data && t(data.noVideoText)) || t({ de: 'Ein Video, das die Pedale beschreibt, befindet sich aktuell in Produktion.', en: 'A video describing the pedals is currently in production.' });
       } else {
         videoIframe.src = data.videoUrl;
       }
-      scriptTextEl.textContent = (data && data.text) || 'Script nicht gefunden';
+      scriptTextEl.textContent = (data && t(data.text)) || t({ de: 'Script nicht gefunden', en: 'Script not found' });
       refreshScriptVisibility();
     })
     .catch(function(){
       panelVideo.classList.add('no-video');
-      noVideoTextEl.textContent = 'A video describing the pedals is currently in production.';
-      scriptTextEl.textContent = 'Script nicht gefunden';
+      noVideoTextEl.textContent = t({ de: 'Ein Video, das die Pedale beschreibt, befindet sich aktuell in Produktion.', en: 'A video describing the pedals is currently in production.' });
+      scriptTextEl.textContent = t({ de: 'Script nicht gefunden', en: 'Script not found' });
       refreshScriptVisibility();
     });
 
@@ -5801,6 +6057,18 @@ const whySection = document.getElementById('whySection');
       }, 400);
     });
   }
+})();
+
+/* ---------- language pad ---------- */
+(function(){
+  const toggle = document.getElementById('langToggle');
+  if (!toggle) return;
+  toggle.dataset.active = CURRENT_LANG;
+  function flip(){ setLang(CURRENT_LANG === 'de' ? 'en' : 'de'); }
+  toggle.addEventListener('click', flip);
+  toggle.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flip(); }
+  });
 })();
 
 /* ---------- Datura: clickable, opens like a double door toward the video section ---------- */
@@ -6785,13 +7053,13 @@ const LINK_ICONS = {
   bandcamp: { label: 'Bandcamp', svg: '<polygon points="4,16 10,8 20,8 14,16" fill="currentColor" stroke="none"/>' },
   youtube: { label: 'YouTube', svg: '<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10 9 L16 12 L10 15 Z" fill="currentColor" stroke="none"/>' },
   soundcloud: { label: 'SoundCloud', svg: '<path d="M6 16 h11 a4 4 0 0 0 0 -8 a5 5 0 0 0 -9.5 -1.5 a3.5 3.5 0 0 0 -1.5 9.5 Z"/><line x1="9" y1="12" x2="9" y2="16"/><line x1="11.5" y1="10" x2="11.5" y2="16"/><line x1="14" y1="11" x2="14" y2="16"/>' },
-  homepage: { label: 'Homepage', svg: '<path d="M4 11 L12 4 L20 11"/><path d="M15 8 V4 H17 V9.6"/><path d="M6 10 V19 H18 V10"/><path d="M10 19 V13 H14 V19"/>' },
+  homepage: { label: t({ de: 'Startseite', en: 'Homepage' }), svg: '<path d="M4 11 L12 4 L20 11"/><path d="M15 8 V4 H17 V9.6"/><path d="M6 10 V19 H18 V10"/><path d="M10 19 V13 H14 V19"/>' },
   // paper plane, solid-filled like the instagram dot/bandcamp/youtube
   // triangles above, with a stroked crease line down the middle of the
   // wing -- the same silhouette Telegram's own logo uses
   telegram: { label: 'Telegram', svg: '<path d="M20.5 4 L3 11.2 L10 13.6 L12.7 20 L14.8 15.6 L20.5 4 Z" fill="currentColor" stroke="none"/><path d="M10 13.6 L20.5 4" stroke-width="1"/>' },
   // envelope: same rect+path stroke construction as homepage's roofline above
-  mail: { label: 'Email', svg: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 6.5 L12 13 L20 6.5"/>' }
+  mail: { label: t({ de: 'E-Mail', en: 'Email' }), svg: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 6.5 L12 13 L20 6.5"/>' }
 };
 // bios/*.json and texts/contact_*.json aren't consistent about where
 // links live -- some nest them under "links", some put the platform keys
@@ -6868,7 +7136,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // from the synth's own stores/<slug>/<synth>.txarcmeta file -- see
   // parseSCArchive, a port of funs.py's parse_sc_archive) to get the
   // actual value the synth now has.
-  const NO_STORE_INFO_TEXT = 'Weitere Informationen folgen.';
+  const NO_STORE_INFO_TEXT = t({ de: 'Weitere Informationen folgen.', en: 'More information coming soon.' });
 
   // ---- port of funs.py: extract_blocks / parse_sc_archive ----
   function extractSCBlocks(text, typeName){
@@ -7026,12 +7294,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       tooltipEl.textContent = synthInfoCache;
       return;
     }
-    tooltipEl.textContent = 'Lädt…';
+    tooltipEl.textContent = t({ de: 'Lädt…', en: 'Loading…' });
     if (!synthInfoPromise){
-      synthInfoPromise = fetch('texts/synth_info.txt')
-        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
-        .then(function(text){ synthInfoCache = text.trim(); return synthInfoCache; })
-        .catch(function(){ synthInfoCache = 'Erklärung nicht gefunden'; return synthInfoCache; });
+      synthInfoPromise = fetch('texts/synth_info.json')
+        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+        .then(function(data){ synthInfoCache = t(data).trim(); return synthInfoCache; })
+        .catch(function(){ synthInfoCache = t({ de: 'Erklärung nicht gefunden', en: 'Explanation not found' }); return synthInfoCache; });
     }
     synthInfoPromise.then(function(text){ tooltipEl.textContent = text; });
   }
@@ -7056,20 +7324,21 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   function ensureSwitchInfoLoaded(switchNum, val, container){
     const side = val === 1 ? 'right' : 'left';
     if (switchInfoCache[switchNum]){
-      renderStaticControlInfo(container, switchInfoCache[switchNum][side] || '');
+      renderStaticControlInfo(container, t(switchInfoCache[switchNum][side]) || '');
       return;
     }
-    renderStaticControlInfo(container, 'Lädt…');
+    renderStaticControlInfo(container, t({ de: 'Lädt…', en: 'Loading…' }));
     if (!switchInfoPromises[switchNum]){
       switchInfoPromises[switchNum] = fetch('texts/switch_' + switchNum + '.json')
         .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
         .then(function(data){ switchInfoCache[switchNum] = data; return data; })
         .catch(function(){
-          switchInfoCache[switchNum] = { left: 'Erklärung nicht gefunden', right: 'Erklärung nicht gefunden' };
+          const fallback = { de: 'Erklärung nicht gefunden', en: 'Explanation not found' };
+          switchInfoCache[switchNum] = { left: fallback, right: fallback };
           return switchInfoCache[switchNum];
         });
     }
-    switchInfoPromises[switchNum].then(function(data){ renderStaticControlInfo(container, data[side] || ''); });
+    switchInfoPromises[switchNum].then(function(data){ renderStaticControlInfo(container, t(data[side]) || ''); });
   }
 
   // how many parameter rows are visible at once per synth group -- beyond
@@ -7188,12 +7457,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         upBtn.type = 'button';
         upBtn.className = 'control-info-page-btn';
         upBtn.textContent = '▲';
-        upBtn.setAttribute('aria-label', 'Vorherige Parameter');
+        upBtn.setAttribute('aria-label', t({ de: 'Vorherige Parameter', en: 'Previous parameters' }));
 
         const sliderEl = document.createElement('div');
         sliderEl.className = 'control-info-page-slider';
         sliderEl.setAttribute('role', 'slider');
-        sliderEl.setAttribute('aria-label', 'Parameter-Position');
+        sliderEl.setAttribute('aria-label', t({ de: 'Parameter-Position', en: 'Parameter position' }));
         sliderEl.setAttribute('aria-valuemin', '0');
         sliderEl.setAttribute('aria-valuemax', String(maxOffset));
         const thumbEl = document.createElement('div');
@@ -7204,7 +7473,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         downBtn.type = 'button';
         downBtn.className = 'control-info-page-btn';
         downBtn.textContent = '▼';
-        downBtn.setAttribute('aria-label', 'Weitere Parameter');
+        downBtn.setAttribute('aria-label', t({ de: 'Weitere Parameter', en: 'More parameters' }));
 
         // applies a new offset in place: updates the visible rows, the
         // buttons' disabled state and the slider thumb, without rebuilding
@@ -7652,6 +7921,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const fragment = template.content.cloneNode(true);
     const wrap = fragment.querySelector('.spotlight-wrap');
     container.appendChild(fragment);
+    // data-i18n* attributes cloned from <template> above are inert until
+    // now -- template content is a disconnected DocumentFragment, so the
+    // one-time document-wide sweep (see uiStringsPromise) never reached
+    // them; this instance needs its own pass once ui_strings.json is
+    // actually loaded (almost certainly already true by now, given
+    // everything this function itself waited on to even run, but chained
+    // through the same promise rather than assumed)
+    uiStringsPromise.then(function(){ applyUIStringsTo(wrap); });
 
     const sideBox = wrap.querySelector('.spotlight-side-box');
     const sideTitle = wrap.querySelector('.spotlight-side-title');
@@ -8851,6 +9128,10 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
 
       // pedal-type title + color: "Synthesizer Pedal:" (red) or
       // "Effects Pedal:" (blue), depending on this program's type
+      // "Synthesizer Pedal:"/"Effects Pedal:" are left untranslated on
+      // purpose -- same judgment call as Switch/Button/Potentiometer
+      // below: standard English gear terminology that reads naturally
+      // as-is in German audio-equipment contexts too
       programTypeLabel.textContent = entry.type === 'fx' ? 'Effects Pedal:' : 'Synthesizer Pedal:';
       programTypeTitle.style.color = colorForType(entry.type);
       currentType = entry.type;
@@ -8877,19 +9158,19 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         circleWrap.style.display = 'none';
         const msg = document.createElement('p');
         msg.className = 'spotlight-fallback';
-        msg.textContent = 'Bild nicht gefunden';
+        msg.textContent = t({ de: 'Bild nicht gefunden', en: 'Image not found' });
         circleWrap.insertAdjacentElement('afterend', msg);
       };
       artistImage.src = 'artists/' + entry.artistSlug + '.png';
 
       // artist bio (+ whatever credential links this artist has, shown
       // later in the modal opened from the photo -- see openCredentials)
-      artistBio.textContent = 'Lädt…';
+      artistBio.textContent = t({ de: 'Lädt…', en: 'Loading…' });
       refreshBioScrollVisibility();
       currentArtistLinks = {};
       fetchJSON('bios/' + entry.artistSlug + '.json').then(function(data){
         if (myToken !== requestToken) return;
-        artistBio.textContent = data.text;
+        artistBio.textContent = t(data.text);
         refreshBioScrollVisibility(); // a long bio now scrolls inside its own fixed-height box instead of growing the card, see bioTextClip above
         currentArtistLinks = extractLinks(data);
         // the real bio text almost never matches "Lädt…"'s length, so the
@@ -8901,14 +9182,17 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         remeasureCardHeight();
       }).catch(function(){
         if (myToken !== requestToken) return;
-        artistBio.textContent = 'Bio nicht gefunden';
+        artistBio.textContent = t({ de: 'Bio nicht gefunden', en: 'Bio not found' });
         refreshBioScrollVisibility();
         remeasureCardHeight();
       });
 
       // program description: bundled directly in this program's own
-      // manifest entry (editions/<edition>/descriptions/<program>.json)
-      programDesc.textContent = entry.text || 'Beschreibung nicht gefunden';
+      // manifest entry (editions/<edition>/descriptions/<program>.json) --
+      // already run through t() when the manifest was first loaded (see
+      // the editions bootstrap fetch), so entry.text here is already a
+      // plain resolved string, not a {de,en} pair
+      programDesc.textContent = entry.text || t({ de: 'Beschreibung nicht gefunden', en: 'Description not found' });
 
       // per-control info: stores/<programSlug>/0.json + 1.json, if that
       // folder exists at all -- most programs don't have one yet, so a
@@ -8984,7 +9268,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
 
     // hover on "Synthesizer Pedal:" / "Effects Pedal:" -- shows a small
     // explanation box for whichever type is currently selected. Text comes
-    // from texts/synth_explanation.txt or texts/fx_explanation.txt
+    // from texts/synth_explanation.json or texts/fx_explanation.json
     // (filenames exactly as specified), fetched once per type and cached
     // across every card on the page (the explanation text is the same
     // regardless of which edition you're looking at).
@@ -8996,16 +9280,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         pedalTypeTooltip.textContent = explanationCache[type];
         return;
       }
-      pedalTypeTooltip.textContent = 'Lädt…';
-      const filename = type === 'fx' ? 'fx_explanation.txt' : 'synth_explanation.txt';
+      pedalTypeTooltip.textContent = t({ de: 'Lädt…', en: 'Loading…' });
+      const filename = type === 'fx' ? 'fx_explanation.json' : 'synth_explanation.json';
       fetch('texts/' + filename)
-        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.text(); })
-        .then(function(text){
-          explanationCache[type] = text.trim();
+        .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+        .then(function(data){
+          explanationCache[type] = t(data).trim();
           if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
         })
         .catch(function(){
-          explanationCache[type] = 'Erklärung nicht gefunden';
+          explanationCache[type] = t({ de: 'Erklärung nicht gefunden', en: 'Explanation not found' });
           if (tooltipLoadedForType === type) pedalTypeTooltip.textContent = explanationCache[type];
         });
     }
@@ -9090,7 +9374,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // button used to fail completely silently whenever a program had no
     // example file yet, giving no feedback at all either way.
     function showSoundStatusMessage(msg){
-      pendingLabel = 'Sound-Beispiel';
+      pendingLabel = t({ de: 'Sound-Beispiel', en: 'Sound example' });
       pendingStoreKey = null;
       pendingVal = null;
       renderBoxTitles();
@@ -9108,12 +9392,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const playPromise = audio.play();
       if (playPromise && playPromise.then){
         playPromise.then(function(){
-          showSoundStatusMessage('Das aktuelle Programm spielt gerade ein Sound-Beispiel ab.');
+          showSoundStatusMessage(t({ de: 'Das aktuelle Programm spielt gerade ein Sound-Beispiel ab.', en: 'The current program is playing a sound example right now.' }));
         }).catch(function(){
           // e.g. file missing (most programs don't have one yet) or
           // autoplay blocked -- either way, worth actually saying so
           // instead of the button just silently doing nothing
-          showSoundStatusMessage('Für dieses Programm ist aktuell kein Sound-Beispiel verfügbar.');
+          showSoundStatusMessage(t({ de: 'Für dieses Programm ist aktuell kein Sound-Beispiel verfügbar.', en: 'No sound example is currently available for this program.' }));
         });
       }
     }
@@ -9298,7 +9582,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
               program: data.program,
               artist: data.artist,
               type: data.type,
-              text: data.text,
+              text: t(data.text),
               artistSlug: slugify(data.artist),
               programSlug: programSlug
             };
@@ -9468,7 +9752,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
         .then(function(data){ stepTexts = data; return data; })
         .catch(function(){
-          stepTexts = STEPS.map(function(){ return 'Erklärung nicht gefunden'; });
+          stepTexts = STEPS.map(function(){ return { de: 'Erklärung nicht gefunden', en: 'Explanation not found' }; });
           return stepTexts;
         });
     }
@@ -9523,7 +9807,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     }
 
     // ordinary, single-target steps -- the usual one cutout
+    // the current step's own highlighted rect, in whichever form
+    // positionFor/positionForPair last set it -- see the document click
+    // listener below, the one thing outside either of those two that
+    // actually reads this
+    let currentHighlightRect = null;
+
     function positionFor(rect, captionLeft){
+      currentHighlightRect = rect;
       notchSvgEl.style.display = 'none';
       arrowPathEl.style.opacity = '0';
       applyHighlightRect(highlightEl, rect);
@@ -9584,6 +9875,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       notchHoleEl.setAttribute('d', d);
       notchOutlineEl.setAttribute('d', d);
       notchSvgEl.style.display = 'block';
+      currentHighlightRect = big;
       updateArrow();
       if (captionLeftOfA) positionCaptionLeftOf(rectA);
       else positionCaptionNear(unionRect(rectA, rectB));
@@ -9694,15 +9986,54 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         return;
       }
       const sourceEl = activeControlEl || tourInstance.wrap.querySelector(step.potiSweepSelector);
-      const targetEl = tourInstance.wrap.querySelector(step.secondarySelector);
-      if (!sourceEl || !targetEl){ arrowPathEl.style.opacity = '0'; return; }
+      const boxEl = tourInstance.wrap.querySelector(step.secondarySelector);
+      if (!sourceEl || !boxEl){ arrowPathEl.style.opacity = '0'; return; }
+      // the actual synth name heading (e.g. "diy_noise0") inside the box,
+      // not just the box's own top edge -- that's the specific piece of
+      // information this control's value is changing, so that's what the
+      // arrow should land on. Whichever one is currently rendered, not a
+      // hardcoded name -- falls back to the box itself on the off chance
+      // it isn't there yet.
+      const targetEl = boxEl.querySelector('.control-info-synth-name') || boxEl;
       const s = sourceEl.getBoundingClientRect();
       const t = targetEl.getBoundingClientRect();
-      const sx = s.left + s.width / 2, sy = s.top + s.height / 2;
-      const tx = t.left + t.width / 2, ty = t.top;
-      // control point pulled upward from the straight midpoint -- what
-      // actually makes this a curve instead of a straight dashed line
-      const mx = (sx + tx) / 2, my = Math.min(sy, ty) - 40;
+      let sx = s.left + s.width / 2, sy = s.top + s.height / 2;
+      let tx = t.left + t.width / 2, ty = t.top + t.height / 2;
+      // clamp both endpoints a few px inside the step's own dashed
+      // highlight box (currentHighlightRect -- set to this same pair's
+      // "big" rect right before this runs, see positionForPair) before
+      // building the curve at all. sourceEl/targetEl's own rects can
+      // momentarily disagree with it -- e.g. re-measured a beat before
+      // the box's own open animation has actually finished settling --
+      // and without this, that disagreement alone was enough for the
+      // curve to visibly poke past the dashed line even though the curve
+      // itself is always contained *between whatever two points it's
+      // actually given* (see the Bezier reasoning below).
+      const ARROW_MARGIN = 6;
+      if (currentHighlightRect){
+        const r = currentHighlightRect;
+        const clampX = function(x){ return Math.max(r.left + ARROW_MARGIN, Math.min(r.right - ARROW_MARGIN, x)); };
+        const clampY = function(y){ return Math.max(r.top + ARROW_MARGIN, Math.min(r.bottom - ARROW_MARGIN, y)); };
+        sx = clampX(sx); sy = clampY(sy);
+        tx = clampX(tx); ty = clampY(ty);
+      }
+      // control point at (sx, ty) -- source's own x, target's own y --
+      // rather than anywhere derived from distance/bulge. A quadratic
+      // Bezier is a convex combination of its 3 points at every t (the
+      // Bernstein coefficients are non-negative and sum to 1), so with
+      // this specific control point both the x and y coordinate of the
+      // whole curve individually stay within [min(sx,tx),max(sx,tx)] and
+      // [min(sy,ty),max(sy,ty)] the entire way -- i.e. strictly inside
+      // the bounding box of the source/target points themselves, which
+      // is itself always inside the (padded) notch box both points live
+      // in. That's what guarantees this can never cross the notch's own
+      // dashed outline, unlike the old distance-scaled "bulge downward"
+      // approach, which had no awareness of that boundary at all. It's
+      // also monotonic in both axes (each coordinate moves the same
+      // direction the whole way, never backtracking) -- for poti1's
+      // default source (up and right of the info box) that reads as one
+      // smooth sweep down, then left, never up or further right.
+      const mx = sx, my = ty;
       arrowPathEl.setAttribute('d',
         'M' + sx.toFixed(1) + ',' + sy.toFixed(1) +
         ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) +
@@ -9744,11 +10075,11 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         return;
       }
       const gen = renderGeneration; // see the delayed place() below
-      captionTextEl.textContent = (stepTexts && stepTexts[stepIndex]) || '';
+      captionTextEl.textContent = (stepTexts && t(stepTexts[stepIndex])) || '';
       stepCountEl.textContent = (stepIndex + 1) + ' / ' + STEPS.length;
       backBtn.disabled = stepIndex === 0;
       nextBtn.disabled = false;
-      nextBtn.textContent = stepIndex === STEPS.length - 1 ? 'Done' : 'Next';
+      nextBtn.textContent = stepIndex === STEPS.length - 1 ? t({ de: 'Fertig', en: 'Done' }) : t({ de: 'Weiter', en: 'Next' });
 
       // stopped unconditionally first so leaving this step -- forward,
       // back, or closing the tour entirely -- always ends any sweep in
@@ -9958,11 +10289,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     function showHoverPreview(){
       if (active || previewMode) return; // real tour already running, or already showing
       previewMode = true;
-      captionTextEl.textContent = (stepTexts && stepTexts.length) ? stepTexts[0] : 'A quick guide to how Editions and the pedal simulation work.';
+      // step 0's own text, distinct from step 1's (stepTexts[0]) -- this
+      // is the pitch for starting the tour at all, not the tour's own
+      // first real explanation, so it describes what pressing the button
+      // does ("opens a guided walkthrough") rather than jumping straight
+      // into edition/program content the visitor hasn't opted into yet
+      captionTextEl.textContent = t({ de: 'Klicke auf das Fragezeichen, um eine kurze geführte Tour durch die Editionen und die Pedal-Simulation zu starten.', en: 'Click the question mark to start a short guided tour through the Editions and the pedal simulation.' });
       stepCountEl.textContent = '0 / ' + STEPS.length;
       backBtn.disabled = true;
       nextBtn.disabled = false;
-      nextBtn.textContent = 'Next';
+      nextBtn.textContent = t({ de: 'Weiter', en: 'Next' });
       captionEl.style.display = 'block';
       positionCaptionNear(helpBtn.getBoundingClientRect());
       // fetched now (not waited on) so the real text is already cached
@@ -9977,17 +10313,41 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       captionEl.style.display = 'none';
     }
     helpBtn.addEventListener('mouseenter', showHoverPreview);
-    helpBtn.addEventListener('mouseleave', hideHoverPreview);
     helpBtn.addEventListener('focus', showHoverPreview);
     helpBtn.addEventListener('blur', hideHoverPreview);
+    // plain mouseleave on the button alone used to fire the instant the
+    // cursor crossed the real gap between it and the caption box below --
+    // exactly the gap a visitor's mouse has to cross to reach the box's
+    // own Next button, so hovering there closed the preview before a
+    // click could ever land. Tracking real mouse position against the
+    // union of both elements' own rects instead means it only actually
+    // closes once the cursor has genuinely left that whole combined area,
+    // button and box together, not merely stepped off one piece of it.
+    const PREVIEW_HOVER_MARGIN = 12;
+    document.addEventListener('mousemove', function(evt){
+      if (!previewMode) return;
+      const b = helpBtn.getBoundingClientRect();
+      const c = captionEl.getBoundingClientRect();
+      const left = Math.min(b.left, c.left) - PREVIEW_HOVER_MARGIN;
+      const right = Math.max(b.right, c.right) + PREVIEW_HOVER_MARGIN;
+      const top = Math.min(b.top, c.top) - PREVIEW_HOVER_MARGIN;
+      const bottom = Math.max(b.bottom, c.bottom) + PREVIEW_HOVER_MARGIN;
+      if (evt.clientX < left || evt.clientX > right || evt.clientY < top || evt.clientY > bottom){
+        hideHoverPreview();
+      }
+    });
 
     helpBtn.addEventListener('click', function(){
       // the button stays visible and clickable even with a card open
       // (see its own CSS) -- pressing it there closes that card back to
-      // idle instead of starting the tour on top of it, since the tour
-      // itself always wants to start from a clean idle state anyway
-      if (activeInstance){ requestClose(activeInstance); return; }
+      // idle first (the tour itself always wants to start from a clean
+      // idle state, step 1 spotlights the idle row of side-boxes), *then*
+      // starts the tour once that close has genuinely finished, via
+      // requestClose's own onClosed callback -- not immediately alongside
+      // it, which used to measure the card's rect mid-close-animation
+      // instead of its real, settled idle position.
       previewMode = false;
+      if (activeInstance){ requestClose(activeInstance, start); return; }
       start();
     });
     closeBtn.addEventListener('click', finish);
@@ -9999,6 +10359,75 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     backBtn.addEventListener('click', function(){
       if (stepIndex > 0) goToStep(stepIndex - 1);
     });
+
+    // clicking anywhere outside the caption box or the step's own dashed
+    // highlight closes the tour -- makes it feel like clicking "away"
+    // dismisses it, the way a normal popover would, rather than only the
+    // explicit close button doing that. The overlay itself is
+    // pointer-events:none (see its own CSS) so this has to be a plain
+    // document listener, not a click handler on the overlay -- real
+    // clicks land directly on whatever's actually underneath. helpBtn is
+    // excluded because its own click handler (above) already decides
+    // what a press on it should do (re-run start(), or close an open
+    // card) -- closing the tour out from under that too would fight it.
+    document.addEventListener('click', function(evt){
+      if (!active) return;
+      if (captionEl.contains(evt.target)) return;
+      if (helpBtn.contains(evt.target)) return;
+      if (currentHighlightRect){
+        const r = currentHighlightRect;
+        if (evt.clientX >= r.left && evt.clientX <= r.right &&
+            evt.clientY >= r.top && evt.clientY <= r.bottom) return;
+      }
+      finish();
+    });
+
+    // one-time "look here" intro -- the first time (per page load; no
+    // persistence, a reload can always show it again) a visitor actually
+    // arrives at the editions section, everything briefly dims except a
+    // circular cutout around the (?) button, a few dashed arrows flow in
+    // toward it, then it all fades back to normal. Purely an attention
+    // nudge, not a tutorial step -- own overlay/state, never touches
+    // active/previewMode itself, and skips entirely if either of those is
+    // already true (the real tour or its hover-preview taking priority).
+    let attentionIntroShown = false;
+    function playAttentionIntro(){
+      const introEl = document.getElementById('editionsAttentionIntro');
+      const holeEl = document.getElementById('editionsAttentionHole');
+      const svgEl = document.getElementById('editionsAttentionSvg');
+      if (!introEl || !holeEl || !svgEl) return;
+      const r = helpBtn.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const pad = 10;
+      holeEl.style.left = (r.left - pad) + 'px';
+      holeEl.style.top = (r.top - pad) + 'px';
+      holeEl.style.width = (r.width + pad * 2) + 'px';
+      holeEl.style.height = (r.height + pad * 2) + 'px';
+
+      // three arrows converging on the button from different directions --
+      // fixed offsets from its own center rather than random, so this
+      // always reads as clearly pointing at one thing, never scattered
+      const starts = [
+        { x: cx - 190, y: cy - 40, bulge: -50 },
+        { x: cx - 130, y: cy + 110, bulge: 40 },
+        { x: cx + 30, y: cy - 150, bulge: -30 }
+      ];
+      svgEl.innerHTML = starts.map(function(s, i){
+        const mx = (s.x + cx) / 2, my = (s.y + cy) / 2 + s.bulge;
+        return '<path class="editions-attention-arrow" style="animation-delay:' + (i * 0.12).toFixed(2) + 's" d="M' +
+          s.x.toFixed(1) + ',' + s.y.toFixed(1) + ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) + ' ' +
+          cx.toFixed(1) + ',' + cy.toFixed(1) + '"/>';
+      }).join('');
+
+      introEl.classList.add('visible');
+      setTimeout(function(){ introEl.classList.remove('visible'); }, 1900);
+    }
+    onArriveAtEditionsGlobal = function(){
+      if (attentionIntroShown) return;
+      attentionIntroShown = true;
+      if (active || previewMode) return; // the real tour (or its hover-preview) already has the visitor's attention
+      playAttentionIntro();
+    };
   })();
 })();
 
@@ -10026,7 +10455,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   const modalContactEmptyEl = document.getElementById('modalContactEmpty');
   fetch('texts/contact_send.json')
     .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
-    .then(function(data){ renderLinkRow(modalContactLinksEl, modalContactEmptyEl, extractLinks(data), 'Kontaktanfrage'); })
+    .then(function(data){ renderLinkRow(modalContactLinksEl, modalContactEmptyEl, extractLinks(data), t({ de: 'Kontaktanfrage', en: 'Contact inquiry' })); })
     .catch(function(){ renderLinkRow(modalContactLinksEl, modalContactEmptyEl, {}); });
 
   const modalNewsletterLinksEl = document.getElementById('modalNewsletterLinks');
@@ -10035,6 +10464,58 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
     .then(function(data){ renderLinkRow(modalNewsletterLinksEl, modalNewsletterEmptyEl, extractLinks(data)); })
     .catch(function(){ renderLinkRow(modalNewsletterLinksEl, modalNewsletterEmptyEl, {}); });
+
+  // Impressum content: sourced from texts/impressum.json (structured
+  // sections, rather than one blob) so both the heading/section titles
+  // and their body text can carry {de,en} pairs like everything else --
+  // built with createElement/textContent rather than innerHTML since this
+  // is legal-notice content and should never be at risk of a stray "<" in
+  // some future edit being interpreted as markup. A text field's "\n"
+  // line breaks become real <br> elements, the same effect the old
+  // hardcoded markup got from literal <br> tags.
+  const impressumScrollEl = document.getElementById('impressumScroll');
+  function appendTextWithBreaks(parent, text){
+    String(text).split('\n').forEach(function(line, i){
+      if (i > 0) parent.appendChild(document.createElement('br'));
+      parent.appendChild(document.createTextNode(line));
+    });
+  }
+  if (impressumScrollEl){
+    fetch('texts/impressum.json')
+      .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+      .then(function(data){
+        const heading = document.createElement('h3');
+        heading.className = 'impressum-heading';
+        heading.textContent = t(data.heading);
+        impressumScrollEl.appendChild(heading);
+
+        (data.sections || []).forEach(function(section){
+          const title = document.createElement('p');
+          title.className = 'impressum-section-title';
+          title.textContent = t(section.title);
+          impressumScrollEl.appendChild(title);
+
+          const text = document.createElement('p');
+          text.className = 'impressum-text';
+          appendTextWithBreaks(text, t(section.text));
+          impressumScrollEl.appendChild(text);
+        });
+
+        if (data.note){
+          const note = document.createElement('p');
+          note.className = 'impressum-note';
+          note.textContent = t(data.note);
+          impressumScrollEl.appendChild(note);
+        }
+        refreshImpressumScrollNav();
+      })
+      .catch(function(){
+        const err = document.createElement('p');
+        err.className = 'impressum-text';
+        err.textContent = t({ de: 'Impressum nicht gefunden', en: 'Legal notice not found' });
+        impressumScrollEl.appendChild(err);
+      });
+  }
 
   // phone: up/down + slider for the Impressum text, same look as the
   // Artist tab's bio-text-nav and the Controls tab's info-box nav --
@@ -10153,7 +10634,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   if (newsletterForm){
     newsletterForm.addEventListener('submit', function(e){
       e.preventDefault();
-      if (newsletterNote) newsletterNote.textContent = 'Danke! Wir halten dich auf dem Laufenden.';
+      if (newsletterNote) newsletterNote.textContent = t({ de: 'Danke! Wir halten dich auf dem Laufenden.', en: "Thanks! We'll keep you posted." });
       newsletterForm.reset();
     });
   }
@@ -10200,10 +10681,19 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
 
   function jumpToIndex(idx, onDone){
     idx = Math.max(0, Math.min(pageSections.length - 1, idx));
-    currentPageIndex = idx;
-    updateLocationHash(idx);
-    refreshSectionNavButtons();
     const target = pageSections[idx];
+    // syncPageIndex does everything this used to do inline (set
+    // currentPageIndex, update the hash, refresh the nav buttons -- see
+    // refreshSectionNavButtonsGlobal, reassigned to the identical local
+    // refreshSectionNavButtons just below) *plus* fires
+    // onArriveAtEditionsGlobal when target is the editions section. Every
+    // ordinary wheel/touch/keydown/nav-button jump goes through this one
+    // function, unlike the five hero-CTA jumps (openSlogan and friends),
+    // which already called syncPageIndex directly -- this used to be the
+    // only path that DIDN'T, so the one-time attention intro could only
+    // ever fire from clicking "Unsere Szene, Unser Sound" itself, never
+    // from just scrolling or swiping down to the section normally.
+    syncPageIndex(target);
     // phone: always block:'start', full stop -- centering a section
     // that's taller than the viewport (a long bio, a long "why" text, an
     // opened edition card now deliberately filling nearly the whole
@@ -10586,7 +11076,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
 
   // NOTE: browsers can't list a folder's contents on their own, so the
   // filenames still have to be kept in sync by hand -- but now in
-  // blog/blog.json (one JSON array of filenames, without the .txt
+  // blog/blog.json (one JSON array of filenames, without the .json
   // extension) rather than here, so dropping a new post in /blog only
   // means adding one line to that manifest instead of editing this file.
   // Expected filename format: YYYYMMDD_Title-Of-The-Post
@@ -10600,7 +11090,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const d = datePart.slice(6, 8);
     const dateDisplay = (y && m && d) ? (y + '.' + m + '.' + d) : datePart;
     const sortKey = y + m + d;
-    const title = titlePart.replace(/[-_]+/g, ' ').trim() || '(ohne Titel)';
+    const title = titlePart.replace(/[-_]+/g, ' ').trim() || t({ de: '(ohne Titel)', en: '(untitled)' });
 
     return { filename: filename, dateDisplay: dateDisplay, sortKey: sortKey, title: title };
   }
@@ -10634,19 +11124,19 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       contentEl.textContent = loadedContent[entry.filename];
       return;
     }
-    contentEl.textContent = 'Lädt…';
-    fetch('blog/' + entry.filename + '.txt')
+    contentEl.textContent = t({ de: 'Lädt…', en: 'Loading…' });
+    fetch('blog/' + entry.filename + '.json')
       .then(function(res){
         if (!res.ok) throw new Error('not found');
-        return res.text();
+        return res.json();
       })
-      .then(function(text){
-        loadedContent[entry.filename] = text.trim();
+      .then(function(data){
+        loadedContent[entry.filename] = t(data.text).trim();
         // only apply if this is still the entry actually being shown
         if (entries[currentIndex] === entry) contentEl.textContent = loadedContent[entry.filename];
       })
       .catch(function(){
-        loadedContent[entry.filename] = 'Beitrag nicht gefunden';
+        loadedContent[entry.filename] = t({ de: 'Beitrag nicht gefunden', en: 'Post not found' });
         if (entries[currentIndex] === entry) contentEl.textContent = loadedContent[entry.filename];
       });
   }
@@ -10660,7 +11150,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       titleBlock.textContent = '';
       const empty = document.createElement('p');
       empty.className = 'blog-item-content';
-      empty.textContent = 'Noch keine Einträge.';
+      empty.textContent = t({ de: 'Noch keine Einträge.', en: 'No entries yet.' });
       regionBelow.appendChild(empty);
       return;
     }

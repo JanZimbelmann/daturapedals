@@ -1,4 +1,10 @@
 {
-  "left": "Momentary mode: the buttons and their pink light stay lit only while actually held down.",
-  "right": "Toggle/Latch mode: a press latches a button on until it is pressed again."
+  "left": {
+    "de": "Momentary-Modus: Die Buttons und ihr pinkes Licht leuchten nur, solange sie tatsächlich gedrückt gehalten werden.",
+    "en": "Momentary mode: the buttons and their pink light stay lit only while actually held down."
+  },
+  "right": {
+    "de": "Toggle/Latch-Modus: Ein Druck rastet einen Button ein, bis er erneut gedrückt wird.",
+    "en": "Toggle/Latch mode: a press latches a button on until it is pressed again."
+  }
 }

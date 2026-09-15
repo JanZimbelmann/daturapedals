@@ -2,5 +2,8 @@
   "program": "Drums",
   "artist": "MVROWI",
   "type": "synth",
-  "text": "Industrial Drums with a simple speed pattern..."
+  "text": {
+    "de": "Industrial Drums mit einem einfachen Speed-Pattern...",
+    "en": "Industrial Drums with a simple speed pattern..."
+  }
 }
