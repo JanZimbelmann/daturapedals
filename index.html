@@ -1557,13 +1557,7 @@
     line-height:1;
     cursor:pointer;
     user-select:none;
-    /* top/left animate too -- JS moves this between its two real spots
-       (see positionHelpButton): the section's own top-right corner while
-       an edition is open, or the idle row's own middle-right once it
-       isn't. Left auto by default (right:1.5rem is what actually
-       positions it there); JS switches to left-based positioning only
-       for the idle spot, see its own comment. */
-    transition:top 0.35s ease, left 0.35s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    transition:transform 0.2s ease, background 0.2s ease, color 0.2s ease;
   }
   .editions-help-btn:hover{
     background:var(--white);
@@ -3924,49 +3918,27 @@
        set from JS per step */
     transition:top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease, opacity 0.3s ease;
   }
-  /* the pedal-simulation half of a paired step (see positionForPair) gets
-     this instead of the plain dashed border above -- a genuine dash-dot
-     line (not just another dashed box) so it visually reads as its own
-     distinct kind of thing being called out, not a second copy of
-     whatever the other cutout in the pair is. border-image doesn't
-     combine with border-radius, so this drops to square corners while
-     it's on; toggled by JS (see positionForPair), never present on an
-     ordinary single-target step. */
-  .tour-highlight.tour-highlight-dashdot{
-    border-radius:0;
-    border-style:solid;
-    border-width:2px;
-    border-image-source:repeating-linear-gradient(90deg,
-      var(--white) 0 7px, transparent 7px 11px,
-      var(--white) 11px 14px, transparent 14px 20px);
-    border-image-slice:1;
-    border-image-repeat:round;
-  }
-  /* a step that wants to spotlight two real elements at once (see
-     positionForPair) uses this second cutout alongside the main one --
-     same look, own box-shadow spread (the two combine into one dim
-     covering everything outside either cutout, since both spreads are
-     the same huge radius). Hidden (0 size, display:none) for every
-     ordinary single-target step. */
-  .tour-highlight-b{
+  /* a step spotlighting two real elements together (see positionForPair)
+     uses this instead of the plain div cutout above -- one continuous
+     notched-rectangle outline (see the SVG markup's own comment) rather
+     than a big box that also covers the empty corner neither element
+     occupies. display:none for every ordinary single-target step. */
+  .tour-notch-svg{
     position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
     display:none;
-    border:1px dashed var(--white);
-    border-radius:6px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.8);
     pointer-events:none;
-    transition:top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease, opacity 0.3s ease;
+    transition:opacity 0.3s ease;
   }
-  /* the short dashed line "hanging" the two cutouts above together into
-     one reads-as-one-thing pair, rather than two boxes that just happen
-     to be near each other */
-  .tour-connector{
-    position:fixed;
-    display:none;
-    width:0;
-    border-left:1px dashed var(--white);
-    pointer-events:none;
-    transition:top 0.4s ease, left 0.4s ease, height 0.4s ease, opacity 0.3s ease;
+  .tour-notch-dim{
+    fill:rgba(0,0,0,0.8);
+  }
+  .tour-notch-outline{
+    stroke:var(--white);
+    stroke-width:1.5px;
+    stroke-dasharray:6,5;
   }
   .tour-caption{
     position:fixed;
@@ -4482,8 +4454,25 @@
      .editions-tour-overlay's own rules just below that class's. -->
 <div class="modal-overlay editions-tour-overlay" id="editionsTourOverlay">
   <div class="tour-highlight" id="tourHighlight"></div>
-  <div class="tour-highlight-b" id="tourHighlightB"></div>
-  <div class="tour-connector" id="tourConnector"></div>
+  <!-- a step spotlighting two real elements together (see
+       positionForPair) uses this instead of the plain div cutout above:
+       one dashed outline tracing a single notched rectangle (the union
+       of both elements' boxes, with the empty corner neither of them
+       actually occupies cut away), rather than either one big box
+       covering that empty corner too or two separate boxes joined by a
+       connector line (both tried, see git history). The mask is what
+       actually punches the notched hole through the dim fill -- white
+       (visible dim) everywhere except the black path (the hole). -->
+  <svg class="tour-notch-svg" id="tourNotchSvg" aria-hidden="true">
+    <defs>
+      <mask id="tourNotchMask">
+        <rect x="0" y="0" width="100%" height="100%" fill="white"/>
+        <path id="tourNotchHole" fill="black"/>
+      </mask>
+    </defs>
+    <rect class="tour-notch-dim" x="0" y="0" width="100%" height="100%" mask="url(#tourNotchMask)"/>
+    <path id="tourNotchOutline" class="tour-notch-outline" fill="none"/>
+  </svg>
   <div class="tour-caption" id="tourCaption">
     <p class="tour-caption-text" id="tourCaptionText"></p>
     <div class="tour-caption-row">
@@ -9353,59 +9342,23 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const helpBtn = document.getElementById('editionsHelpBtn');
     const overlay = document.getElementById('editionsTourOverlay');
     const highlightEl = document.getElementById('tourHighlight');
-    const highlightBEl = document.getElementById('tourHighlightB');
-    const connectorEl = document.getElementById('tourConnector');
+    const notchSvgEl = document.getElementById('tourNotchSvg');
+    const notchHoleEl = document.getElementById('tourNotchHole');
+    const notchOutlineEl = document.getElementById('tourNotchOutline');
     const captionEl = document.getElementById('tourCaption');
     const captionTextEl = document.getElementById('tourCaptionText');
     const stepCountEl = document.getElementById('tourStepCount');
     const backBtn = document.getElementById('tourBackBtn');
     const nextBtn = document.getElementById('tourNextBtn');
     const closeBtn = document.getElementById('tourCloseBtn');
-    if (!helpBtn || !overlay || !highlightEl || !highlightBEl || !connectorEl ||
+    if (!helpBtn || !overlay || !highlightEl || !notchSvgEl || !notchHoleEl || !notchOutlineEl ||
         !captionEl || !captionTextEl || !stepCountEl || !backBtn || !nextBtn || !closeBtn) return;
 
-    // the button stays visible whether or not an edition is open (it no
-    // longer hides itself on open -- clicking it always starts the tour
-    // fresh regardless), but sits in two different real spots depending
-    // on that: the section's own top-right corner (its plain CSS default
-    // -- see .editions-help-btn) while a card is open, since that corner
-    // is clear either way, or the idle row's own middle-right once
-    // nothing is open, so it reads as belonging to the row of tabs
-    // rather than floating disconnected above them.
-    function positionHelpButton(){
-      if (container.classList.contains('has-active')){
-        // back to the plain CSS default spot -- clearing these lets the
-        // stylesheet's own top:1.5rem;right:1.5rem take over again
-        helpBtn.style.top = '';
-        helpBtn.style.left = '';
-        helpBtn.style.right = '';
-        return;
-      }
-      const sectionRect = spotlightSection.getBoundingClientRect();
-      const rowRect = container.getBoundingClientRect();
-      helpBtn.style.right = 'auto';
-      helpBtn.style.left = (rowRect.right - sectionRect.left + 16) + 'px';
-      helpBtn.style.top = (rowRect.top - sectionRect.top + rowRect.height / 2 - helpBtn.offsetHeight / 2) + 'px';
-    }
-    positionHelpButton();
-    window.addEventListener('resize', positionHelpButton);
-    // the row's own open/close FLIP (see flipSideBoxes) and card
-    // slide are what actually move it between these two states --
-    // watching has-active directly catches every path that toggles it
-    // (the tour's own open/close, but also a plain click on any side
-    // box), rather than this button needing its own copy of that logic.
-    // Re-run once more after that animation's own duration so the final,
-    // settled position is used instead of wherever the row was mid-flight
-    // the instant the class itself changed. childList is also watched,
-    // not just the class attribute: the very first call above runs before
-    // the editions bootstrap's own async fetch has actually mounted
-    // anything into this row, so that first position is against an empty
-    // (zero-size) row -- this is what actually catches the real one, the
-    // moment mountEdition's cards are appended in.
-    new MutationObserver(function(){
-      positionHelpButton();
-      setTimeout(positionHelpButton, CARD_MS + 100);
-    }).observe(container, { attributes: true, attributeFilter: ['class'], childList: true });
+    // stays visible and in its one fixed spot (the section's own
+    // top-right corner, see .editions-help-btn) whether or not an
+    // edition is open -- moving it around based on that state (tried,
+    // then reverted) read as the button itself being unstable/hard to
+    // find rather than a help button that's just always there.
 
     // step 0 targets the idle tab row itself, before anything opens --
     // every other step resolves its selector against the one edition
@@ -9431,7 +9384,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // to auto-open, so the other editions fading into the dim reads as
       // "everything but the one we're about to open," not as if the
       // whole row were equally the point
-      { selector: '.spotlight-side-box', open: false },
+      { selector: '.spotlight-side-box', open: false, captionLeftOfPrimary: true },
       { selector: '.program-bar', open: true },
       { selector: '.program-type-title', open: true, page: 'info' },
       { selector: '.pedal-diagram-panel', open: true, page: 'controls' },
@@ -9532,55 +9485,66 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     }
 
     // ordinary, single-target steps -- the usual one cutout
-    function positionFor(rect){
-      highlightEl.classList.remove('tour-highlight-dashdot');
-      highlightBEl.style.display = 'none';
-      connectorEl.style.display = 'none';
+    function positionFor(rect, captionLeft){
+      notchSvgEl.style.display = 'none';
       applyHighlightRect(highlightEl, rect);
-      positionCaptionNear(rect);
+      if (captionLeft) positionCaptionLeftOf(rect);
+      else positionCaptionNear(rect);
     }
 
-    // caption to the left of rectA (the pedal simulation half of the
-    // pair, see positionForPair), rather than above/below either cutout
-    // -- that side is otherwise empty on desktop (the card's own
-    // description block sits there, but this step already dims it same
-    // as everything else not part of the pair), and starting the box
-    // level with rectA's own top lets it naturally run down far enough
-    // to sit alongside rectB (the info box) below it too, reading as
-    // "explaining this whole pair" rather than pointing at just one of them.
-    function positionCaptionLeftOf(rectA){
+    // caption to the left of `rect`, rather than above/below it -- used
+    // whenever the target itself is tall relative to how much room is
+    // actually free above/below it (a single narrow idle tab, or the
+    // pedal-simulation half of a notched pair), where above/below
+    // placement has nowhere to land without overlapping the very thing
+    // being pointed at. Starting level with `rect`'s own top lets a tall
+    // caption naturally run down alongside it rather than needing to be
+    // vertically centered.
+    function positionCaptionLeftOf(rect){
       const pad = 8;
       const captionRect = captionEl.getBoundingClientRect();
       const vh = window.innerHeight;
-      const left = Math.max(16, rectA.left - pad - 16 - captionRect.width);
-      const top = Math.max(16, Math.min(rectA.top - pad, vh - captionRect.height - 16));
+      const left = Math.max(16, rect.left - pad - 16 - captionRect.width);
+      const top = Math.max(16, Math.min(rect.top - pad, vh - captionRect.height - 16));
       captionEl.style.left = left + 'px';
       captionEl.style.top = top + 'px';
     }
 
+    // the 6-point outline of a rectangle (`big`) with its top-left corner
+    // notched away up to (notchRight, notchBottom) -- an L-shape, drawn
+    // clockwise starting from the notch's own inner corner. Shared
+    // between the visible dashed outline and the mask hole that actually
+    // punches the dim away from this same shape (see the SVG markup's
+    // own comment), so the two always trace exactly the same region.
+    function notchedRectPath(big, notchRight, notchBottom){
+      const pts = [
+        [notchRight, big.top], [big.right, big.top],
+        [big.right, big.bottom], [big.left, big.bottom],
+        [big.left, notchBottom], [notchRight, notchBottom]
+      ];
+      return 'M' + pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' L') + ' Z';
+    }
+
     // a step spotlighting two real elements together (see
-    // secondarySelector) as two separate cutouts joined by a short
-    // dashed line, rather than one box stretched to cover both (which,
-    // for two elements far apart with empty space between, would dim
-    // that empty space too, reading as spotlighting the gap rather than
-    // the two actual things). `rectA` is expected above `rectB`
-    // (matches this card's own layout: the pedal diagram sits above the
-    // object-info box), so the connector hangs straight down between
-    // them. `rectA` (the pedal simulation) gets the dash-dot border
-    // (see .tour-highlight-dashdot) instead of the plain dashed one,
-    // since it's being called out as its own distinct kind of thing
-    // rather than a second copy of whatever rectB is.
+    // secondarySelector) as one continuous notched-rectangle cutout,
+    // rather than a big box that also covers the empty corner neither of
+    // them actually occupies. `rectA` is expected above-and-narrower than
+    // `rectB` (matches this card's own layout: the pedal diagram sits
+    // above and to the right, the full-width object-info box below), so
+    // the notch removed is specifically that box's own top-left corner.
     function positionForPair(rectA, rectB, captionLeftOfA){
-      highlightEl.classList.add('tour-highlight-dashdot');
-      applyHighlightRect(highlightEl, rectA);
-      applyHighlightRect(highlightBEl, rectB);
+      highlightEl.style.display = 'none';
       const pad = 8;
-      const aBottom = rectA.bottom + pad;
-      const bTop = rectB.top - pad;
-      connectorEl.style.display = 'block';
-      connectorEl.style.left = (rectA.left + rectA.width / 2) + 'px';
-      connectorEl.style.top = aBottom + 'px';
-      connectorEl.style.height = Math.max(0, bTop - aBottom) + 'px';
+      const big = {
+        left: Math.min(rectA.left, rectB.left) - pad,
+        top: rectA.top - pad,
+        right: Math.max(rectA.right, rectB.right) + pad,
+        bottom: rectB.bottom + pad
+      };
+      const d = notchedRectPath(big, rectA.left - pad, rectB.top - pad);
+      notchHoleEl.setAttribute('d', d);
+      notchOutlineEl.setAttribute('d', d);
+      notchSvgEl.style.display = 'block';
       if (captionLeftOfA) positionCaptionLeftOf(rectA);
       else positionCaptionNear(unionRect(rectA, rectB));
     }
@@ -9707,8 +9671,10 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         if (secondary){
           positionForPair(target.getBoundingClientRect(), secondary.getBoundingClientRect(), step.captionLeftOfPrimary);
         } else {
-          positionFor(target.getBoundingClientRect());
+          positionFor(target.getBoundingClientRect(), step.captionLeftOfPrimary);
         }
+        highlightEl.style.opacity = '';
+        notchSvgEl.style.opacity = '';
         // this step has now actually landed -- see transitioning's own
         // declaration for why this is the one place that clears it
         transitioning = false;
@@ -9787,6 +9753,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     function goToStep(index){
       if (transitioning) return; // see its own declaration for why
       transitioning = true;
+      // fades the *previous* step's own cutout out right away, rather
+      // than leaving it sitting there pointing at the old thing for
+      // however long this step takes to open/settle before place()
+      // finally moves it -- place() (see below) is what fades whichever
+      // one this step actually uses back in, once it has something real
+      // to show.
+      highlightEl.style.opacity = '0';
+      notchSvgEl.style.opacity = '0';
       const step = STEPS[index];
       stepIndex = index;
       const gen = ++renderGeneration; // see its own declaration for why
@@ -9837,6 +9811,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         active = true;
         tourInstance = null;
         overlay.classList.add('active');
+        // the section-paging wheel/touch/keydown handlers already skip
+        // their own jump-to-next-section logic while any .modal-overlay
+        // is active (this one included), but that's all they do --
+        // without also blocking it here, a plain mouse-wheel scroll
+        // still natively scrolls the real page underneath this overlay,
+        // which is normally invisible behind a solid modal but not
+        // behind this one (it's a dim, not a solid cover), so the
+        // desync reads as the highlight and the real page drifting out
+        // of sync with each other.
+        document.documentElement.style.overflow = 'hidden';
         goToStep(0);
         resizeHandler = function(){ if (active) renderStep(); };
         window.addEventListener('resize', resizeHandler);
@@ -9848,6 +9832,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       renderGeneration++; // invalidates any transition still in flight
       transitioning = false; // don't leave a later start() permanently blocked
       overlay.classList.remove('active');
+      document.documentElement.style.overflow = '';
       stopPotiSweep();
       if (resizeHandler){ window.removeEventListener('resize', resizeHandler); resizeHandler = null; }
       // per product decision: leave whatever edition/program the tour
@@ -9856,7 +9841,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       tourInstance = null;
     }
 
-    helpBtn.addEventListener('click', start);
+    helpBtn.addEventListener('click', function(){
+      // the button stays visible and clickable even with a card open
+      // (see its own CSS) -- pressing it there closes that card back to
+      // idle instead of starting the tour on top of it, since the tour
+      // itself always wants to start from a clean idle state anyway
+      if (activeInstance){ requestClose(activeInstance); return; }
+      start();
+    });
     closeBtn.addEventListener('click', finish);
     nextBtn.addEventListener('click', function(){
       if (stepIndex >= STEPS.length - 1){ finish(); return; }
