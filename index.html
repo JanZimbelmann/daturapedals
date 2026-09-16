@@ -10892,7 +10892,20 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     });
     closeBtn.addEventListener('click', finish);
     nextBtn.addEventListener('click', function(){
-      if (previewMode){ previewMode = false; start(); return; }
+      if (previewMode){
+        // same close-the-open-card-first handling as helpBtn's own click
+        // above (see its comment) -- the hover preview can be showing
+        // ("0 / N") while a card is already open from earlier, unrelated
+        // browsing, and pressing Weiter here is just as much "actually
+        // start the tour" as clicking the (?) button itself is. Missing
+        // this meant starting the tour via Weiter (rather than the
+        // button) left that card sitting open instead of collapsing it
+        // back to idle first.
+        previewMode = false;
+        if (activeInstance){ requestClose(activeInstance, start); return; }
+        start();
+        return;
+      }
       if (stepIndex >= STEPS.length - 1){ finish(); return; }
       goToStep(stepIndex + 1);
     });
