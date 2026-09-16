@@ -1524,6 +1524,15 @@
     min-width:64px;
     max-width:64px;
   }
+  /* the guided tour's own first step spotlights one specific side-box
+     (see renderStep) -- every *other* one gets this class for exactly
+     that step's duration, since the overlay above them is otherwise
+     pointer-events:none (real pedal interaction has to reach through it
+     on every other step) and would let a press open a different edition
+     than the one the tour is actually walking through */
+  .spotlight-side-box.tour-side-box-blocked{
+    pointer-events:none;
+  }
   /* once a card is open, its own side box locks back to the normal size --
      clicking it to open shouldn't leave it sitting there enlarged just
      because the cursor happens to still be over it */
@@ -1604,8 +1613,8 @@
     position:absolute;
     top:1.5rem;
     right:1.5rem;
-    width:2rem;
-    height:2rem;
+    width:2.5rem;
+    height:2.5rem;
     /* above .section-nav-up's own full-width, full-page-top invisible bar
        (z-index:40) -- without this its click was swallowed by that bar
        instead, jumping to the previous section rather than opening the tour */
@@ -1615,11 +1624,20 @@
     background:transparent;
     color:var(--white);
     font-family:'IBM Plex Mono', monospace;
-    font-size:0.95rem;
+    font-size:1.2rem;
     line-height:1;
     cursor:pointer;
     user-select:none;
-    transition:transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    transition:transform 0.2s ease, background 0.2s ease, color 0.2s ease, opacity 0.25s ease;
+  }
+  /* hidden for the duration of the real tour (see start()/finish()) --
+     it's what the tour itself was opened from, so leaving it visible
+     and clickable overlapping the tour's own dim/highlight read as a
+     second, redundant control sitting on top of everything else. Fades
+     back in the moment the tour actually ends. */
+  .editions-help-btn.tour-active{
+    opacity:0;
+    pointer-events:none;
   }
   .editions-help-btn:hover{
     background:var(--white);
@@ -4018,55 +4036,85 @@
   .tour-arrow-path{
     stroke:var(--white);
     stroke-width:1.5px;
-    stroke-dasharray:5,5;
+    stroke-dasharray:6,6;
     transition:opacity 0.2s ease;
+    /* the dashes themselves march continuously along the path, toward
+       whatever it's pointing at (M is always the source end, the final
+       L/Q point the target -- decreasing dashoffset slides the pattern
+       in that same start-to-end direction) -- the path's own position
+       stays completely still, only the dash pattern moves */
+    animation:tourArrowFlow 0.7s linear infinite;
+  }
+  @keyframes tourArrowFlow{
+    from{ stroke-dashoffset:12; }
+    to{ stroke-dashoffset:0; }
   }
   .tour-arrow-head{
     fill:var(--white);
   }
-  /* one-time "look here" intro, played the first time a visitor arrives at
-     #editionsSection on a given page load (see onArriveAtEditionsGlobal) --
-     entirely independent of the real guided tour above (own overlay, own
-     state, never touches `active`/`previewMode`) so it can never collide
-     with it; the trigger site itself is what skips playing this if the
-     tour or its hover-preview happen to already be showing. */
-  .editions-attention-intro{
-    position:fixed;
+  /* "look here" nudge on the (?) button: pulses once with two expanding
+     rings around it, no dim, nothing else on the page touched (see
+     onArriveAtEditionsGlobal/playAttentionIntro). Two strengths, both
+     sharing this same before/after-ring structure:
+     - .attention-ripple-strong: every single time a visitor actually
+       arrives at the editions section (not just once per page load
+       anymore).
+     - .attention-ripple: the original, gentler strength, replayed every
+       few seconds afterward for as long as no edition is expanded (see
+       the repeating check in the JS) -- an ongoing idle nudge, not an
+       arrival announcement, so it stays subtler.
+     The trigger site skips both entirely whenever the real tour or its
+     hover-preview already has the visitor's attention.
+     ::before/::after are the two rings, anchored via inset:0 against the
+     button's own already-`position:absolute` box -- no extra positioning
+     context needed for them. */
+  .editions-help-btn.attention-ripple{
+    animation:attentionPulse 0.6s ease-in-out;
+  }
+  .editions-help-btn.attention-ripple::before,
+  .editions-help-btn.attention-ripple::after{
+    content:'';
+    position:absolute;
     inset:0;
-    z-index:1999; /* one below .modal-overlay's 2000 -- never meant to outrank a real modal/tour if one somehow opens mid-animation */
-    pointer-events:none;
-    opacity:0;
-    transition:opacity 0.5s ease;
-  }
-  .editions-attention-intro.visible{
-    opacity:1;
-  }
-  .editions-attention-hole{
-    position:fixed;
     border-radius:50%;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.78);
+    border:1px solid var(--white);
+    animation:attentionRipple 1.3s ease-out;
     pointer-events:none;
-    /* top/left/width/height set from JS to match the (?) button's own
-       rect each time this plays, same technique as .tour-highlight */
   }
-  .editions-attention-svg{
-    position:fixed;
+  .editions-help-btn.attention-ripple::after{
+    animation-delay:0.5s;
+  }
+  .editions-help-btn.attention-ripple-strong{
+    animation:attentionPulseStrong 0.7s ease-in-out;
+  }
+  .editions-help-btn.attention-ripple-strong::before,
+  .editions-help-btn.attention-ripple-strong::after{
+    content:'';
+    position:absolute;
     inset:0;
-    width:100vw;
-    height:100vh;
+    border-radius:50%;
+    border:1.5px solid var(--white);
+    animation:attentionRippleStrong 1.5s ease-out;
     pointer-events:none;
   }
-  .editions-attention-arrow{
-    fill:none;
-    stroke:var(--white);
-    stroke-width:1.5px;
-    stroke-dasharray:6,7;
-    marker-end:url(#tourArrowHead); /* reuses the guided tour's own arrowhead marker -- SVG ids resolve document-wide, not just within their own <svg> */
-    animation:attentionArrowFlow 0.8s linear infinite;
+  .editions-help-btn.attention-ripple-strong::after{
+    animation-delay:0.55s;
   }
-  @keyframes attentionArrowFlow{
-    from{ stroke-dashoffset:26; }
-    to{ stroke-dashoffset:0; }
+  @keyframes attentionPulse{
+    0%, 100%{ transform:scale(1); }
+    50%{ transform:scale(1.18); }
+  }
+  @keyframes attentionRipple{
+    0%{ transform:scale(1); opacity:0.9; }
+    100%{ transform:scale(1.9); opacity:0; }
+  }
+  @keyframes attentionPulseStrong{
+    0%, 100%{ transform:scale(1); }
+    50%{ transform:scale(1.32); }
+  }
+  @keyframes attentionRippleStrong{
+    0%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(2.4); opacity:0; }
   }
   .tour-caption{
     position:fixed;
@@ -4625,6 +4673,16 @@
       <marker id="tourArrowHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
         <path class="tour-arrow-head" d="M0,0 L10,5 L0,10 Z"/>
       </marker>
+      <!-- rose counterpart, kept in this same <svg> root rather than
+           reusing #tourArrowHeadRose down in #tourStaticArrowsSvg -- a
+           marker-end="url(#...)" reference only actually resolves (and
+           paints an arrowhead) when the <marker> it points at lives in
+           the *same* <svg> root as the path using it; pointing across
+           roots silently draws no arrowhead at all instead of erroring,
+           which is exactly what read as "the rose arrow has no head." -->
+      <marker id="tourArrowHeadRoseCurved" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 Z" fill="#e6a9b0"/>
+      </marker>
     </defs>
     <rect class="tour-notch-dim" x="0" y="0" width="100%" height="100%" mask="url(#tourNotchMask)"/>
     <path id="tourNotchOutline" class="tour-notch-outline" fill="none"/>
@@ -4634,6 +4692,33 @@
          step. Same SVG as the notch above so it always renders on top of
          that dim, not fighting it for stacking order. -->
     <path id="tourArrowPath" class="tour-arrow-path" fill="none" marker-end="url(#tourArrowHead)"/>
+  </svg>
+  <!-- straight pointer(s) for a single-target step that still wants to
+       point at something else nearby (the switch steps: down to their
+       own info box, or out to the buttons they affect) -- a separate SVG
+       from tourNotchSvg above specifically so positionFor's own
+       notchSvgEl.style.display='none' (single-highlight steps never show
+       the notch/pair-arrow SVG) never hides these along with it; how many
+       paths it holds (0, 1 or 2) depends entirely on the current step,
+       rebuilt by updateStaticArrows each time. -->
+  <svg class="tour-notch-svg" id="tourStaticArrowsSvg" aria-hidden="true">
+    <defs>
+      <!-- rose counterpart of #tourArrowHead -- switch 2's own pointer
+           recolors to match whichever mod box it's currently pointing at
+           (see updateStaticArrows), the same rose already used for
+           #bio-panel-object-mod1 itself -->
+      <marker id="tourArrowHeadRose" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 Z" fill="#e6a9b0"/>
+      </marker>
+      <!-- white counterpart, kept in this same <svg> root for the same
+           reason #tourNotchSvg keeps its own rose copy -- see that one's
+           own comment. Without this, switch 2/3's own white pointers were
+           the ones missing an arrowhead instead. -->
+      <marker id="tourArrowHeadStatic" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path class="tour-arrow-head" d="M0,0 L10,5 L0,10 Z"/>
+      </marker>
+    </defs>
+    <g id="tourStaticArrowsGroup"></g>
   </svg>
 </div>
 <!-- a sibling of the dim/highlight overlay above, not a child of it --
@@ -4652,13 +4737,6 @@
     <button type="button" class="tour-btn tour-btn-next" id="tourNextBtn">Next</button>
   </div>
   <button type="button" class="tour-close" id="tourCloseBtn" data-i18n-aria="tour.close" aria-label="Tour schließen">&times;</button>
-</div>
-
-<!-- one-time "look here" intro (see onArriveAtEditionsGlobal/playAttentionIntro)
-     -- own overlay, entirely separate from #editionsTourOverlay above -->
-<div class="editions-attention-intro" id="editionsAttentionIntro">
-  <div class="editions-attention-hole" id="editionsAttentionHole"></div>
-  <svg class="editions-attention-svg" id="editionsAttentionSvg" aria-hidden="true"></svg>
 </div>
 
 <template id="editionCardTemplate">
@@ -7646,13 +7724,23 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // both the desktop row (tabs move horizontally) and the phone column
   // (tabs move vertically, see max-width:640px) without needing a
   // separate vertical-specific version.
-  function flipSideBoxes(mutate){
+  // `onSettled`, if given, fires once every side-box this FLIP actually
+  // moved has genuinely finished its own transform transition -- not
+  // synchronously after this function returns, which is only true for
+  // the *setup* (measure/invert/release), not the animation itself still
+  // playing out afterward. A caller measuring something else (like the
+  // guided tour positioning its first step's highlight against this same
+  // row) right after calling this, instead of waiting for onSettled, was
+  // measuring these boxes mid-flight -- reading as the highlight landing
+  // where the row used to be, then visibly sliding to catch up to it.
+  function flipSideBoxes(mutate, onSettled){
     const before = instances.map(function(inst){
       const r = inst.sideBox.getBoundingClientRect();
       return { left: r.left, top: r.top };
     });
     mutate();
     let animated = false;
+    let pending = 0;
     instances.forEach(function(inst, i){
       const sideBox = inst.sideBox;
       const r = sideBox.getBoundingClientRect();
@@ -7660,6 +7748,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const dy = before[i].top - r.top;
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
       animated = true;
+      pending++;
       sideBox.style.transition = 'none';
       sideBox.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
       void sideBox.offsetHeight; // commit the jump before releasing it
@@ -7668,8 +7757,11 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       sideBox.addEventListener('transitionend', function onDone(){
         sideBox.style.transition = ''; // hand control back to the stylesheet
         sideBox.removeEventListener('transitionend', onDone);
+        pending--;
+        if (pending === 0 && onSettled) onSettled();
       }, { once:true });
     });
+    if (!animated && onSettled) onSettled();
     return animated;
   }
 
@@ -7762,9 +7854,13 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           if (other === instance) other.wrap.classList.remove('wrap-active');
           else other.wrap.classList.remove('wrap-hidden-sibling');
         });
+      }, function(){
+        // only once the row's own FLIP has genuinely finished settling --
+        // see flipSideBoxes' own onSettled comment for why this can't just
+        // run right after starting it
+        instances.forEach(syncMobileWrapHeight);
+        if (onClosed) onClosed();
       });
-      instances.forEach(syncMobileWrapHeight);
-      if (onClosed) onClosed();
     });
   }
 
@@ -8443,6 +8539,9 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // every button unpressed) instead of carrying over whatever a previous
     // interaction left it at, so it always looks the same everywhere
     let resetPedalControls = function(){};
+    // same reasoning/fallback pattern as resetPedalControls just above --
+    // reassigned below once the middle switch is actually wired up
+    let forceModOff = function(){};
 
     if (diagram){
       try{
@@ -8454,6 +8553,18 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // rose when pushed right, back to normal when pushed left.
       const middleSwitchEl = diagram.querySelector('.pedal-switch[data-index="1"]');
       renderBoxTitles();
+      // exposed on the instance (see its own object literal below) so the
+      // guided tour can force this back to Mod 0 / the grey box whenever
+      // it (re)enters the poti1 pair step -- that step is always meant to
+      // introduce *the* info box fresh, not whichever mod side a visitor
+      // happened to leave the real switch on from earlier, unrelated
+      // interaction. Reassigns the outer fallback declared above (same
+      // pattern as resetPedalControls), not a fresh declaration -- this
+      // sits inside `if (diagram){ try{...} }`, so nothing in here runs
+      // at all when there's no diagram to wire up.
+      forceModOff = function(){
+        applyMiddleSwitchState('left', false);
+      };
       function applyMiddleSwitchState(newState, announce){
         if (!middleSwitchEl) return;
         const trackX = parseFloat(middleSwitchEl.getAttribute('data-track-x'));
@@ -9552,7 +9663,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         const activeBtn = wrap.querySelector('.card-page-btn.active');
         return activeBtn ? activeBtn.dataset.page : null;
       },
-      resetPedalObjectInfo: resetPedalObjectInfo
+      resetPedalObjectInfo: resetPedalObjectInfo,
+      forceModOff: forceModOff
     };
     instances.push(instance);
 
@@ -9667,6 +9779,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const notchHoleEl = document.getElementById('tourNotchHole');
     const notchOutlineEl = document.getElementById('tourNotchOutline');
     const arrowPathEl = document.getElementById('tourArrowPath');
+    const staticArrowsSvgEl = document.getElementById('tourStaticArrowsSvg');
+    const staticArrowsGroupEl = document.getElementById('tourStaticArrowsGroup');
     const captionEl = document.getElementById('tourCaption');
     const captionTextEl = document.getElementById('tourCaptionText');
     const stepCountEl = document.getElementById('tourStepCount');
@@ -9674,6 +9788,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const nextBtn = document.getElementById('tourNextBtn');
     const closeBtn = document.getElementById('tourCloseBtn');
     if (!helpBtn || !overlay || !highlightEl || !notchSvgEl || !notchHoleEl || !notchOutlineEl || !arrowPathEl ||
+        !staticArrowsSvgEl || !staticArrowsGroupEl ||
         !captionEl || !captionTextEl || !stepCountEl || !backBtn || !nextBtn || !closeBtn) return;
 
     // stays visible and in its one fixed spot (the section's own
@@ -9710,11 +9825,40 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       { selector: '.program-bar', open: true },
       { selector: '.program-type-title', open: true, page: 'info' },
       { selector: '.pedal-diagram-panel', open: true, page: 'controls' },
-      { selector: '.pedal-diagram-panel', open: true, page: 'controls', secondarySelector: '.bio-panel-object.expanded', potiSweepSelector: '.pedal-poti[data-index="0"]', captionLeftOfPrimary: true },
+      // this one step now illustrates all four control->destination
+      // relationships at once: poti1's own curved pointer (see
+      // secondarySelector/potiSweepSelector below and updateArrow) plus
+      // switch 2's and switch 3's own straight ones (staticArrows) --
+      // switch 2's still needs an *open* info box to point at, which this
+      // step's own poti sweep already keeps open throughout (see
+      // startPotiSweep), so no separate triggerSelector is needed here
+      // the way switch 2's own step used to need one just for this.
+      // Switch 3's buttons need nothing opened at all -- they're always
+      // part of the diagram.
+      { selector: '.pedal-diagram-panel', open: true, page: 'controls', secondarySelector: '.bio-panel-object.expanded, .bio-panel-object-mod1.expanded', potiSweepSelector: '.pedal-poti[data-index="0"]', captionLeftOfPrimary: true,
+        staticArrows: [
+          // the box itself, not the heading text inside it -- landing on
+          // that heading meant travelling *past* the box's own edge and
+          // a little way into it, reading as an arrow going inside the
+          // box rather than one just pointing at it
+          { from: '.pedal-switch[data-index="1"]', to: '.bio-panel-object.expanded, .bio-panel-object-mod1.expanded', style: 'vertical' },
+          { from: '.pedal-switch[data-index="2"]', to: '.pedal-button[data-index="0"]' },
+          { from: '.pedal-switch[data-index="2"]', to: '.pedal-button[data-index="1"]' }
+        ] },
+      // plain single-highlight steps again -- the arrows that used to
+      // live here moved up to the pair step above (see its own comment)
       { selector: '.pedal-switch[data-index="1"]', open: true, page: 'controls' },
       { selector: '.pedal-switch[data-index="2"]', open: true, page: 'controls' },
       { selector: '.spotlight-center-play', open: true, page: 'controls' },
-      { selector: '.spotlight-bottom-row', open: true, page: 'artist', resetInfoBox: true }
+      { selector: '.spotlight-bottom-row', open: true, page: 'artist', resetInfoBox: true },
+      // the numbered circles next to "In Kooperation mit:" -- one per
+      // program this artist has ever worked on, across every edition
+      // (see collabButtonsEl in mountEdition). page:'artist' since
+      // .collab-divider is what actually moves into that mobile tab (see
+      // its own ".card-page-artist .collab-divider" CSS) -- on desktop
+      // it already sits in the main flow regardless, so this is only
+      // load-bearing there.
+      { selector: '.collab-divider', open: true, page: 'artist' }
     ];
 
     let stepTexts = null;
@@ -9818,6 +9962,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       notchSvgEl.style.display = 'none';
       arrowPathEl.style.opacity = '0';
       applyHighlightRect(highlightEl, rect);
+      updateStaticArrows();
       if (captionLeft) positionCaptionLeftOf(rect);
       else positionCaptionNear(rect);
     }
@@ -9877,8 +10022,92 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       notchSvgEl.style.display = 'block';
       currentHighlightRect = big;
       updateArrow();
+      // the pair step now also illustrates switch 2/3's own relationships
+      // alongside poti1's curved pointer above (see STEPS' own comment) --
+      // unlike updateArrow's own curved pointer, these are deliberately
+      // never clamped to this step's dashed box (see updateStaticArrows'
+      // own comment): they're reaching *out* of it, toward the switches
+      // and buttons elsewhere in the diagram, not staying inside it.
+      updateStaticArrows();
       if (captionLeftOfA) positionCaptionLeftOf(rectA);
       else positionCaptionNear(unionRect(rectA, rectB));
+    }
+
+    // re-measures and repositions the *whole* notch box (not just the
+    // arrows inside it) against the secondary element's real, settled
+    // rect -- shared by both the initial step-entry path (see
+    // renderStep's own identical poll further down) and a genuine
+    // control press within an already-active pair step (see
+    // onRealControlPress/onRealControlClickForArrows below). A different
+    // control can need a genuinely different amount of vertical room for
+    // its own parameter rows, so the secondary box's real *height* can
+    // keep settling after a press just as much as its width does right
+    // after the step first opens it -- without this, only the arrows
+    // themselves were being kept in sync, while the dashed outline
+    // around them stayed sized for whichever control was active before.
+    // Also watches the object-name heading's own rect specifically, not
+    // just the box's outer width/height: switching to a genuinely
+    // different control while the panel's already open briefly pops that
+    // heading with its own transform:scale/rotate "notice me" animation
+    // (see .label-emphasize, ~0.65s) -- one that deliberately never
+    // reflows anything around it (the box's own width/height stay put
+    // through it), but very much does move *this* element's own measured
+    // rect while it plays, which is exactly what updateArrow's own
+    // target measurement was catching mid-wobble.
+    // Polls rather than a fixed delay for the same reason the other one
+    // does: neither this box's real transition duration nor the
+    // emphasize animation's own is something this file should have to
+    // assume/hardcode. Caps out at ~1.2s.
+    function pollThenPositionPair(gen){
+      const step = STEPS[stepIndex];
+      if (!tourInstance || !step.secondarySelector) return;
+      const primaryEl = tourInstance.wrap.querySelector(step.selector);
+      const secondaryEl = tourInstance.wrap.querySelector(step.secondarySelector);
+      if (!primaryEl || !secondaryEl) return;
+      const titleRowEl = secondaryEl.querySelector('.spotlight-title');
+      function snapshot(){
+        const b = secondaryEl.getBoundingClientRect();
+        const t = titleRowEl ? titleRowEl.getBoundingClientRect() : null;
+        return {
+          w: b.width, h: b.height,
+          tl: t ? t.left : 0, tt: t ? t.top : 0, tw: t ? t.width : 0, th: t ? t.height : 0
+        };
+      }
+      let last = snapshot();
+      let stableCount = 0, attempts = 0;
+      // the swap between the two mod boxes (see .bio-panel-object's own
+      // width/right transition, 0.35s) always has *both* boxes moving
+      // at once -- the one opening and the one closing -- whereas the
+      // very first time this step renders, the default (grey/Mod 0) box
+      // is already sitting fully open from a prior settle, so there's no
+      // transition in flight to catch at all. That's why this only ever
+      // read as landing wrong ("inside the object name") specifically
+      // after actually flipping the mod switch: near the tail end of
+      // that cubic-bezier curve, consecutive 60ms samples can already
+      // read as sub-pixel-stable a beat before the box has actually
+      // reached its final rect, so two stable readings alone isn't
+      // enough of a guarantee once a real transition is involved --
+      // requiring at least MIN_ATTEMPTS (comfortably past the box's own
+      // 0.35s transition) before accepting an early "stable" exit closes
+      // that gap, while the existing 20-attempt cap still covers slower
+      // cases like the label-emphasize animation.
+      const MIN_ATTEMPTS = 7; // 7 * 60ms = 420ms, past the 350ms box transition
+      (function poll(){
+        if (gen !== renderGeneration) return;
+        const cur = snapshot();
+        const stable = Math.abs(cur.w - last.w) < 0.5 && Math.abs(cur.h - last.h) < 0.5 &&
+          Math.abs(cur.tl - last.tl) < 0.5 && Math.abs(cur.tt - last.tt) < 0.5 &&
+          Math.abs(cur.tw - last.tw) < 0.5 && Math.abs(cur.th - last.th) < 0.5;
+        stableCount = stable ? stableCount + 1 : 0;
+        last = cur;
+        attempts++;
+        if ((stableCount >= 2 && attempts >= MIN_ATTEMPTS) || attempts >= 20){
+          if (gen !== renderGeneration) return;
+          positionForPair(primaryEl.getBoundingClientRect(), secondaryEl.getBoundingClientRect(), step.captionLeftOfPrimary);
+          return;
+        }
+        setTimeout(poll, 60);
+      })();
     }
 
     let potiSweepEl = null;
@@ -9975,6 +10204,95 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // is freshly (re)entered, so it always starts back on the default.
     let activeControlEl = null;
 
+    // the point where a ray from `rect`'s own center, aimed toward
+    // (dirX,dirY), exits `rect`'s own boundary -- i.e. whichever edge (or
+    // corner) of the box actually faces that direction. Used to anchor
+    // every arrow endpoint on the object it's pointing at/from, not that
+    // object's center -- an arrow that starts or ends in the middle of a
+    // shape (or of a line of text) reads as piercing through it; starting
+    // and ending right at its edge instead reads as pointing at it.
+    function rectEdgePoint(rect, dirX, dirY){
+      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+      const hw = rect.width / 2, hh = rect.height / 2;
+      if (!dirX && !dirY) return { x: cx, y: cy };
+      const sx = dirX ? Math.abs(hw / dirX) : Infinity;
+      const sy = dirY ? Math.abs(hh / dirY) : Infinity;
+      const s = Math.min(sx, sy);
+      return { x: cx + dirX * s, y: cy + dirY * s };
+    }
+
+    // both ends of a straight or curved pointer between two real
+    // elements, each anchored on whichever edge of its own rect faces the
+    // other element (see rectEdgePoint) rather than its plain center.
+    function edgeToEdgePoints(fromEl, toEl){
+      const f = fromEl.getBoundingClientRect();
+      const t = toEl.getBoundingClientRect();
+      const fcx = f.left + f.width / 2, fcy = f.top + f.height / 2;
+      const tcx = t.left + t.width / 2, tcy = t.top + t.height / 2;
+      const from = rectEdgePoint(f, tcx - fcx, tcy - fcy);
+      const to = rectEdgePoint(t, fcx - tcx, fcy - tcy);
+      return { sx: from.x, sy: from.y, tx: to.x, ty: to.y };
+    }
+
+    // straight-down-only variant of edgeToEdgePoints: both ends share the
+    // source's own true horizontal center, unclamped -- a real vertical
+    // line, not one bent sideways to force it onto the target. An earlier
+    // version clamped this x into the target's own width so the line
+    // would always visually land inside it, but that meant the line's
+    // *source* end moved right along with it whenever the source sat to
+    // the target's left (or left, when sitting to its right) -- reading
+    // as the arrow starting off to the side of the object it's supposed
+    // to be pointing from, not the object itself. "Straight down" wins:
+    // this always starts exactly at the source's own center and never
+    // moves sideways, even if that means it doesn't land dead-center
+    // inside a target that doesn't horizontally overlap it.
+    function verticalEdgePoints(fromEl, toEl){
+      const f = fromEl.getBoundingClientRect();
+      const t = toEl.getBoundingClientRect();
+      const x = f.left + f.width / 2;
+      const goingDown = (f.top + f.height / 2) <= (t.top + t.height / 2);
+      return {
+        sx: x, sy: goingDown ? f.bottom : f.top,
+        tx: x, ty: goingDown ? t.top : t.bottom
+      };
+    }
+
+    // anchors for a "straight down, then straight across" pointer: the
+    // source's own horizontal center is what the vertical leg drops
+    // from (not wherever a straight line toward the target happens to
+    // exit its perimeter, which reads as starting off to one side of the
+    // object instead of its middle), and the target's own vertical
+    // center is what the horizontal leg arrives at, landing on whichever
+    // side edge actually faces the source.
+    // `toRect` is a plain rect, not an element -- the caller measures it,
+    // since the real target here (the object-name heading) is two
+    // inline spans inside a full-width block <p>; that <p>'s own rect
+    // stretches to its container's full width regardless of how short
+    // the actual text is, which is what made this land on the box's own
+    // far wall instead of the visible end of the text (see updateArrow's
+    // own unionRect call for the actual fix).
+    function elbowEdgePoints(fromEl, toRect){
+      const f = fromEl.getBoundingClientRect();
+      const t = toRect;
+      const fcx = f.left + f.width / 2, fcy = f.top + f.height / 2;
+      const tcx = t.left + t.width / 2, tcy = t.top + t.height / 2;
+      return {
+        sx: fcx, sy: tcy >= fcy ? f.bottom : f.top,
+        tx: fcx >= tcx ? t.right : t.left, ty: tcy
+      };
+    }
+
+    function clampToHighlightX(x){
+      if (!currentHighlightRect) return x;
+      const r = currentHighlightRect, m = 6;
+      return Math.max(r.left + m, Math.min(r.right - m, x));
+    }
+    function clampToHighlightY(y){
+      if (!currentHighlightRect) return y;
+      const r = currentHighlightRect, m = 6;
+      return Math.max(r.top + m, Math.min(r.bottom - m, y));
+    }
+
     // draws (or hides) the pair step's own curved dashed pointer from
     // whichever control is currently active to the info box it opens.
     // Only ever shown on the one step that has both a secondarySelector
@@ -9986,59 +10304,178 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         return;
       }
       const sourceEl = activeControlEl || tourInstance.wrap.querySelector(step.potiSweepSelector);
+      // only switches with their *own* dedicated straight pointer (see
+      // STEPS' own staticArrows -- currently switch 2 and 3) suppress
+      // this curved one instead, so the two never draw on top of each
+      // other. Any other switch (switch 1, which has no staticArrows
+      // entry of its own) falls straight through to the same curved
+      // treatment every poti/button already gets below -- it has no
+      // special secondary relationship to point at instead, so it's
+      // "just another object" pointing at its own name like they do.
+      const hasOwnStaticArrow = !!(sourceEl && step.staticArrows && step.staticArrows.some(function(spec){
+        return tourInstance.wrap.querySelector(spec.from) === sourceEl;
+      }));
+      if (hasOwnStaticArrow){ arrowPathEl.style.opacity = '0'; return; }
       const boxEl = tourInstance.wrap.querySelector(step.secondarySelector);
       if (!sourceEl || !boxEl){ arrowPathEl.style.opacity = '0'; return; }
-      // the actual synth name heading (e.g. "diy_noise0") inside the box,
-      // not just the box's own top edge -- that's the specific piece of
-      // information this control's value is changing, so that's what the
-      // arrow should land on. Whichever one is currently rendered, not a
-      // hardcoded name -- falls back to the box itself on the off chance
-      // it isn't there yet.
-      const targetEl = boxEl.querySelector('.control-info-synth-name') || boxEl;
-      const s = sourceEl.getBoundingClientRect();
-      const t = targetEl.getBoundingClientRect();
-      let sx = s.left + s.width / 2, sy = s.top + s.height / 2;
-      let tx = t.left + t.width / 2, ty = t.top + t.height / 2;
-      // clamp both endpoints a few px inside the step's own dashed
-      // highlight box (currentHighlightRect -- set to this same pair's
-      // "big" rect right before this runs, see positionForPair) before
-      // building the curve at all. sourceEl/targetEl's own rects can
-      // momentarily disagree with it -- e.g. re-measured a beat before
-      // the box's own open animation has actually finished settling --
-      // and without this, that disagreement alone was enough for the
-      // curve to visibly poke past the dashed line even though the curve
-      // itself is always contained *between whatever two points it's
-      // actually given* (see the Bezier reasoning below).
-      const ARROW_MARGIN = 6;
-      if (currentHighlightRect){
-        const r = currentHighlightRect;
-        const clampX = function(x){ return Math.max(r.left + ARROW_MARGIN, Math.min(r.right - ARROW_MARGIN, x)); };
-        const clampY = function(y){ return Math.max(r.top + ARROW_MARGIN, Math.min(r.bottom - ARROW_MARGIN, y)); };
-        sx = clampX(sx); sy = clampY(sy);
-        tx = clampX(tx); ty = clampY(ty);
+      // the box's own object-name heading -- "Potentiometer 1 (Mod 0)",
+      // the control's own name plus which mod side it's showing, not the
+      // underlying synth engine's own name (.control-info-synth-name,
+      // e.g. "diy_noise0") further down inside the same box. Whichever of
+      // the two mod boxes is actually open (see secondarySelector's own
+      // comma list), not hardcoded to one side.
+      // horizontal reach includes the "(Mod n)" tag next to the name (so
+      // GAP below still means "a bit before the closing bracket"), but
+      // the *vertical* center is taken from the name span alone -- the
+      // tag's own smaller font (.mod-tag) pulled a combined union rect's
+      // vertical center down past the name text's real baseline, which
+      // is what read as the arrow passing under the words instead of
+      // through them. Falls back to the box's own rect on the off chance
+      // neither heading span is there yet.
+      const titleSpan = boxEl.querySelector('.object-info-title, .object-info-title-mod1');
+      const modTag = boxEl.querySelector('.mod-tag');
+      let targetRect = boxEl.getBoundingClientRect();
+      if (titleSpan){
+        targetRect = titleSpan.getBoundingClientRect();
+        if (modTag){
+          const modRect = modTag.getBoundingClientRect();
+          const left = Math.min(targetRect.left, modRect.left);
+          const right = Math.max(targetRect.right, modRect.right);
+          targetRect = { left: left, right: right, top: targetRect.top, bottom: targetRect.bottom, width: right - left, height: targetRect.height };
+        }
       }
-      // control point at (sx, ty) -- source's own x, target's own y --
-      // rather than anywhere derived from distance/bulge. A quadratic
-      // Bezier is a convex combination of its 3 points at every t (the
-      // Bernstein coefficients are non-negative and sum to 1), so with
-      // this specific control point both the x and y coordinate of the
-      // whole curve individually stay within [min(sx,tx),max(sx,tx)] and
-      // [min(sy,ty),max(sy,ty)] the entire way -- i.e. strictly inside
-      // the bounding box of the source/target points themselves, which
-      // is itself always inside the (padded) notch box both points live
-      // in. That's what guarantees this can never cross the notch's own
-      // dashed outline, unlike the old distance-scaled "bulge downward"
-      // approach, which had no awareness of that boundary at all. It's
-      // also monotonic in both axes (each coordinate moves the same
-      // direction the whole way, never backtracking) -- for poti1's
-      // default source (up and right of the info box) that reads as one
-      // smooth sweep down, then left, never up or further right.
-      const mx = sx, my = ty;
+      let { sx, sy, tx, ty } = elbowEdgePoints(sourceEl, targetRect);
+      // a little further back than the heading's own true edge -- landing
+      // exactly on it put the arrowhead right up against (sometimes
+      // visibly touching) the "(Mod 0)" tag's own closing bracket, which
+      // read as pointing at the punctuation rather than the text as a
+      // whole. GAP is subtracted from whichever direction the horizontal
+      // leg is actually travelling, so it stops short on approach rather
+      // than overshooting past the text and having to pull back.
+      const GAP = 10;
+      tx += (tx >= sx ? -1 : 1) * GAP;
+      // clamped a few px inside the step's own dashed highlight box
+      // (currentHighlightRect -- set to this same pair's "big" rect right
+      // before this runs, see positionForPair). sourceEl/targetEl's own
+      // rects can momentarily disagree with it -- e.g. re-measured a beat
+      // before the box's own open animation has actually finished
+      // settling -- and without this, that disagreement alone was enough
+      // for the curve to visibly poke past the dashed line.
+      sx = clampToHighlightX(sx); sy = clampToHighlightY(sy);
+      tx = clampToHighlightX(tx); ty = clampToHighlightY(ty);
+      // straight down (staying at the source's own x) then straight
+      // across (staying at the target's own y), with only the elbow
+      // where those two legs meet actually rounded -- not one big sweep.
+      // Each leg moves strictly one direction and never backtracks, so
+      // the path can never read as going up or further past the target --
+      // the corner always sits between source and target on each axis
+      // (never beyond either), which is what actually guarantees that,
+      // regardless of which side of the source the target happens to be
+      // on. ELBOW is how many px of each straight leg get rounded away
+      // into the corner's own curve; capped at half of whichever leg is
+      // shorter so the rounding can never eat a whole leg (or overlap
+      // itself) when source and target sit close together.
+      const ELBOW = Math.min(28, Math.abs(ty - sy) / 2, Math.abs(tx - sx) / 2);
+      const ySign = ty >= sy ? 1 : -1;
+      const xSign = tx >= sx ? 1 : -1;
+      const elbowY = ty - ySign * ELBOW; // ELBOW px short of ty, still on the straight-down leg
+      const cornerX = sx + xSign * ELBOW; // ELBOW px past sx, already on the straight-across leg
       arrowPathEl.setAttribute('d',
         'M' + sx.toFixed(1) + ',' + sy.toFixed(1) +
-        ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) +
-        ' ' + tx.toFixed(1) + ',' + ty.toFixed(1));
+        ' L' + sx.toFixed(1) + ',' + elbowY.toFixed(1) +
+        ' Q' + sx.toFixed(1) + ',' + ty.toFixed(1) + ' ' + cornerX.toFixed(1) + ',' + ty.toFixed(1) +
+        ' L' + tx.toFixed(1) + ',' + ty.toFixed(1));
+      // recolors to match whichever mod box it's actually pointing at --
+      // rose while it's the rose (Mod 1) box, the ordinary white
+      // otherwise -- same distinction switch 2's own straight pointer
+      // already carries (see updateStaticArrows), now shared by this one
+      // too so *any* control's arrow reflects the box's real current
+      // color, not just switch 2's. style.stroke, not setAttribute --
+      // .tour-arrow-path's own stylesheet rule (stroke:var(--white))
+      // otherwise wins over a plain stroke="..." attribute every time
+      // (a CSS rule always beats a bare SVG presentation attribute,
+      // regardless of which one is set later), so the attribute was
+      // silently never actually visible.
+      if (boxEl.classList.contains('bio-panel-object-mod1')){
+        arrowPathEl.style.stroke = '#e6a9b0';
+        // #tourArrowHeadRoseCurved, not #tourArrowHeadRose -- this path
+        // lives in #tourNotchSvg, and a marker-end reference only paints
+        // anything when the <marker> it points at is defined in that
+        // same <svg> root (see that marker's own comment); #tourArrowHeadRose
+        // lives over in #tourStaticArrowsSvg instead, which is why this
+        // was drawing a colored line with no arrowhead at all.
+        arrowPathEl.setAttribute('marker-end', 'url(#tourArrowHeadRoseCurved)');
+      } else {
+        arrowPathEl.style.stroke = '';
+        arrowPathEl.setAttribute('marker-end', 'url(#tourArrowHead)');
+      }
       arrowPathEl.style.opacity = '1';
+    }
+
+    // straight pointer(s) for a single-target step's own extra
+    // annotation -- e.g. the mod switch pointing down at its own info
+    // box, or the momentary/toggle switch pointing out at the two
+    // buttons it changes the behavior of (see STEPS' own staticArrows).
+    // Unlike updateArrow above, these are never clamped to
+    // currentHighlightRect: that rect only ever covers the step's single
+    // spotlighted element (see positionFor), not whatever these are
+    // pointing *at*, which is deliberately still sitting in the dimmed
+    // background -- these are meant to visibly reach out of the
+    // highlight into that dim, not stay inside it.
+    function updateStaticArrows(){
+      staticArrowsGroupEl.innerHTML = '';
+      const step = STEPS[stepIndex];
+      const specs = step && step.staticArrows;
+      // on-demand, not always shown: a given spec only draws once the
+      // control it actually starts from is the one just genuinely
+      // pressed (see onRealControlPress/activeControlEl) -- nothing here
+      // by default, same as the curved pointer defaulting to poti1 alone
+      // rather than every control's arrow cluttering the step at once.
+      if (!tourInstance || !specs || !specs.length || !activeControlEl){
+        staticArrowsSvgEl.style.display = 'none';
+        return;
+      }
+      // whether the pedal is currently in "rose mod" -- a *global* pedal
+      // state (every switch/poti/button, plus the info box itself,
+      // recolors together), not something specific to any one arrow's
+      // own target. switch 3's own two pointers land on the buttons, not
+      // the info box, so checking *their* target for the rose box (the
+      // way this used to work) could never match -- checking whether the
+      // rose box is the one actually open anywhere in this card is the
+      // one check that's correct for every arrow alike.
+      const roseActive = !!tourInstance.wrap.querySelector('.bio-panel-object-mod1.expanded');
+      let drew = false;
+      specs.forEach(function(spec){
+        const fromEl = tourInstance.wrap.querySelector(spec.from);
+        if (fromEl !== activeControlEl) return;
+        const toEl = tourInstance.wrap.querySelector(spec.to);
+        if (!fromEl || !toEl) return;
+        const p = spec.style === 'vertical' ? verticalEdgePoints(fromEl, toEl) : edgeToEdgePoints(fromEl, toEl);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'tour-arrow-path');
+        path.setAttribute('fill', 'none');
+        // recolors to match the pedal's current rose/grey state (see
+        // roseActive just above) -- the same distinction the info box's
+        // own color already carries. style.stroke, not setAttribute --
+        // see updateArrow's own identical comment: a stroke="..."
+        // attribute silently loses to .tour-arrow-path's own stylesheet
+        // rule every time.
+        if (roseActive){
+          path.style.stroke = '#e6a9b0';
+          path.setAttribute('marker-end', 'url(#tourArrowHeadRose)');
+        } else {
+          // #tourArrowHeadStatic, not #tourArrowHead -- this path lives
+          // in #tourStaticArrowsSvg, and #tourArrowHead lives over in
+          // #tourNotchSvg instead; see updateArrow's identical comment
+          // on why a cross-<svg>-root marker reference draws no
+          // arrowhead at all.
+          path.setAttribute('marker-end', 'url(#tourArrowHeadStatic)');
+        }
+        path.setAttribute('d', 'M' + p.sx.toFixed(1) + ',' + p.sy.toFixed(1) + ' L' + p.tx.toFixed(1) + ',' + p.ty.toFixed(1));
+        staticArrowsGroupEl.appendChild(path);
+        drew = true;
+      });
+      staticArrowsSvgEl.style.display = drew ? 'block' : 'none';
     }
 
     // a genuine (real, not this file's own simulated) press on any
@@ -10059,9 +10496,55 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       stopPotiSweep();
       activeControlEl = control;
       updateArrow();
+      updateStaticArrows();
+      // redrawn again next frame, then once more once the box's own size
+      // has actually settled: this handler is capture-phase on
+      // 'mousedown', which runs *before* the control's own real handling
+      // of this same press -- a poti's own drag-start logic (which is
+      // what actually opens/relabels its info box) is a later listener
+      // on this identical mousedown, and a switch/button's own relabeling
+      // happens on 'click' (see below), later still. Redrawing
+      // immediately here was measuring the *previous* control's still-
+      // current name/width (and the box's still-previous height -- a
+      // different control can need a different number of parameter rows)
+      // for a moment -- pointing at stale text, sometimes visibly the
+      // wrong length, with a dashed outline sized for the wrong control
+      // entirely. One rAF is enough room for this same mousedown's other
+      // handlers to land; pollThenPositionPair covers whatever's still
+      // genuinely mid-resize after that.
+      const gen = renderGeneration;
+      requestAnimationFrame(function(){
+        if (!active || !tourInstance || activeControlEl !== control) return;
+        updateArrow();
+        updateStaticArrows();
+        pollThenPositionPair(gen);
+      });
     }
     window.addEventListener('mousedown', onRealControlPress, true);
     window.addEventListener('touchstart', onRealControlPress, true);
+
+    // a genuine press while the pair step is showing can also change
+    // which box/name either kind of arrow should point at or be colored
+    // like -- bubble phase, unlike onRealControlPress above, specifically
+    // so this runs *after* the control's own click handler has already
+    // applied whatever state/label change it causes (a switch/button
+    // relabels its info box on 'click', not 'mousedown', so reading it
+    // from a capture-phase mousedown handler -- or even that handler's
+    // own next-frame recheck, which can still land before a slower click
+    // dispatch -- would sometimes still see the old one).
+    function onRealControlClickForArrows(evt){
+      if (!evt.isTrusted || !active || !tourInstance) return;
+      const step = STEPS[stepIndex];
+      if (!step.secondarySelector && !step.staticArrows) return;
+      updateArrow();
+      updateStaticArrows();
+      // same reasoning as onRealControlPress's own rAF callback -- a
+      // switch/button's relabeling lands right about here, but the
+      // secondary box's real *size* settling from that can still take a
+      // little longer than this one synchronous click handler
+      if (step.secondarySelector) pollThenPositionPair(renderGeneration);
+    }
+    window.addEventListener('click', onRealControlClickForArrows, false);
 
     function renderStep(){
       const step = STEPS[stepIndex];
@@ -10074,6 +10557,21 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         finish();
         return;
       }
+      // step 1 spotlights the idle row's *first* side-box specifically
+      // (see resolveTarget) so the tour always opens the same edition --
+      // but the overlay itself is pointer-events:none (real pedal
+      // interaction has to reach through it on every other step), which
+      // left every *other* side-box just as clickable as the one this
+      // step is actually about, so pressing "Freudian Technoidian" here
+      // opened the wrong edition instead of following the tour at all.
+      // Blocked on every side-box except target while this exact step is
+      // showing, and unblocked otherwise (this runs on every step, not
+      // just this one, so leaving it clears the block same as never
+      // reaching it in the first place).
+      document.querySelectorAll('.spotlight-side-box').forEach(function(box){
+        box.classList.toggle('tour-side-box-blocked', step.selector === '.spotlight-side-box' && !step.open && box !== target);
+      });
+
       const gen = renderGeneration; // see the delayed place() below
       captionTextEl.textContent = (stepTexts && t(stepTexts[stepIndex])) || '';
       stepCountEl.textContent = (stepIndex + 1) + ' / ' + STEPS.length;
@@ -10090,6 +10588,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // yet and silently falling back to a single cutout.
       stopPotiSweep();
       if (step.potiSweepSelector && tourInstance){
+        // always starts this step fresh on the grey/Mod 0 box -- not
+        // whichever mod side a visitor happened to leave the real switch
+        // on from earlier, unrelated interaction (see forceModOff's own
+        // comment). Before startPotiSweep, which is what actually opens
+        // the box this measures right after.
+        if (tourInstance.forceModOff) tourInstance.forceModOff();
         const potiEl = tourInstance.wrap.querySelector(step.potiSweepSelector);
         if (potiEl) startPotiSweep(potiEl);
       }
@@ -10116,21 +10620,39 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // real, settled size -- rather than guessing a fixed delay for
       // that (fragile: it's whatever .bio-panel-object's own transition
       // duration happens to be, which this file has no business assuming),
-      // poll its width until it stops changing between two checks, then
-      // place. Caps out at ~1.2s so a genuinely stuck box (shouldn't
-      // happen) still doesn't leave this step waiting forever.
+      // poll until it stops changing between two checks, then place.
+      // Caps out at ~1.2s so a genuinely stuck box (shouldn't happen)
+      // still doesn't leave this step waiting forever.
       if (step.secondarySelector && step.potiSweepSelector && tourInstance){
         const watched = tourInstance.wrap.querySelector(step.secondarySelector);
-        let lastWidth = watched ? watched.getBoundingClientRect().width : 0;
+        // left, not just width -- .bio-panel-object is right-anchored
+        // (right:0, width growing from a 14px closed pill), so its own
+        // *left* edge is what actually sweeps across the whole 0.35s
+        // transition, while width alone can read as settled a beat
+        // early (rounding, or width/right not quite finishing in lockstep).
+        // positionForPair's own notch box is built from this rect's
+        // left/right together (see its own big.left), so watching width
+        // alone here was catching the box still mid-sweep and drawing
+        // the cutout's left edge too far right -- cropping off the
+        // box's own left portion entirely, most visibly landing back on
+        // this step from a later one (the box has to genuinely re-open,
+        // not just resize) rather than arriving here fresh.
+        function snapshot(){
+          const r = watched ? watched.getBoundingClientRect() : null;
+          return { l: r ? r.left : 0, w: r ? r.width : 0 };
+        }
+        let last = snapshot();
         let stableCount = 0;
         let attempts = 0;
+        const MIN_ATTEMPTS = 7; // 7 * 60ms = 420ms, past the 350ms box transition
         (function pollUntilStable(){
           if (gen !== renderGeneration) return;
-          const w = watched ? watched.getBoundingClientRect().width : 0;
-          stableCount = Math.abs(w - lastWidth) < 0.5 ? stableCount + 1 : 0;
-          lastWidth = w;
+          const cur = snapshot();
+          const stable = Math.abs(cur.l - last.l) < 0.5 && Math.abs(cur.w - last.w) < 0.5;
+          stableCount = stable ? stableCount + 1 : 0;
+          last = cur;
           attempts++;
-          if (stableCount >= 2 || attempts >= 20){ place(); return; }
+          if ((stableCount >= 2 && attempts >= MIN_ATTEMPTS) || attempts >= 20){ place(); return; }
           setTimeout(pollUntilStable, 60);
         })();
       } else {
@@ -10157,7 +10679,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           // method at all; this is what their own real listeners expect
           // (plain 'click', see the pedal-switch wiring), so it triggers
           // the exact same handler a real touch would.
-          if (triggerEl) triggerEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          if (triggerEl){
+            // real coordinates (the element's own center), not the
+            // (0,0) an unset clientX/clientY would default to -- besides
+            // being the honest thing to report for a simulated click at
+            // this exact element, an unset one is indistinguishable from
+            // a real click on the corner of the screen to the "click
+            // outside closes the tour" listener elsewhere in this file
+            const r = triggerEl.getBoundingClientRect();
+            triggerEl.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+          }
           // lets the touched control's own info box finish opening (see
           // .bio-panel-object's own width/right transition) before this
           // step measures it -- measuring immediately after the click
@@ -10243,6 +10774,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         previewMode = false;
         tourInstance = null;
         overlay.classList.add('active');
+        helpBtn.classList.add('tour-active');
         captionEl.style.display = 'block'; // already true if start() followed a hover, but harmless either way
         // the section-paging wheel/touch/keydown handlers already skip
         // their own jump-to-next-section logic while any .modal-overlay
@@ -10265,10 +10797,18 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       renderGeneration++; // invalidates any transition still in flight
       transitioning = false; // don't leave a later start() permanently blocked
       overlay.classList.remove('active');
+      helpBtn.classList.remove('tour-active');
       captionEl.style.display = 'none';
       document.documentElement.style.overflow = '';
       stopPotiSweep();
       if (resizeHandler){ window.removeEventListener('resize', resizeHandler); resizeHandler = null; }
+      // safety net for closing mid-step-1 (see renderStep's own comment) --
+      // every other side-box's block is normally cleared by renderStep
+      // itself the moment a *later* step renders, but finish() can end
+      // the tour without ever reaching one
+      document.querySelectorAll('.spotlight-side-box.tour-side-box-blocked').forEach(function(box){
+        box.classList.remove('tour-side-box-blocked');
+      });
       // per product decision: leave whatever edition/program the tour
       // opened exactly as it is rather than auto-closing it back to idle
       // -- the user lands right where the tour left off
@@ -10371,7 +10911,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // what a press on it should do (re-run start(), or close an open
     // card) -- closing the tour out from under that too would fight it.
     document.addEventListener('click', function(evt){
-      if (!active) return;
+      // isTrusted, not just active -- this file dispatches its own
+      // synthetic clicks in a few places (settleThenRender's own
+      // triggerSelector, most notably), and a synthetic MouseEvent with
+      // no clientX/clientY defaults to (0,0), which is never inside
+      // anything this checks below -- without this guard, the tour's own
+      // simulated click to open a step's info box was closing the tour
+      // out from under itself the instant it fired.
+      if (!evt.isTrusted || !active) return;
       if (captionEl.contains(evt.target)) return;
       if (helpBtn.contains(evt.target)) return;
       if (currentHighlightRect){
@@ -10382,52 +10929,41 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       finish();
     });
 
-    // one-time "look here" intro -- the first time (per page load; no
-    // persistence, a reload can always show it again) a visitor actually
-    // arrives at the editions section, everything briefly dims except a
-    // circular cutout around the (?) button, a few dashed arrows flow in
-    // toward it, then it all fades back to normal. Purely an attention
-    // nudge, not a tutorial step -- own overlay/state, never touches
-    // active/previewMode itself, and skips entirely if either of those is
-    // already true (the real tour or its hover-preview taking priority).
-    let attentionIntroShown = false;
-    function playAttentionIntro(){
-      const introEl = document.getElementById('editionsAttentionIntro');
-      const holeEl = document.getElementById('editionsAttentionHole');
-      const svgEl = document.getElementById('editionsAttentionSvg');
-      if (!introEl || !holeEl || !svgEl) return;
-      const r = helpBtn.getBoundingClientRect();
-      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const pad = 10;
-      holeEl.style.left = (r.left - pad) + 'px';
-      holeEl.style.top = (r.top - pad) + 'px';
-      holeEl.style.width = (r.width + pad * 2) + 'px';
-      holeEl.style.height = (r.height + pad * 2) + 'px';
-
-      // three arrows converging on the button from different directions --
-      // fixed offsets from its own center rather than random, so this
-      // always reads as clearly pointing at one thing, never scattered
-      const starts = [
-        { x: cx - 190, y: cy - 40, bulge: -50 },
-        { x: cx - 130, y: cy + 110, bulge: 40 },
-        { x: cx + 30, y: cy - 150, bulge: -30 }
-      ];
-      svgEl.innerHTML = starts.map(function(s, i){
-        const mx = (s.x + cx) / 2, my = (s.y + cy) / 2 + s.bulge;
-        return '<path class="editions-attention-arrow" style="animation-delay:' + (i * 0.12).toFixed(2) + 's" d="M' +
-          s.x.toFixed(1) + ',' + s.y.toFixed(1) + ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) + ' ' +
-          cx.toFixed(1) + ',' + cy.toFixed(1) + '"/>';
-      }).join('');
-
-      introEl.classList.add('visible');
-      setTimeout(function(){ introEl.classList.remove('visible'); }, 1900);
+    // "look here" nudge on the (?) button -- two rings rippling out plus
+    // a scale pulse, nothing else on the page touched (see the CSS's own
+    // comment for the two strengths). Own state, never touches
+    // active/previewMode itself, and skips entirely if either is already
+    // true (the real tour or its hover-preview already has the
+    // visitor's attention).
+    function playAttentionIntro(strong){
+      const cls = strong ? 'attention-ripple-strong' : 'attention-ripple';
+      helpBtn.classList.add(cls);
+      setTimeout(function(){ helpBtn.classList.remove(cls); }, strong ? 2100 : 1900);
     }
+    // every single time a visitor actually arrives at the editions
+    // section now (not just once per page load) -- the stronger version,
+    // an arrival announcement rather than an ongoing idle nudge (see the
+    // repeating one just below)
     onArriveAtEditionsGlobal = function(){
-      if (attentionIntroShown) return;
-      attentionIntroShown = true;
-      if (active || previewMode) return; // the real tour (or its hover-preview) already has the visitor's attention
-      playAttentionIntro();
+      if (active || previewMode) return;
+      playAttentionIntro(true);
     };
+    // ...and an ongoing reminder on top of that, at the original (gentler)
+    // strength -- every 2s while idle (no edition open, so the nudge can
+    // afford to be more frequent), every 5s once one is expanded (a
+    // visitor has clearly already found the button by then, this is just
+    // a slower reminder it's still there). A plain setInterval can't
+    // switch its own delay, so this reschedules itself each time instead,
+    // picking the interval fresh from the current state right before
+    // each wait rather than whatever it was when the loop started.
+    function scheduleRepeatingPulse(){
+      const delay = activeInstance ? 5000 : 2000;
+      setTimeout(function(){
+        if (!active && !previewMode) playAttentionIntro(false);
+        scheduleRepeatingPulse();
+      }, delay);
+    }
+    scheduleRepeatingPulse();
   })();
 })();
 
