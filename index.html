@@ -1782,6 +1782,78 @@
   .spotlight-center-play:hover .play-emblem{
     background-color:var(--edition-bg, var(--black));
   }
+  /* toggled by playCurrentWav for exactly as long as the .wav (and its
+     paired .csv pedal-movement timeline, see playCsvTimeline) is actually
+     playing -- a soft pulse on the button itself plus three rings (see
+     .play-ring below) expanding outward from it, so it's clear at a
+     glance that a performance is running (and, along with controlsLocked
+     elsewhere, that the pedal's own controls aren't interactive right now). */
+  .spotlight-center-play.playing{
+    /* can't be re-pressed while a performance is already running -- belt
+       and suspenders alongside playCurrentWav's own soundPlaying guard */
+    pointer-events:none;
+    animation:spotlightPlayPulse 1.2s ease-in-out infinite, spotlightPlayColorFade 1.2s ease-in-out infinite;
+  }
+  .spotlight-center-play.playing .play-emblem{
+    animation:spotlightPlayEmblemFade 1.2s ease-in-out infinite;
+  }
+  @keyframes spotlightPlayPulse{
+    0%, 100%{ transform:translate(-50%, -50%) scale(1); }
+    50%{ transform:translate(-50%, -50%) scale(1.06); }
+  }
+  /* the button's own foreground/background swap -- the same invert
+     :hover already does, just breathing on a loop instead of needing the
+     cursor there, and paired with the emblem's own opposite fade just
+     below so the two always stay readable against each other */
+  @keyframes spotlightPlayColorFade{
+    0%, 100%{ background:var(--edition-bg, var(--black)); }
+    50%{ background:var(--edition-fg, var(--white)); }
+  }
+  @keyframes spotlightPlayEmblemFade{
+    0%, 100%{ background-color:var(--edition-fg, var(--white)); }
+    50%{ background-color:var(--edition-bg, var(--black)); }
+  }
+  /* real elements, not ::before/::after -- three rings wants three
+     independently-timed animations, and a single element only has two
+     pseudo-element slots to spend. Grows via width/height (not
+     transform:scale, which would also visibly thicken the 2px border the
+     bigger it gets) all the way out to 120vmax -- deliberately huge,
+     bigger than any real card could be, rather than sized to any one
+     card's own real dimensions: .spotlight-box (the card itself) already
+     clips its own content at `overflow:hidden`, so each ring reads as
+     travelling *through* the whole card and stopping exactly at its edge
+     for free, with no need to measure that card's own size at all. */
+  .play-ring{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:2px solid var(--edition-fg, var(--white));
+    pointer-events:none;
+    opacity:0;
+    transform:translate(-50%, -50%);
+  }
+  .spotlight-center-play.playing .play-ring{
+    animation-name:spotlightPlayRipple;
+    animation-timing-function:ease-out;
+    animation-iteration-count:infinite;
+  }
+  /* three different *durations*, not just three delays staggered on one
+     shared duration -- rings all expanding at the same speed, just offset
+     in time, keep the exact same fixed spacing between them forever,
+     which reads as one predictable, evenly-spaced repeat. Slightly
+     different speeds instead mean their relative spacing keeps drifting
+     apart and back together as they play, closer to genuine overlapping
+     wave interference than a metronome. */
+  .spotlight-center-play.playing .play-ring-1{ animation-duration:2.2s; animation-delay:0s; }
+  .spotlight-center-play.playing .play-ring-2{ animation-duration:2.7s; animation-delay:0.5s; }
+  .spotlight-center-play.playing .play-ring-3{ animation-duration:3.3s; animation-delay:1s; }
+  @keyframes spotlightPlayRipple{
+    0%{ width:100%; height:100%; opacity:0.6; }
+    100%{ width:120vmax; height:120vmax; opacity:0; }
+  }
 
   /* vine reveal: 3 sharp, angular zig-zag lines (straight segments, not
      curves -- more like a plotted graph/circuit trace than an organic
@@ -1892,6 +1964,22 @@
      while the rose mod is active, same as the Mod 0 panel above */
   .pedal-diagram-panel.mod-rose-active{
     background:#2b2224;
+  }
+  /* toggled by playCurrentWav alongside .spotlight-center-play.playing
+     (see that one's own comment) -- highlights the pedal simulation
+     itself, not just the play button, while a recorded performance is
+     actually driving it. A glowing box-shadow rather than a border so it
+     doesn't nudge this panel's own layout, pulsing in sync with the
+     button's own pulse above (same 1.2s). */
+  .pedal-diagram-panel.playing{
+    animation:pedalDiagramPlayGlow 1.2s ease-in-out infinite;
+  }
+  @keyframes pedalDiagramPlayGlow{
+    /* never fully off (0 0 0 0 read as a jarring on/off flicker at the
+       low point) -- breathes between a soft baseline glow and a
+       stronger peak instead */
+    0%, 100%{ box-shadow:0 0 10px 3px var(--edition-fg, var(--white)); }
+    50%{ box-shadow:0 0 22px 6px var(--edition-fg, var(--white)); }
   }
 
   /* a 2-column grid (not flex) specifically so the right column -- and
@@ -4779,6 +4867,13 @@
 
     <button class="spotlight-center-play" data-i18n-aria="editionCard.playSound" aria-label="Sound abspielen">
       <span class="play-emblem"></span>
+      <!-- three rings, not one -- see .play-ring's own CSS comment for why
+           three different durations (not just three delays) reads as
+           actual interference rather than one predictable, evenly-spaced
+           repeat -->
+      <span class="play-ring play-ring-1"></span>
+      <span class="play-ring play-ring-2"></span>
+      <span class="play-ring play-ring-3"></span>
     </button>
     <!-- decorative only: vine-like tendrils that draw themselves in from
          below the program bar and curl into the circle whenever a
@@ -8542,6 +8637,19 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // same reasoning/fallback pattern as resetPedalControls just above --
     // reassigned below once the middle switch is actually wired up
     let forceModOff = function(){};
+    // same pattern again -- reassigned below once switchControls/
+    // potiControls/buttonControls all actually exist to drive. See its own
+    // definition (search playCsvTimeline) for what it does.
+    let playCsvTimeline = function(){};
+    // same pattern again -- these two own controlsLocked's real lifetime
+    // (locking/unlocking the real controls, the play button itself, and
+    // every .playing highlight), called from playCurrentWav around the
+    // *audio* element's own play/ended lifecycle rather than the .csv
+    // timeline's -- a played-back performance should still read as "in
+    // progress" for however long the sound itself keeps playing, even
+    // after the .csv's own last event has already landed.
+    let beginPerformance = function(){};
+    let endPerformance = function(){};
 
     if (diagram){
       try{
@@ -8616,6 +8724,34 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const switchResets = [];
       const potiResets = [];
       const buttonEls = [];
+      // one entry per real control, keyed by its own data-index -- built up
+      // as each type is wired below, then used together by playCsvTimeline
+      // (see its own comment further down) to drive this pedal from a
+      // recorded performance's .csv timeline the same way a person turning
+      // knobs and flipping switches would.
+      const switchControls = {};
+      const potiControls = {};
+      const buttonControls = {};
+      // true for exactly as long as a recorded .csv performance is
+      // driving this pedal (see playCsvTimeline) -- real switch/poti/
+      // button interaction below all bail out while this is true, so a
+      // playing performance can't be fought/derailed by someone also
+      // trying to turn a knob at the same time.
+      let controlsLocked = false;
+      // used by every *Controls[i].set() below (the CSV-driven path) to
+      // keep a live number updating in the info panel *only* if that
+      // exact control is already the one selected/shown -- mirrors
+      // moveDrag's own identical guard just below. Deliberately never
+      // opens/reselects anything itself (see showPedalObjectInfo for
+      // that): a played-back performance moving the pedal shouldn't pop
+      // open a different info window than whatever the visitor already
+      // had selected, or open one at all if nothing was.
+      function updatePendingIfSelected(storeKey, val){
+        if (storeKey !== null && pendingStoreKey === storeKey){
+          pendingVal = val;
+          updateDetailValues();
+        }
+      }
       // switch 3 (index 2) picks the buttons' interaction mode: right
       // (its default) is a normal toggle, left is momentary -- pink light
       // only lit while actually held down
@@ -8650,6 +8786,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         }
         render();
         sw.addEventListener('click', function(){
+          if (controlsLocked) return; // a .csv performance is driving the pedal right now
           if (switchIndex === 1){
             const state = sw.getAttribute('data-state');
             applyMiddleSwitchState(state === 'left' ? 'right' : 'left', true);
@@ -8686,6 +8823,34 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
             diagram.classList.remove('buttons-momentary');
           }
         });
+        // CSV-driven only (see playCsvTimeline) -- deliberately *not* the
+        // same path a real click takes: that one always announces (opens
+        // this switch's own info box), which is exactly what a played-back
+        // performance shouldn't do (see controlsLocked's own comment).
+        // Carries switch 1/3's own real side effects (rose mod, button
+        // interaction mode) directly instead, then only nudges the info
+        // panel's live number via updatePendingIfSelected, which no-ops
+        // unless this switch already happens to be the one selected.
+        switchControls[switchIndex] = {
+          set: function(value){
+            const desired = value >= 0.5 ? 'right' : 'left';
+            if (sw.getAttribute('data-state') === desired) return;
+            sw.setAttribute('data-state', desired);
+            render();
+            if (switchIndex === 1){
+              diagram.classList.toggle('mod-rose-active', desired === 'right');
+              if (diagramPanel) diagramPanel.classList.toggle('mod-rose-active', desired === 'right');
+              setPedalRoseMod(desired === 'right');
+            }
+            if (switchIndex === 2){
+              buttonsToggleMode = desired === 'right';
+              diagram.classList.toggle('buttons-momentary', !buttonsToggleMode);
+              if (!buttonsToggleMode) buttonEls.forEach(function(b){ b.classList.remove('pressed'); });
+              burstButtons();
+            }
+            updatePendingIfSelected(switchIndex === 0 ? '2' : null, desired === 'left' ? 0 : 1);
+          }
+        };
       });
 
       // potis: drag the knob between -135deg (bottom-left) and +135deg
@@ -8731,6 +8896,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           return deg;
         }
         function startDrag(point){
+          if (controlsLocked) return; // a .csv performance is driving the pedal right now
           dragging = true;
           poti.classList.add('poti-active');
           angleDeg = angleFromPointer(point);
@@ -8777,6 +8943,24 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           angleDeg = 0;
           render();
         });
+        // CSV-driven only (see playCsvTimeline) -- moves the needle alone,
+        // never opens/reselects this poti's own info box (unlike
+        // startDrag above); updatePendingIfSelected only nudges the live
+        // number if this poti already happens to be the one selected, same
+        // as moveDrag's own guard just above. Called for every snap *and*
+        // every frame of a glide alike -- unlike startDrag (a real touch
+        // only ever fires once per press), nothing here needs to
+        // distinguish "just started" from "still moving".
+        // value: this poti's own current 0-1 position, so a glide
+        // starting on it knows what to glide *from*.
+        potiControls[potiIndex] = {
+          set: function(value){
+            angleDeg = POTI_MIN_DEG + value * (POTI_MAX_DEG - POTI_MIN_DEG);
+            render();
+            updatePendingIfSelected(potiStoreKey, potiVal());
+          },
+          value: potiVal
+        };
       });
 
       // buttons: while switch 3 is right (buttonsToggleMode), a click
@@ -8787,6 +8971,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         const buttonNumber = parseInt(btn.getAttribute('data-index'), 10) + 1;
         const buttonStoreKey = String(buttonNumber - 1); // button 1/2 -> store key "0"/"1"
         btn.addEventListener('click', function(){
+          if (controlsLocked) return; // a .csv performance is driving the pedal right now
           if (!buttonsToggleMode) return; // momentary mode is driven by press/release below instead
           btn.classList.toggle('pressed');
           // the pink light is the button's "1" state, off is "0" -- same
@@ -8794,6 +8979,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           showPedalObjectInfo('Button ' + buttonNumber, btn, buttonStoreKey, btn.classList.contains('pressed') ? 1 : 0);
         });
         function press(){
+          if (controlsLocked) return; // a .csv performance is driving the pedal right now
           if (buttonsToggleMode) return;
           btn.classList.add('pressed');
           showPedalObjectInfo('Button ' + buttonNumber, btn, buttonStoreKey, 1);
@@ -8828,9 +9014,130 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         btn.addEventListener('touchend', release);
         btn.addEventListener('touchcancel', release);
         buttonEls.push(btn);
+        // CSV-driven only (see playCsvTimeline) -- deliberately not
+        // press()/release() or a dispatched click, both of which announce
+        // (open this button's own info box); this only ever lights/unlights
+        // the button and nudges its live number via updatePendingIfSelected,
+        // which no-ops unless this button already happens to be selected.
+        buttonControls[buttonNumber - 1] = {
+          set: function(value){
+            const want = value >= 0.5;
+            btn.classList.toggle('pressed', want);
+            updatePendingIfSelected(buttonStoreKey, want ? 1 : 0);
+          }
+        };
       });
 
+      // -------- CSV-driven pedal-simulation playback (see playCurrentWav) --------
+      // Replays a recorded SuperCollider performance timeline: a straight
+      // dump of {obj, value, time, duration} events, obj 0-11 mapping to
+      // this pedal's real controls -- 0/1 -> buttons 1/2, 2/3/4 -> switches
+      // 1/2/3, 6/7/8/9 -> potentiometers 1/2/3/4. 5/10/11 exist in the
+      // format (some other pedal layout might use every slot) but have no
+      // widget on *this* one, so those rows are just skipped.
+      // duration<=0 snaps instantly; duration>0 glides linearly from the
+      // control's own current value -- but only for potis, the only
+      // continuous control here. A switch/button is only ever fully on or
+      // off, so any duration it's given is treated as 0 (jump the instant
+      // its own time arrives) rather than trying to show a binary control
+      // "half pressed" partway through a glide.
+      const CSV_OBJ_SWITCH = { 2: 0, 3: 1, 4: 2 };
+      const CSV_OBJ_POTI = { 6: 0, 7: 1, 8: 2, 9: 3 };
+      const CSV_OBJ_BUTTON = { 0: 0, 1: 1 };
+      let csvPlaybackToken = 0;
+      // locks/unlocks the real controls, the play button itself, and every
+      // .playing highlight (button, ring, pedal glow) together -- called
+      // from playCurrentWav around the *audio* element's own play/ended
+      // lifecycle (see that function), not from this timeline's own start/
+      // end, so a performance still reads as "in progress" for however
+      // long the sound keeps playing even after the .csv's own last event
+      // has already landed. resetPedalControls also calls endPerformance,
+      // in case a program switch happens mid-performance.
+      beginPerformance = function(){
+        controlsLocked = true;
+        if (playBtn) playBtn.classList.add('playing');
+        diagram.classList.add('playing');
+        if (diagramPanel) diagramPanel.classList.add('playing');
+      };
+      endPerformance = function(){
+        controlsLocked = false;
+        if (playBtn) playBtn.classList.remove('playing');
+        diagram.classList.remove('playing');
+        if (diagramPanel) diagramPanel.classList.remove('playing');
+      };
+      playCsvTimeline = function(rows, audioEl){
+        // invalidates any still-running playback from a previous press (or
+        // a resetPedalControls call, see its own bumped copy below) --
+        // otherwise an old rAF loop would keep fighting a newer one, or a
+        // fresh reset, for the same controls.
+        const token = ++csvPlaybackToken;
+        const pending = rows.slice().sort(function(a, b){ return a.time - b.time; });
+        const active = []; // in-flight poti glides: {index, from, to, startMs, endMs}
+        const playStart = performance.now();
+        // audio.currentTime, while it's actually playing, is the
+        // authoritative clock -- both files share the identical
+        // time-zero the tool recorded them against, and staying locked to
+        // the audio element's own clock (rather than a separate
+        // performance.now() timer) is what keeps a multi-minute recording
+        // from drifting out of sync. Falls back to elapsed real time
+        // whenever that's not available (autoplay blocked, no matching
+        // .wav, or it's paused/ended already) -- movement without sound
+        // beats no movement at all.
+        function elapsedMs(){
+          if (audioEl && !audioEl.paused && !audioEl.ended && !isNaN(audioEl.currentTime)){
+            return audioEl.currentTime * 1000;
+          }
+          return performance.now() - playStart;
+        }
+        function cancelGlide(index){
+          for (let i = active.length - 1; i >= 0; i--){
+            if (active[i].index === index) active.splice(i, 1);
+          }
+        }
+        function tick(){
+          if (token !== csvPlaybackToken) return; // superseded
+          const elapsed = elapsedMs();
+          while (pending.length && pending[0].time * 1000 <= elapsed){
+            const ev = pending.shift();
+            if (ev.obj in CSV_OBJ_POTI){
+              const index = CSV_OBJ_POTI[ev.obj];
+              const ctrl = potiControls[index];
+              if (!ctrl) continue;
+              cancelGlide(index);
+              if (ev.duration > 0){
+                active.push({ index: index, from: ctrl.value(), to: ev.value, startMs: ev.time * 1000, endMs: (ev.time + ev.duration) * 1000 });
+              } else {
+                ctrl.set(ev.value);
+              }
+            } else if (ev.obj in CSV_OBJ_SWITCH){
+              const ctrl = switchControls[CSV_OBJ_SWITCH[ev.obj]];
+              if (ctrl) ctrl.set(ev.value);
+            } else if (ev.obj in CSV_OBJ_BUTTON){
+              const ctrl = buttonControls[CSV_OBJ_BUTTON[ev.obj]];
+              if (ctrl) ctrl.set(ev.value);
+            }
+            // any other obj (5, 10, 11, ...) has no widget on this pedal
+          }
+          for (let i = active.length - 1; i >= 0; i--){
+            const g = active[i];
+            const t = g.endMs <= g.startMs ? 1 : Math.min(1, Math.max(0, (elapsed - g.startMs) / (g.endMs - g.startMs)));
+            const ctrl = potiControls[g.index];
+            if (ctrl) ctrl.set(g.from + (g.to - g.from) * t);
+            if (t >= 1) active.splice(i, 1);
+          }
+          // no endPerformance() call here on the last event -- the pedal
+          // stops moving once its own timeline runs out, but the lock/
+          // glow stay up for however much longer the *audio* keeps
+          // playing (see beginPerformance/endPerformance's own comment);
+          // playCurrentWav's own 'ended' listener is what actually clears it.
+          if (pending.length || active.length) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      };
+
       resetPedalControls = function(){
+        csvPlaybackToken++; // stop any in-flight .csv playback from fighting this reset
+        endPerformance(); // and unlock the controls again if it was mid-performance
         switchResets.forEach(function(fn){ fn(); });
         potiResets.forEach(function(fn){ fn(); });
         clearTimeout(burstTimer);
@@ -9140,7 +9447,25 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const collabButtonsEl = wrap.querySelector('.collab-buttons');
 
     let currentIndex = 0;
-    let currentWav = 'examples/' + programs[0].programSlug + '.wav';
+    // rooted at this edition's own folder (editions/<slug>/examples/<program>.wav)
+    // -- a bare 'examples/...' path used to resolve against the site root
+    // instead, which never actually matched where these files live, so the
+    // play button silently always hit the "no sound example" fallback.
+    let currentWav = 'editions/' + editionSlug + '/examples/' + programs[0].programSlug + '.wav';
+    // paired timeline for the pedal-simulation playback (see playCsvTimeline
+    // below) -- same folder, same base name, .csv instead of .wav. Not every
+    // program has one yet; missing is handled the same way a missing .wav
+    // already is, by just not doing anything for it.
+    let currentCsv = 'editions/' + editionSlug + '/examples/' + programs[0].programSlug + '.csv';
+    // true for exactly as long as playCurrentWav's own Audio element is
+    // actually playing -- guards the play button itself (see
+    // playCurrentWav: pressing it again mid-playback is a no-op, on top of
+    // the button's own pointer-events:none while .playing). currentAudioEl
+    // is that same Audio element, so a program switch mid-playback (see
+    // applyEntry) can stop it rather than leaving it playing on in the
+    // background under a card that no longer shows it.
+    let soundPlaying = false;
+    let currentAudioEl = null;
     let currentType = programs[0].type;
     let tooltipLoadedForType = null; // caches which type's explanation is currently loaded
     let requestToken = 0; // guards against a slow fetch overwriting a newer selection
@@ -9216,7 +9541,22 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const myToken = ++requestToken;
 
       positionBar();
-      currentWav = 'examples/' + entry.programSlug + '.wav';
+      currentWav = 'editions/' + editionSlug + '/examples/' + entry.programSlug + '.wav';
+      currentCsv = 'editions/' + editionSlug + '/examples/' + entry.programSlug + '.csv';
+      // stop the previous program's sound example (if any) rather than
+      // leaving it playing on in the background under a card that no
+      // longer shows it. Clears soundPlaying/currentAudioEl directly
+      // rather than only trusting the 'pause' this triggers (see
+      // playCurrentWav's own finishPlayback) -- that listener isn't even
+      // attached yet if this races ahead of audio.play()'s own promise
+      // resolving, which would otherwise leave the play button stuck
+      // looking like it's still playing. resetPedalControls just below
+      // clears the visual .playing state either way (see endPerformance).
+      if (currentAudioEl){
+        currentAudioEl.pause();
+        currentAudioEl = null;
+      }
+      soundPlaying = false;
       resetPedalControls();
       resetPedalObjectInfo();
       // phone: switching to a different *program* within the same edition
@@ -9498,18 +9838,76 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       if (detail0) detail0.innerHTML = html;
       if (detail1) detail1.innerHTML = html;
     }
+    // parses the pedal-automation tool's own .csv dump (header row, then
+    // one obj,value,time,duration row per event -- see playCsvTimeline's
+    // own comment for what these mean) into the plain object list it
+    // expects, re-sorted by time defensively even though the source file
+    // is already meant to arrive that way.
+    function parseCsvTimeline(text){
+      return text.trim().split('\n').slice(1)
+        .filter(function(line){ return line.trim() !== ''; })
+        .map(function(line){
+          const parts = line.split(',');
+          return { obj: Number(parts[0]), value: Number(parts[1]), time: Number(parts[2]), duration: Number(parts[3]) };
+        })
+        .sort(function(a, b){ return a.time - b.time; });
+    }
     function playCurrentWav(){
+      // both a JS guard (in case something other than a real click ever
+      // calls this) and a mirror of .spotlight-center-play.playing's own
+      // pointer-events:none -- a re-press while already playing is a no-op.
+      if (soundPlaying) return;
+      soundPlaying = true;
       const audio = new Audio(currentWav);
+      currentAudioEl = audio;
+      // shared by every way this specific play can end -- natural
+      // completion, an error partway through, or applyEntry pausing it
+      // early because the program got switched out from under it. Guarded
+      // on currentAudioEl still being *this* audio so a stale listener
+      // from an already-superseded Audio element can't clear a *newer*
+      // one's own lock.
+      function finishPlayback(){
+        if (currentAudioEl !== audio) return;
+        soundPlaying = false;
+        currentAudioEl = null;
+        endPerformance();
+      }
       const playPromise = audio.play();
       if (playPromise && playPromise.then){
         playPromise.then(function(){
-          showSoundStatusMessage(t({ de: 'Das aktuelle Programm spielt gerade ein Sound-Beispiel ab.', en: 'The current program is playing a sound example right now.' }));
+          beginPerformance();
+          audio.addEventListener('ended', finishPlayback);
+          audio.addEventListener('pause', finishPlayback);
+          audio.addEventListener('error', finishPlayback);
+          // deliberately *not* showSoundStatusMessage here -- unlike the
+          // "no sound example available" case below (worth saying,
+          // there's nothing else to look at), a successful play leaves
+          // whatever was already selected in the info panel alone, so a
+          // visitor who had a control's info open can watch its own
+          // numbers change live as the recorded performance moves it
+          // (see updatePendingIfSelected).
+          // the pedal-simulation timeline is a separate, optional file --
+          // most programs won't have one yet even once they have a .wav,
+          // so a missing/failed .csv fetch here just means the sound
+          // plays with no accompanying pedal movement, not an error.
+          fetch(currentCsv).then(function(res){
+            if (!res.ok) throw new Error('no csv for this program');
+            return res.text();
+          }).then(function(text){
+            playCsvTimeline(parseCsvTimeline(text), audio);
+          }).catch(function(){});
         }).catch(function(){
           // e.g. file missing (most programs don't have one yet) or
           // autoplay blocked -- either way, worth actually saying so
-          // instead of the button just silently doing nothing
+          // instead of the button just silently doing nothing. Nothing
+          // actually started playing, so no lock to release here.
+          soundPlaying = false;
+          currentAudioEl = null;
           showSoundStatusMessage(t({ de: 'Für dieses Programm ist aktuell kein Sound-Beispiel verfügbar.', en: 'No sound example is currently available for this program.' }));
         });
+      } else {
+        soundPlaying = false;
+        currentAudioEl = null;
       }
     }
     if (playBtn) playBtn.addEventListener('click', playCurrentWav);
