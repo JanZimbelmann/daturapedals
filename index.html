@@ -3608,12 +3608,24 @@
          background on this element at all -- each child gets its own
          hairline border instead, which only ever draws a single 1px line
          between two actual boxes, never a gap-shaped bar. */
-      /* dropping the title + paginated 4-row window below (see
-         getParamPageSize) frees up real room, but a synth with plenty of
-         params in 2 columns can still end up taller than the screen has
-         left -- this lets the whole tab scroll to reach the rest instead
-         of clipping it or pushing the diagram off-screen. */
+    }
+    /* dropping the title + paginated 4-row window below (see
+       getParamPageSize) frees up real room, but a synth with plenty of
+       params in 2 columns can still end up taller than the screen has
+       left -- this lets that content scroll to reach the rest instead of
+       clipping it or pushing the diagram off-screen. A wrapper around
+       just the diagram/info-box (see syncMobileLayout, which builds this
+       element and moves them into it), not overflow-y:auto on
+       .card-page-controls itself: that card is also the sound-preview
+       button/vine-reveal/anchor's own containing block (position:absolute
+       against it, see positionVineReveal), so scrolling *it* dragged them
+       along too, even though the intent was always for them to stay put
+       while only this content underneath scrolls. */
+    .card-page-controls-scroll{
+      flex:1;
+      min-height:0;
       overflow-y:auto;
+      overscroll-behavior:contain;
     }
     .card-page-controls .spotlight-diagram-block{
       background:var(--black);
@@ -8624,12 +8636,31 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         if (collabDividerEl && captionEl) captionEl.appendChild(collabDividerEl);
         else if (collabDividerEl) artistPage.appendChild(collabDividerEl);
         if (collabButtonsInner && captionEl) captionEl.appendChild(collabButtonsInner);
-        if (diagramBlockEl) controlsPage.appendChild(diagramBlockEl);
-        if (bioPanelObject) controlsPage.appendChild(bioPanelObject);
-        if (bioPanelObjectMod1) controlsPage.appendChild(bioPanelObjectMod1);
+        // the diagram + its info box are the one part of this page that
+        // can genuinely run taller than the screen (see .card-page-
+        // controls-scroll's own CSS) -- wrapped in their own scrolling
+        // child rather than scrolling .card-page-controls itself so that
+        // the sound-preview button/vine-reveal/anchor just below (also
+        // position:absolute against .card-page-controls, see
+        // positionVineReveal) stay visually put while this wrapper
+        // scrolls, instead of dragging along with it. Created once and
+        // reused on every re-sync rather than recreated -- appendChild
+        // below still *moves* the diagram/info-box into it correctly
+        // even if they're already somewhere else (a previous sync, or
+        // their original desktop spot).
+        let controlsScroll = controlsPage.querySelector('.card-page-controls-scroll');
+        if (!controlsScroll){
+          controlsScroll = document.createElement('div');
+          controlsScroll.className = 'card-page-controls-scroll';
+          controlsPage.appendChild(controlsScroll);
+        }
+        if (diagramBlockEl) controlsScroll.appendChild(diagramBlockEl);
+        if (bioPanelObject) controlsScroll.appendChild(bioPanelObject);
+        if (bioPanelObjectMod1) controlsScroll.appendChild(bioPanelObjectMod1);
         // the sound-preview button + its vine-reveal animation normally
         // hang off the program bar (see positionVineReveal), which this
-        // tab has none of -- relocated into this same page, hanging off
+        // tab has none of -- relocated into this same page (NOT the
+        // scrolling wrapper above -- see its own comment), hanging off
         // .controls-vine-anchor instead (see its own CSS and
         // positionVineReveal's phone branch)
         const playBtnEl = wrap.querySelector('.spotlight-center-play');
@@ -11923,9 +11954,17 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // was instead getting caught by this listener as a page-swipe attempt,
   // freezing the page and jumping a whole section instead of just
   // scrolling the text like it looks like it should.
+  // .card-page-controls-scroll is the mobile Controls page's own outer
+  // scroll wrapper (see syncMobileLayout) -- without it here, dragging on
+  // the diagram's own background (not specifically on a poti/switch/
+  // button, which already own their own entries below, or on the info
+  // box, which has its own inner .object-info-inner scroll) fell through
+  // to the page-swipe handler instead of scrolling this wrapper like the
+  // rest of the page does.
   const TOUCH_SWIPE_EXEMPT_SELECTOR =
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
     '.why-text, .bio-text-clip, .video-script-text, .object-info-inner, .control-info-scroll-nav, ' +
+    '.card-page-controls-scroll, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, .program-bar, ' +
     '.logo-box, #pedalsLabel, #sloganMain, #summeText, .why-mobile-tab, .card-page-btn';
   // the *real scrollable text* subset of the exempt selector above --
@@ -11935,6 +11974,21 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // should: scroll it internally right up until it's already at its own
   // top/bottom, and only *then* does continuing the same drag hand off
   // to the normal section-jump -- see touchend below.
+  // deliberately *not* .card-page-controls-scroll here, even though it's
+  // in the exempt list above -- .closest() would walk straight past a
+  // poti/switch/button (they're not in this narrower list either) to
+  // match this wrapper instead, making touchExemptScrollEl non-null for
+  // them too. That flips touchend's "a control that owns its gesture
+  // outright... never hands off" early-return off for every poti/switch/
+  // button drag, and since the wrapper usually isn't even tall enough to
+  // scroll at all (scrollTop stays 0, trivially satisfying *both* the
+  // atTop and atBottom checks), a plain poti drag past 15px would then
+  // *also* commit a full section jump. Leaving it out of this list means
+  // a drag that starts on the diagram's own background (not on a poti
+  // etc, and not inside the info box, which keeps its own entry) still
+  // scrolls this wrapper via native touch (see the exempt list above)
+  // but never hands off to a page-swipe on release -- a smaller miss
+  // than the poti regression above would be.
   const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .video-script-text, .blog-item-content, .object-info-inner';
   // the subset of the exempt selector above that's *only* a plain tap
   // target -- no drag gesture of its own at all (unlike .pedal-poti/
@@ -11954,6 +12008,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   let touchTapOnly = false;
   let touchDragEngaged = false;
   let touchExemptScrollEl = null;
+  // captured once, at touchstart, rather than re-read fresh at touchend --
+  // see touchend's own comment on why the hand-off check needs "was
+  // *already* at the boundary before this drag" and not just "happens to
+  // be at the boundary by the time the finger lifts".
+  let touchExemptScrollElStartAtTop = false;
+  let touchExemptScrollElStartAtBottom = false;
   let touchIsPhone = false;
   window.addEventListener('touchstart', function(e){
     if (document.querySelector('.modal-overlay.active')) return;
@@ -11961,6 +12021,10 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     touchTapOnly = !!(e.target.closest && e.target.closest(TOUCH_TAP_ONLY_SELECTOR));
     touchDragEngaged = false;
     touchExemptScrollEl = (e.target.closest && e.target.closest(TOUCH_SCROLL_BOUNDARY_SELECTOR)) || null;
+    if (touchExemptScrollEl){
+      touchExemptScrollElStartAtTop = touchExemptScrollEl.scrollTop <= 1;
+      touchExemptScrollElStartAtBottom = touchExemptScrollEl.scrollTop >= touchExemptScrollEl.scrollHeight - touchExemptScrollEl.clientHeight - 1;
+    }
     touchIsPhone = window.matchMedia(PHONE_QUERY).matches;
     touchStartY = e.touches[0].clientY;
   }, { passive:true });
@@ -11990,6 +12054,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   window.addEventListener('touchend', function(e){
     const exempt = touchSwipeExempt;
     const scrollEl = touchExemptScrollEl;
+    const startAtTop = touchExemptScrollElStartAtTop;
+    const startAtBottom = touchExemptScrollElStartAtBottom;
     const wasPhone = touchIsPhone;
     touchSwipeExempt = false;
     touchExemptScrollEl = null;
@@ -12005,15 +12071,20 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       if (!scrollEl) return; // a control that owns its gesture outright (poti, slider, tap target...) -- never hands off
       // scroll-boundary handoff: dragging inside a real scrollable text
       // box always scrolls it first (see touchmove above, unaffected);
-      // only once that box is already sitting at the very end in the
-      // direction being dragged does the *same* gesture instead count as
-      // a page-swipe to the next/previous section -- overscroll-behavior:
-      // contain (see the box's own CSS) keeps it pinned there rather than
-      // rubber-banding while that's being decided.
-      const atBottom = scrollEl.scrollTop >= scrollEl.scrollHeight - scrollEl.clientHeight - 1;
-      const atTop = scrollEl.scrollTop <= 1;
-      if (delta > 0 && !atBottom) return; // dragging further in, box isn't done scrolling yet
-      if (delta < 0 && !atTop) return;
+      // only once that box was *already* sitting at the very end in the
+      // direction being dragged *before this drag even started* does the
+      // same gesture instead count as a page-swipe to the next/previous
+      // section -- checked against the boundary state captured at
+      // touchstart, not re-read fresh here: re-reading here meant simply
+      // scrolling to the end of a short param list during an ordinary
+      // read-to-the-bottom drag -- extremely common, not a deliberate
+      // "give up on this box, swipe the whole page instead" gesture --
+      // was *also* satisfying "at the boundary by release time", handing
+      // off to an unwanted section jump the instant the finger lifted.
+      // overscroll-behavior:contain (see the box's own CSS) keeps it
+      // pinned at the boundary rather than rubber-banding once there.
+      if (delta > 0 && !startAtBottom) return; // dragging further in, box wasn't already done scrolling
+      if (delta < 0 && !startAtTop) return;
     }
 
     if (!wasPhone){
