@@ -10406,21 +10406,35 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // jobs) to reliably find clear space the way it does on desktop --
     // between the highlight itself, the pedal diagram, and everything
     // else stacked into one narrow column, the caption ended up sitting
-    // on top of *something* on nearly every step. Pinning it to the same
-    // spot at the very top of the screen every time instead trades "near
-    // the highlighted thing" for "always somewhere clear and predictable"
-    // -- the highlight/notch cutout elsewhere on screen still shows what
-    // step is actually talking about, so the caption itself doesn't also
-    // need to be adjacent to it to make sense.
-    function positionCaptionAtTop(){
+    // on top of *something* on nearly every step. Always pinning it to
+    // the top isn't right either -- step 5's own highlighted pair (the
+    // diagram + its info box) sits right up near the top of that page's
+    // own mobile layout, which the diagram/info-box column here is built
+    // completely differently from desktop's side-by-side one, and a
+    // caption fixed at the top just sat on top of the diagram instead.
+    // Pinning flush to whichever *screen* edge (not "near the target" --
+    // still too tight a fit on phone) has genuinely more room outside the
+    // highlighted rect -- top if the target leaves more space below it,
+    // bottom if it leaves more space above -- means the caption and
+    // whatever's actually being pointed at never fight for the same
+    // spot, on every step alike, without needing to special-case any one
+    // of them.
+    function positionCaptionAtScreenEdge(rect){
+      const pad = 16;
+      const vh = window.innerHeight;
+      const captionRect = captionEl.getBoundingClientRect();
+      const spaceAbove = rect.top;
+      const spaceBelow = vh - rect.bottom;
+      captionEl.style.top = spaceAbove >= spaceBelow
+        ? pad + 'px'
+        : Math.max(pad, vh - captionRect.height - pad) + 'px';
       captionEl.style.left = '1.5rem';
-      captionEl.style.top = '1rem';
     }
     // picks whichever side (below/above `rect`) actually has room for the
     // caption's own real height, rather than always defaulting to one
     // side and letting it run off-screen for a target near an edge
     function positionCaptionNear(rect){
-      if (window.matchMedia('(max-width:640px)').matches){ positionCaptionAtTop(); return; }
+      if (window.matchMedia('(max-width:640px)').matches){ positionCaptionAtScreenEdge(rect); return; }
       const pad = 8;
       const captionRect = captionEl.getBoundingClientRect();
       const vw = window.innerWidth, vh = window.innerHeight;
@@ -10464,7 +10478,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // caption naturally run down alongside it rather than needing to be
     // vertically centered.
     function positionCaptionLeftOf(rect){
-      if (window.matchMedia('(max-width:640px)').matches){ positionCaptionAtTop(); return; }
+      if (window.matchMedia('(max-width:640px)').matches){ positionCaptionAtScreenEdge(rect); return; }
       const pad = 8;
       const captionRect = captionEl.getBoundingClientRect();
       const vh = window.innerHeight;
@@ -11317,6 +11331,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     let previewMode = false;
     function showHoverPreview(){
       if (active || previewMode) return; // real tour already running, or already showing
+      // phone: there's no real hover gesture, only a tap -- but some
+      // mobile browsers still synthesize a mouseenter right before the
+      // click on a first tap (an old touch/:hover compatibility shim),
+      // which fired this anyway just long enough to flash the "0 / N"
+      // preview text an instant before the click handler immediately
+      // replaced it with the real step 1 -- a flicker with no real
+      // hover behind it to justify showing a preview at all. helpBtn's
+      // own click handler (see below) already does everything pressing
+      // it needs on its own, preview or not.
+      if (window.matchMedia('(max-width:640px)').matches) return;
       previewMode = true;
       // step 0's own text, distinct from step 1's (stepTexts[0]) -- this
       // is the pitch for starting the tour at all, not the tour's own
