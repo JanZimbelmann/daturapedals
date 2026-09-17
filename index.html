@@ -1611,10 +1611,20 @@
      regardless of how wide the idle tab row happens to be */
   .editions-help-btn{
     position:absolute;
-    top:1.5rem;
+    /* centers this button's own 2rem height on .section-nav-up's 52px
+       (3.25rem) bar -- its arrow glyph sits vertically centered in that
+       whole bar (see .section-nav-btn), so matching heights here reads as
+       both sitting on the same line rather than this one floating lower.
+       Also shrunk from the previous 2.5rem: at that size, sitting this
+       high up left it close enough to (and on some viewports overlapping)
+       the idle edition tabs below, which are vertically centered in the
+       section rather than pinned to its top (see .spotlight's own
+       align-items:center) and so can start quite close to the top edge
+       on a short viewport. */
+    top:0.625rem;
     right:1.5rem;
-    width:2.5rem;
-    height:2.5rem;
+    width:2rem;
+    height:2rem;
     /* above .section-nav-up's own full-width, full-page-top invisible bar
        (z-index:40) -- without this its click was swallowed by that bar
        instead, jumping to the previous section rather than opening the tour */
@@ -1624,7 +1634,7 @@
     background:transparent;
     color:var(--white);
     font-family:'IBM Plex Mono', monospace;
-    font-size:1.2rem;
+    font-size:1rem;
     line-height:1;
     cursor:pointer;
     user-select:none;
@@ -1801,6 +1811,15 @@
     0%, 100%{ transform:translate(-50%, -50%) scale(1); }
     50%{ transform:translate(-50%, -50%) scale(1.06); }
   }
+  /* same pulse, but based on the mobile Controls page's own real base
+     transform (translateY(-50%) alone -- see .card-page-controls
+     .spotlight-center-play, which positions the button via right:1.5rem
+     instead of left:50%) rather than the desktop one above. Swapped in
+     for .playing only on that page -- see its own rule. */
+  @keyframes spotlightPlayPulseMobile{
+    0%, 100%{ transform:translateY(-50%) scale(1); }
+    50%{ transform:translateY(-50%) scale(1.06); }
+  }
   /* the button's own foreground/background swap -- the same invert
      :hover already does, just breathing on a loop instead of needing the
      cursor there, and paired with the emblem's own opposite fade just
@@ -1813,16 +1832,25 @@
     0%, 100%{ background-color:var(--edition-fg, var(--white)); }
     50%{ background-color:var(--edition-bg, var(--black)); }
   }
-  /* real elements, not ::before/::after -- three rings wants three
-     independently-timed animations, and a single element only has two
-     pseudo-element slots to spend. Grows via width/height (not
-     transform:scale, which would also visibly thicken the 2px border the
-     bigger it gets) all the way out to 120vmax -- deliberately huge,
-     bigger than any real card could be, rather than sized to any one
-     card's own real dimensions: .spotlight-box (the card itself) already
-     clips its own content at `overflow:hidden`, so each ring reads as
-     travelling *through* the whole card and stopping exactly at its edge
-     for free, with no need to measure that card's own size at all. */
+  /* real elements, spawned/removed by JS (see startRippleSpawner), not
+     pre-declared or class-gated -- each .play-ring runs its *own* one-shot
+     animation the instant it's inserted, and removes itself on
+     animationend. That's deliberate: while a class-gated `infinite`
+     animation is simple, stopping it by just removing the class (the
+     first approach here) snaps every ring straight back to invisible
+     wherever it happened to be mid-expansion, which read as the wave
+     stopping "mid air" instead of finishing its own journey. Spawning
+     independent one-shot rings instead means ending playback only has to
+     stop spawning *new* ones -- any already in flight keep animating
+     themselves through to completion regardless.
+     Grows via width/height (not transform:scale, which would also
+     visibly thicken the 2px border the bigger it gets) all the way out to
+     120vmax -- deliberately huge, bigger than any real card could be,
+     rather than sized to any one card's own real dimensions:
+     .spotlight-box (the card itself) already clips its own content at
+     `overflow:hidden`, so each ring reads as travelling *through* the
+     whole card and stopping exactly at its edge for free, with no need to
+     measure that card's own size at all. */
   .play-ring{
     position:absolute;
     top:50%;
@@ -1832,24 +1860,13 @@
     border-radius:50%;
     border:2px solid var(--edition-fg, var(--white));
     pointer-events:none;
-    opacity:0;
     transform:translate(-50%, -50%);
-  }
-  .spotlight-center-play.playing .play-ring{
     animation-name:spotlightPlayRipple;
     animation-timing-function:ease-out;
-    animation-iteration-count:infinite;
+    animation-iteration-count:1;
+    /* animation-duration set per-ring inline by startRippleSpawner (a
+       little randomized each time) -- see its own comment for why */
   }
-  /* three different *durations*, not just three delays staggered on one
-     shared duration -- rings all expanding at the same speed, just offset
-     in time, keep the exact same fixed spacing between them forever,
-     which reads as one predictable, evenly-spaced repeat. Slightly
-     different speeds instead mean their relative spacing keeps drifting
-     apart and back together as they play, closer to genuine overlapping
-     wave interference than a metronome. */
-  .spotlight-center-play.playing .play-ring-1{ animation-duration:2.2s; animation-delay:0s; }
-  .spotlight-center-play.playing .play-ring-2{ animation-duration:2.7s; animation-delay:0.5s; }
-  .spotlight-center-play.playing .play-ring-3{ animation-duration:3.3s; animation-delay:1s; }
   @keyframes spotlightPlayRipple{
     0%{ width:100%; height:100%; opacity:0.6; }
     100%{ width:120vmax; height:120vmax; opacity:0; }
@@ -3685,6 +3702,23 @@
     .card-page-controls .spotlight-center-play:hover{
       transform:translateY(-50%) scale(1.08);
     }
+    /* .playing's own spotlightPlayPulse keyframe (see its own rule)
+       hardcodes translate(-50%, -50%) as its base transform -- exactly
+       right on desktop (left:50% + that same translate is how the button
+       centers itself there), but this page positions the button via
+       right:1.5rem + translateY(-50%) alone instead (no translateX at
+       all, see just above). Since a CSS animation's own transform
+       replaces the element's transform outright rather than layering on
+       top of it, playing the desktop keyframe here was applying an
+       unwanted translateX(-50%) on top of the real position, reading as
+       the button visibly hopping left the instant a sound started
+       playing. A second keyframe with this page's own real base
+       transform instead of the desktop one fixes it without touching the
+       shared spotlightPlayColorFade animation alongside it.
+       */
+    .card-page-controls .spotlight-center-play.playing{
+      animation-name:spotlightPlayPulseMobile, spotlightPlayColorFade;
+    }
     .card-page-controls .bio-panel-object{
       /* was static -- the scroll-nav added below (position:absolute)
          anchors to this box specifically, and needs it to actually be a
@@ -4587,6 +4621,18 @@
   }
   @media (max-width:640px){
     .section-nav-btn{ height:44px; font-size:1.05rem; }
+    /* shrunk further and recentered on this shorter 44px bar's own 22px
+       center (see .editions-help-btn's own base-rule comment for the
+       full reasoning) -- phone is exactly where the idle edition tabs
+       have the least headroom below this button, so it needs to be
+       smaller here than the already-shrunk desktop size, not just moved. */
+    .editions-help-btn{
+      top:0.5rem;
+      right:1rem;
+      width:1.75rem;
+      height:1.75rem;
+      font-size:0.85rem;
+    }
     /* a little clear of the true screen edge -- right at bottom:0 sat
        close enough to a real phone's own gesture bar/home indicator to
        feel cramped against it */
@@ -4867,13 +4913,9 @@
 
     <button class="spotlight-center-play" data-i18n-aria="editionCard.playSound" aria-label="Sound abspielen">
       <span class="play-emblem"></span>
-      <!-- three rings, not one -- see .play-ring's own CSS comment for why
-           three different durations (not just three delays) reads as
-           actual interference rather than one predictable, evenly-spaced
-           repeat -->
-      <span class="play-ring play-ring-1"></span>
-      <span class="play-ring play-ring-2"></span>
-      <span class="play-ring play-ring-3"></span>
+      <!-- .play-ring spans are spawned/removed by JS while playing (see
+           startRippleSpawner), not pre-declared here -- see that
+           function's own comment for why. -->
     </button>
     <!-- decorative only: vine-like tendrils that draw themselves in from
          below the program bar and curl into the circle whenever a
@@ -9045,6 +9087,36 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const CSV_OBJ_POTI = { 6: 0, 7: 1, 8: 2, 9: 3 };
       const CSV_OBJ_BUTTON = { 0: 0, 1: 1 };
       let csvPlaybackToken = 0;
+      // spawns one .play-ring span into the play button, lets its own
+      // one-shot CSS animation run, and removes it once that animation
+      // finishes (see .play-ring's own CSS comment for why spawned
+      // elements rather than a class-gated infinite one). Duration is
+      // randomized a little each time (2.2-3.4s) rather than fixed --
+      // with a new ring starting roughly every 750ms, that spread means
+      // several rings are usually alive at once, each partway through its
+      // own slightly different journey, which is what actually reads as
+      // overlapping interference rather than one evenly-spaced repeat.
+      function spawnRipple(){
+        if (!playBtn) return;
+        const ring = document.createElement('span');
+        ring.className = 'play-ring';
+        ring.style.animationDuration = (2.2 + Math.random() * 1.2).toFixed(2) + 's';
+        ring.addEventListener('animationend', function(){ ring.remove(); });
+        playBtn.appendChild(ring);
+      }
+      let rippleSpawnTimer = null;
+      function startRippleSpawner(){
+        stopRippleSpawner();
+        spawnRipple();
+        rippleSpawnTimer = setInterval(spawnRipple, 750);
+      }
+      function stopRippleSpawner(){
+        if (rippleSpawnTimer){ clearInterval(rippleSpawnTimer); rippleSpawnTimer = null; }
+        // deliberately doesn't touch any .play-ring already in the DOM --
+        // each one finishes its own animation and removes itself, so a
+        // ring mid-expansion when playback ends still completes cleanly
+        // instead of snapping off "mid air".
+      }
       // locks/unlocks the real controls, the play button itself, and every
       // .playing highlight (button, ring, pedal glow) together -- called
       // from playCurrentWav around the *audio* element's own play/ended
@@ -9058,12 +9130,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         if (playBtn) playBtn.classList.add('playing');
         diagram.classList.add('playing');
         if (diagramPanel) diagramPanel.classList.add('playing');
+        startRippleSpawner();
       };
       endPerformance = function(){
         controlsLocked = false;
         if (playBtn) playBtn.classList.remove('playing');
         diagram.classList.remove('playing');
         if (diagramPanel) diagramPanel.classList.remove('playing');
+        stopRippleSpawner();
       };
       playCsvTimeline = function(rows, audioEl){
         // invalidates any still-running playback from a previous press (or
@@ -10327,10 +10401,26 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       el.style.height = (rect.height + pad * 2) + 'px';
     }
 
+    // phone: the screen's too tight for "position it near whatever it's
+    // pointing at" (positionCaptionNear/positionCaptionLeftOf's own real
+    // jobs) to reliably find clear space the way it does on desktop --
+    // between the highlight itself, the pedal diagram, and everything
+    // else stacked into one narrow column, the caption ended up sitting
+    // on top of *something* on nearly every step. Pinning it to the same
+    // spot at the very top of the screen every time instead trades "near
+    // the highlighted thing" for "always somewhere clear and predictable"
+    // -- the highlight/notch cutout elsewhere on screen still shows what
+    // step is actually talking about, so the caption itself doesn't also
+    // need to be adjacent to it to make sense.
+    function positionCaptionAtTop(){
+      captionEl.style.left = '1.5rem';
+      captionEl.style.top = '1rem';
+    }
     // picks whichever side (below/above `rect`) actually has room for the
     // caption's own real height, rather than always defaulting to one
     // side and letting it run off-screen for a target near an edge
     function positionCaptionNear(rect){
+      if (window.matchMedia('(max-width:640px)').matches){ positionCaptionAtTop(); return; }
       const pad = 8;
       const captionRect = captionEl.getBoundingClientRect();
       const vw = window.innerWidth, vh = window.innerHeight;
@@ -10374,6 +10464,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // caption naturally run down alongside it rather than needing to be
     // vertically centered.
     function positionCaptionLeftOf(rect){
+      if (window.matchMedia('(max-width:640px)').matches){ positionCaptionAtTop(); return; }
       const pad = 8;
       const captionRect = captionEl.getBoundingClientRect();
       const vh = window.innerHeight;
