@@ -159,12 +159,17 @@
 
   /* the rest of the hero recedes into darkness while the door opens.
      !important is needed here because the fade-in reveal animation
-     (with fill-mode forwards) otherwise outranks normal rules for opacity. */
+     (with fill-mode forwards) otherwise outranks normal rules for opacity.
+     .lang-toggle included in every group below (not just this one) --
+     it used to just sit there statically through all five of these
+     animations while everything else in the hero faded, the one element
+     that never joined in. */
   #wordmarkWrap.open .slogan-main,
   #wordmarkWrap.open .divider,
   #wordmarkWrap.open .slogan-sub,
   #wordmarkWrap.open .summe-text,
-  #wordmarkWrap.open .pedals-label{
+  #wordmarkWrap.open .pedals-label,
+  #wordmarkWrap.open .lang-toggle{
     opacity:0.08 !important;
   }
 
@@ -175,7 +180,8 @@
   #wordmarkWrap.slogan-open .divider,
   #wordmarkWrap.slogan-open .slogan-sub,
   #wordmarkWrap.slogan-open .summe-text,
-  #wordmarkWrap.slogan-open .pedals-label{
+  #wordmarkWrap.slogan-open .pedals-label,
+  #wordmarkWrap.slogan-open .lang-toggle{
     opacity:0 !important;
   }
 
@@ -185,7 +191,8 @@
   #wordmarkWrap.pedals-open .divider,
   #wordmarkWrap.pedals-open .slogan-main,
   #wordmarkWrap.pedals-open .slogan-sub,
-  #wordmarkWrap.pedals-open .summe-text{
+  #wordmarkWrap.pedals-open .summe-text,
+  #wordmarkWrap.pedals-open .lang-toggle{
     opacity:0 !important;
   }
 
@@ -197,7 +204,8 @@
   #wordmarkWrap.subslogan-open .slogan-main,
   #wordmarkWrap.subslogan-open .slogan-sub,
   #wordmarkWrap.subslogan-open .summe-text,
-  #wordmarkWrap.subslogan-open .pedals-label{
+  #wordmarkWrap.subslogan-open .pedals-label,
+  #wordmarkWrap.subslogan-open .lang-toggle{
     opacity:0 !important;
   }
 
@@ -207,8 +215,26 @@
   #wordmarkWrap.summe-open .divider,
   #wordmarkWrap.summe-open .slogan-main,
   #wordmarkWrap.summe-open .slogan-sub,
-  #wordmarkWrap.summe-open .pedals-label{
+  #wordmarkWrap.summe-open .pedals-label,
+  #wordmarkWrap.summe-open .lang-toggle{
     opacity:0 !important;
+  }
+
+  /* pressing the language toggle itself: everything *except* it fades
+     out (see flip() -- the toggle stays, playing its own thumb-slide +
+     enlarge flourish, then the real reload/language-switch happens once
+     that's actually finished playing, not instantly on click) */
+  #wordmarkWrap.lang-open .wordmark,
+  #wordmarkWrap.lang-open .divider,
+  #wordmarkWrap.lang-open .slogan-main,
+  #wordmarkWrap.lang-open .slogan-sub,
+  #wordmarkWrap.lang-open .summe-text,
+  #wordmarkWrap.lang-open .pedals-label{
+    opacity:0 !important;
+  }
+  .lang-toggle.lang-toggle-enlarge{
+    transform:scale(1.35);
+    transition:transform 0.3s cubic-bezier(.22,1.6,.36,1);
   }
 
   .letter-blowup{
@@ -1799,9 +1825,9 @@
      glance that a performance is running (and, along with controlsLocked
      elsewhere, that the pedal's own controls aren't interactive right now). */
   .spotlight-center-play.playing{
-    /* can't be re-pressed while a performance is already running -- belt
-       and suspenders alongside playCurrentWav's own soundPlaying guard */
-    pointer-events:none;
+    /* still pressable while playing -- see playCurrentWav's own
+       soundPlaying branch: a press here stops the performance instead of
+       starting a second, overlapping one. */
     animation:spotlightPlayPulse 1.2s ease-in-out infinite, spotlightPlayColorFade 1.2s ease-in-out infinite;
   }
   .spotlight-center-play.playing .play-emblem{
@@ -3849,15 +3875,19 @@
     /* the placeholder message (before anything's been pressed) is the
        *only* content in the box at that point -- left-aligned like a
        real title looked lopsided, all bunched against the left edge with
-       the whole right half of the box sitting empty. Centered instead,
-       both axes, since there's nothing else in the box competing for
-       that space at this point. */
+       the whole right half of the box sitting empty. Centered
+       horizontally, since there's nothing else in the box competing for
+       that space at this point -- but pinned to the *top* vertically
+       (not also centered top-to-bottom) so it reads as a prompt sitting
+       right where a real control's name would, rather than floating in
+       the middle of an otherwise-empty box. */
     .card-page-controls .object-info-inner > .spotlight-title.no-selection-yet{
       height:100%;
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       justify-content:center;
       text-align:center;
+      padding-top:0.9rem;
     }
     /* 2 columns instead of the shared single-column list, and no fixed
        page-window height -- every param renders at once now (see
@@ -4631,6 +4661,47 @@
     opacity:0;
     pointer-events:none;
   }
+  /* jump-straight-to-the-end pair, off to the left rather than sharing
+     .section-nav-btn's own centered spot -- three arrows in a row (not
+     one) reads as "all the way", the same convention as a media player's
+     >>| skip button, distinct at a glance from the single-arrow, one-
+     section-at-a-time buttons next to them. Sits *above* those (z-index
+     41, matching .editions-help-btn's own reasoning) since section-nav-up/
+     down's own full-width bar would otherwise swallow the click. */
+  .section-jump-btn{
+    position:fixed;
+    left:1rem;
+    z-index:41;
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:0.1rem;
+    background:none;
+    border:none;
+    padding:0.4rem 0.5rem;
+    color:var(--grey-3);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.85rem;
+    cursor:pointer;
+    user-select:none;
+    opacity:0.85;
+    transition:opacity 0.25s ease, color 0.25s ease;
+  }
+  .section-jump-top{
+    top:0.5rem;
+  }
+  .section-jump-bottom{
+    bottom:0.5rem;
+  }
+  .section-jump-btn:hover{
+    opacity:1;
+    color:var(--white);
+    text-shadow:0 0 10px rgba(255,255,255,0.5);
+  }
+  .section-jump-btn:disabled{
+    opacity:0;
+    pointer-events:none;
+  }
   @media (max-width:640px){
     .section-nav-btn{ height:44px; font-size:1.05rem; }
     /* shrunk further and recentered on this shorter 44px bar's own 22px
@@ -4649,6 +4720,10 @@
        close enough to a real phone's own gesture bar/home indicator to
        feel cramped against it */
     .section-nav-down{ bottom:10px; }
+    /* same phone-only clearance/shrink reasoning as .editions-help-btn
+       and .section-nav-down just above */
+    .section-jump-top{ top:0.4rem; font-size:0.7rem; }
+    .section-jump-bottom{ bottom:14px; font-size:0.7rem; }
     /* a real gap between each top-level section on phone -- every section
        is exactly one dvh tall, so without this the *next* one's own top
        edge sits flush against the current one's bottom, and any
@@ -5234,6 +5309,12 @@
      of the page appearing to shift under repeated taps. -->
 <button type="button" class="section-nav-btn section-nav-up" id="sectionNavUp" data-i18n-aria="sectionNav.prev" aria-label="Zum vorherigen Abschnitt">▲</button>
 <button type="button" class="section-nav-btn section-nav-down" id="sectionNavDown" data-i18n-aria="sectionNav.next" aria-label="Zum nächsten Abschnitt">▼</button>
+<!-- jump-to-start/end, off to the side of the plain one-section-at-a-time
+     arrows above -- same disabled-at-the-relevant-end treatment (see
+     refreshSectionNavButtons), just jumping straight to index 0 or the
+     very last section instead of stepping by one. -->
+<button type="button" class="section-jump-btn section-jump-top" id="sectionJumpTop" data-i18n-aria="sectionNav.jumpTop" aria-label="Zum Seitenanfang springen"><span>▲</span><span>▲</span><span>▲</span></button>
+<button type="button" class="section-jump-btn section-jump-bottom" id="sectionJumpBottom" data-i18n-aria="sectionNav.jumpBottom" aria-label="Zum Seitenende springen"><span>▼</span><span>▼</span><span>▼</span></button>
 
 <script>
 // ---------- language: 'de' or 'en', persisted in localStorage,
@@ -6291,7 +6372,26 @@ const whySection = document.getElementById('whySection');
   const toggle = document.getElementById('langToggle');
   if (!toggle) return;
   toggle.dataset.active = CURRENT_LANG;
-  function flip(){ setLang(CURRENT_LANG === 'de' ? 'en' : 'de'); }
+  let flipping = false;
+  // same "rest of the hero fades away" move as the other four hero CTAs
+  // (see #wordmarkWrap.lang-open's own CSS), just for this one instead --
+  // plays out first (fade + a brief enlarge on the toggle itself, then
+  // the thumb sliding to the new side), and only *then* does the actual
+  // reload/language-switch happen (setLang), instead of that firing
+  // instantly on click with no transition of its own at all.
+  function flip(){
+    if (flipping) return;
+    flipping = true;
+    const nextLang = CURRENT_LANG === 'de' ? 'en' : 'de';
+    wordmarkWrap.classList.add('lang-open');
+    toggle.classList.add('lang-toggle-enlarge');
+    setTimeout(function(){
+      toggle.dataset.active = nextLang; // slides the thumb (see its own CSS transition)
+      setTimeout(function(){
+        setLang(nextLang);
+      }, 300);
+    }, 350);
+  }
   toggle.addEventListener('click', flip);
   toggle.addEventListener('keydown', function(e){
     if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flip(); }
@@ -8723,6 +8823,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // after the .csv's own last event has already landed.
     let beginPerformance = function(){};
     let endPerformance = function(){};
+    // stops the .csv timeline's own tick() loop from playing on -- needed
+    // on top of just pausing the audio element (see playCurrentWav's own
+    // stop branch) because elapsedMs() falls back to a plain wall-clock
+    // timer the instant the audio it was following stops, rather than
+    // stopping itself alongside it.
+    let stopCsvTimeline = function(){};
 
     if (diagram){
       try{
@@ -9118,6 +9224,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       const CSV_OBJ_POTI = { 6: 0, 7: 1, 8: 2, 9: 3 };
       const CSV_OBJ_BUTTON = { 0: 0, 1: 1 };
       let csvPlaybackToken = 0;
+      stopCsvTimeline = function(){ csvPlaybackToken++; };
       // spawns one .play-ring span into the play button, lets its own
       // one-shot CSS animation run, and removes it once that animation
       // finishes (see .play-ring's own CSS comment for why spawned
@@ -9958,12 +10065,22 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         .sort(function(a, b){ return a.time - b.time; });
     }
     function playCurrentWav(){
-      // both a JS guard (in case something other than a real click ever
-      // calls this) and a mirror of .spotlight-center-play.playing's own
-      // pointer-events:none -- a re-press while already playing is a no-op.
-      if (soundPlaying) return;
+      // pressed again while already playing -- stop instead of starting a
+      // second, overlapping playback. Pausing the audio fires its own
+      // 'pause' listener (see finishPlayback below), which unlocks the
+      // controls and clears every .playing indicator the same way a
+      // natural end does; stopCsvTimeline separately halts the pedal's
+      // own movement, since playCsvTimeline's own clock quietly falls
+      // back to plain wall-clock time the instant the audio it was
+      // following stops, rather than stopping itself alongside it.
+      if (soundPlaying){
+        if (currentAudioEl) currentAudioEl.pause();
+        stopCsvTimeline();
+        return;
+      }
       soundPlaying = true;
       const audio = new Audio(currentWav);
+      audio.volume = 0.5;
       currentAudioEl = audio;
       // shared by every way this specific play can end -- natural
       // completion, an error partway through, or applyEntry pausing it
@@ -10338,7 +10455,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // the way switch 2's own step used to need one just for this.
       // Switch 3's buttons need nothing opened at all -- they're always
       // part of the diagram.
-      { selector: '.pedal-diagram-panel', open: true, page: 'controls', secondarySelector: '.bio-panel-object.expanded, .bio-panel-object-mod1.expanded', potiSweepSelector: '.pedal-poti[data-index="0"]', captionLeftOfPrimary: true,
+      { selector: '.pedal-diagram-panel', open: true, page: 'controls', secondarySelector: '.bio-panel-object.expanded, .bio-panel-object-mod1.expanded', potiSweepSelector: '.pedal-poti[data-index="0"]', captionLeftOfPrimary: true, mobileCaptionEdge: 'top',
         staticArrows: [
           // the box itself, not the heading text inside it -- landing on
           // that heading meant travelling *past* the box's own edge and
@@ -10352,7 +10469,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // live here moved up to the pair step above (see its own comment)
       { selector: '.pedal-switch[data-index="1"]', open: true, page: 'controls' },
       { selector: '.pedal-switch[data-index="2"]', open: true, page: 'controls' },
-      { selector: '.spotlight-center-play', open: true, page: 'controls' },
+      { selector: '.spotlight-center-play', open: true, page: 'controls', mobileCaptionEdge: 'bottom' },
       { selector: '.spotlight-bottom-row', open: true, page: 'artist', resetInfoBox: true },
       // the numbered circles next to "In Kooperation mit:" -- one per
       // program this artist has ever worked on, across every edition
@@ -10361,7 +10478,18 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // its own ".card-page-artist .collab-divider" CSS) -- on desktop
       // it already sits in the main flow regardless, so this is only
       // load-bearing there.
-      { selector: '.collab-divider', open: true, page: 'artist' }
+      // secondarySelector added specifically for phone: syncMobileLayout
+      // physically separates the numbered circles (.collab-buttons) from
+      // this divider row there (see its own comment -- the circles end up
+      // lower, under the artist's name, not inside this row anymore the
+      // way desktop has them), so highlighting .collab-divider alone
+      // missed them entirely on that layout. Union-highlighting both
+      // together (see positionForPair's own phone branch, a plain box
+      // rather than desktop's notch) covers wherever each one actually is
+      // in either layout -- on desktop the two rects already overlap
+      // (the circles sit inside this same row), so the union is just
+      // this row again, no visible change there.
+      { selector: '.collab-divider', open: true, page: 'artist', secondarySelector: '.collab-buttons' }
     ];
 
     let stepTexts = null;
@@ -10451,14 +10579,45 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // spot, on every step alike, without needing to special-case any one
     // of them.
     function positionCaptionAtScreenEdge(rect){
-      const pad = 16;
+      const edgePad = 16; // gap kept from the screen's own edge
+      const gap = 8; // gap kept clear between the caption and the highlight box
       const vh = window.innerHeight;
-      const captionRect = captionEl.getBoundingClientRect();
-      const spaceAbove = rect.top;
-      const spaceBelow = vh - rect.bottom;
-      captionEl.style.top = spaceAbove >= spaceBelow
-        ? pad + 'px'
-        : Math.max(pad, vh - captionRect.height - pad) + 'px';
+      const step = STEPS[stepIndex];
+      // undo any previous step's own height constraint (see below) before
+      // measuring this step's real, natural (unconstrained) height fresh
+      captionTextEl.style.maxHeight = '';
+      captionTextEl.style.overflowY = '';
+      // some steps know better than the heuristic below where they
+      // themselves should land -- e.g. step 5's own pair highlight sits
+      // right at the top of that page's mobile layout, which the
+      // heuristic (built for a single target rect) doesn't weigh
+      // correctly against how much of the *rest* of that tall highlight
+      // actually still leaves room below it.
+      const edge = (step && step.mobileCaptionEdge) || (rect.top >= (vh - rect.bottom) ? 'top' : 'bottom');
+      const naturalHeight = captionEl.getBoundingClientRect().height;
+      // how much of the caption's own natural height *isn't* the
+      // scrollable text -- its own padding plus the Back/Weiter row below
+      // it -- measured fresh each time rather than assumed, so this stays
+      // correct even if that markup/spacing ever changes.
+      const chromeHeight = naturalHeight - captionTextEl.getBoundingClientRect().height;
+      const maxBoxHeight = edge === 'top'
+        ? (currentHighlightRect ? currentHighlightRect.top - gap : vh) - edgePad
+        : vh - edgePad - (currentHighlightRect ? vh - currentHighlightRect.bottom + gap : 0);
+      if (currentHighlightRect && naturalHeight > maxBoxHeight){
+        // the highlighted box itself is close enough to this edge that
+        // the caption's own natural height would run into it -- capping
+        // the *text* alone (not the whole box, which would also swallow
+        // the Back/Weiter row) and letting it scroll internally keeps the
+        // two from ever actually intersecting, rather than the caption
+        // just growing on top of the highlight.
+        const textMax = Math.max(40, maxBoxHeight - chromeHeight);
+        captionTextEl.style.maxHeight = textMax + 'px';
+        captionTextEl.style.overflowY = 'auto';
+      }
+      const finalHeight = captionEl.getBoundingClientRect().height;
+      captionEl.style.top = edge === 'top'
+        ? edgePad + 'px'
+        : Math.max(edgePad, vh - finalHeight - edgePad) + 'px';
       captionEl.style.left = '1.5rem';
     }
     // picks whichever side (below/above `rect`) actually has room for the
@@ -10550,10 +10709,25 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         right: Math.max(rectA.right, rectB.right) + pad,
         bottom: rectB.bottom + pad
       };
-      const d = notchedRectPath(big, rectA.left - pad, rectB.top - pad);
-      notchHoleEl.setAttribute('d', d);
-      notchOutlineEl.setAttribute('d', d);
-      notchSvgEl.style.display = 'block';
+      if (window.matchMedia('(max-width:640px)').matches){
+        // phone: one plain box around both, not desktop's notch -- the
+        // notch's L-shape (the pair's shared box with one target's own
+        // corner cut away, so the *other* target's real top-left edge
+        // still reads as the box's own edge, not just floating in the
+        // middle of a bigger rectangle) was built for desktop's specific
+        // side-by-side diagram/info-box arrangement, where that gap is
+        // real, empty space neither target actually occupies. Phone
+        // stacks everything in one column instead -- there's no such gap
+        // left to notch away, so the shape just read as two separate
+        // boxes stuck together instead of one clean highlight.
+        notchSvgEl.style.display = 'none';
+        applyHighlightRect(highlightEl, unionRect(rectA, rectB));
+      } else {
+        const d = notchedRectPath(big, rectA.left - pad, rectB.top - pad);
+        notchHoleEl.setAttribute('d', d);
+        notchOutlineEl.setAttribute('d', d);
+        notchSvgEl.style.display = 'block';
+      }
       currentHighlightRect = big;
       updateArrow();
       // the pair step now also illustrates switch 2/3's own relationships
@@ -11814,9 +11988,13 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // buttons disabling themselves at their own scroll limits.
   const sectionNavUp = document.getElementById('sectionNavUp');
   const sectionNavDown = document.getElementById('sectionNavDown');
+  const sectionJumpTop = document.getElementById('sectionJumpTop');
+  const sectionJumpBottom = document.getElementById('sectionJumpBottom');
   function refreshSectionNavButtons(){
     if (sectionNavUp) sectionNavUp.disabled = currentPageIndex <= 0;
     if (sectionNavDown) sectionNavDown.disabled = currentPageIndex >= pageSections.length - 1;
+    if (sectionJumpTop) sectionJumpTop.disabled = currentPageIndex <= 0;
+    if (sectionJumpBottom) sectionJumpBottom.disabled = currentPageIndex >= pageSections.length - 1;
   }
   refreshSectionNavButtons();
   // see syncPageIndex's own comment -- this is what lets it also refresh
@@ -11834,6 +12012,20 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       if (isJumping || pageAnimationActive) return;
       isJumping = true;
       jumpToIndex(currentPageIndex + 1, function(){ isJumping = false; });
+    });
+  }
+  if (sectionJumpTop){
+    sectionJumpTop.addEventListener('click', function(){
+      if (isJumping || pageAnimationActive) return;
+      isJumping = true;
+      jumpToIndex(0, function(){ isJumping = false; });
+    });
+  }
+  if (sectionJumpBottom){
+    sectionJumpBottom.addEventListener('click', function(){
+      if (isJumping || pageAnimationActive) return;
+      isJumping = true;
+      jumpToIndex(pageSections.length - 1, function(){ isJumping = false; });
     });
   }
 
@@ -11989,7 +12181,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // scrolls this wrapper via native touch (see the exempt list above)
   // but never hands off to a page-swipe on release -- a smaller miss
   // than the poti regression above would be.
-  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .video-script-text, .blog-item-content, .object-info-inner';
+  // .object-info-inner is *also* deliberately not here (moved up into the
+  // exempt-only list above instead) -- even requiring the box to already
+  // be at its own boundary before the drag started (see touchstart) still
+  // handed off more often than felt right for the pedal's own control
+  // readout specifically, which a visitor scrolls through far more
+  // rhythmically (up, down, up again, hunting for one param) than a
+  // block of prose. It's still real native-scroll (see the exempt list
+  // above), it just never counts as a page-swipe attempt at all now, the
+  // same as a poti/switch/button's own drag never does.
+  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .video-script-text, .blog-item-content';
   // the subset of the exempt selector above that's *only* a plain tap
   // target -- no drag gesture of its own at all (unlike .pedal-poti/
   // .particle-slider/etc, which have real touchmove handling elsewhere

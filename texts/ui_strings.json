@@ -63,6 +63,8 @@
   },
   "sectionNav": {
     "prev": { "de": "Zum vorherigen Abschnitt", "en": "Go to the previous section" },
-    "next": { "de": "Zum nächsten Abschnitt", "en": "Go to the next section" }
+    "next": { "de": "Zum nächsten Abschnitt", "en": "Go to the next section" },
+    "jumpTop": { "de": "Zum Seitenanfang springen", "en": "Jump to the top of the page" },
+    "jumpBottom": { "de": "Zum Seitenende springen", "en": "Jump to the bottom of the page" }
   }
 }
