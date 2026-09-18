@@ -4,36 +4,36 @@
     {
       "title": { "de": "Angaben gemäß § 5 TMG", "en": "Information according to § 5 TMG (German Telemedia Act)" },
       "text": {
-        "de": "Datura Pedals GbR\nMusterstraße 12\n04109 Leipzig\nDeutschland",
-        "en": "Datura Pedals GbR\nMusterstraße 12\n04109 Leipzig\nGermany"
+        "de": "Datura Pedals (in gründung)\nDohnanyistrasse 16\n04103 Leipzig\nDeutschland",
+        "en": "Datura Pedals (in formation)\nDohnanyistrasse 16\n04103 Leipzig\nGermany"
       }
     },
     {
       "title": { "de": "Vertreten durch", "en": "Represented by" },
       "text": {
-        "de": "Max Mustermann, Erika Musterfrau",
-        "en": "Max Mustermann, Erika Musterfrau"
+        "de": "Jan Zimbelmann, Henning Bertram",
+        "en": "Jan Zimbelmann, Henning Bertram"
       }
     },
     {
       "title": { "de": "Kontakt", "en": "Contact" },
       "text": {
-        "de": "Telefon: +49 (0) 341 123456\nE-Mail: daturapedals@gmail.com",
-        "en": "Phone: +49 (0) 341 123456\nEmail: daturapedals@gmail.com"
+        "de": "E-Mail: daturapedals@gmail.com",
+        "en": "Email: daturapedals@gmail.com"
       }
     },
     {
       "title": { "de": "Umsatzsteuer-ID", "en": "VAT ID" },
       "text": {
-        "de": "Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE000000000",
-        "en": "VAT identification number according to §27a of the German VAT Act: DE000000000"
+        "de": "Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: nicht vorhanden",
+        "en": "VAT identification number according to §27a of the German VAT Act: not available"
       }
     },
     {
       "title": { "de": "Redaktionell verantwortlich", "en": "Editorially responsible" },
       "text": {
-        "de": "Max Mustermann, Musterstraße 12, 04109 Leipzig",
-        "en": "Max Mustermann, Musterstraße 12, 04109 Leipzig, Germany"
+        "de": "Jan Zimbelmann, Dohnanyistrasse 16, 04103 Leipzig, Deutschland",
+        "en": "Jan Zimbelmann, Dohnanyistrasse 16, 04103 Leipzig, Germany"
       }
     },
     {
@@ -43,9 +43,5 @@
         "en": "The European Commission provides a platform for online dispute resolution (ODR): https://ec.europa.eu/consumers/odr/. Our email address can be found above in this legal notice."
       }
     }
-  ],
-  "note": {
-    "de": "Dies ist ein Platzhaltertext. Bitte durch die tatsächlichen Angaben ersetzen.",
-    "en": "This is placeholder text. Please replace it with the actual details."
-  }
+  ]
 }

@@ -3889,6 +3889,31 @@
       text-align:center;
       padding-top:0.9rem;
     }
+    /* desktop's .control-info-box is flex with no justify-content, so two
+       .control-info-group children (a control touching 2 synths) just
+       pack together at the start -- fine in a wide sidebar, but on this
+       narrow column it read as both synths' info bunched over on the
+       left with the whole right half of the box sitting empty. Grid with
+       two equal 1fr tracks instead splits them evenly, one flush left,
+       one flush right, the same fix .control-info-params below already
+       uses for the param name/value pairs *within* one group. */
+    .card-page-controls .control-info-box{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+    }
+    /* the desktop rule's own right-padding was standing in for a gap
+       between groups that .control-info-box's shared `gap` already
+       provides once it's grid -- without zeroing it here, the two would
+       add together, reading as a bigger gap before the divider than
+       after it instead of one centered evenly in the middle of it (see
+       the very next rule, which still adds its own padding-left back
+       for exactly that centering, same as it does on desktop). */
+    .card-page-controls .control-info-group{
+      padding:0;
+    }
+    .card-page-controls .control-info-group + .control-info-group{
+      padding-left:1.4rem;
+    }
     /* 2 columns instead of the shared single-column list, and no fixed
        page-window height -- every param renders at once now (see
        getParamPageSize), so this just grows to fit them instead of
@@ -5317,13 +5342,22 @@
 <button type="button" class="section-jump-btn section-jump-bottom" id="sectionJumpBottom" data-i18n-aria="sectionNav.jumpBottom" aria-label="Zum Seitenende springen"><span>▼</span><span>▼</span><span>▼</span></button>
 
 <script>
-// ---------- language: 'de' or 'en', persisted in localStorage,
-// defaulting to 'de' (this site's own default before this feature
-// existed). Read once at the very top since a handful of things below
-// (fetch URLs, static text) need to know it before anything else runs.
-// Switching languages reloads the page rather than re-rendering live --
-// see #langToggle's own markup comment for why. ----------
+// ---------- language: 'de' or 'en', persisted in localStorage *and*
+// reflected in the URL's own ?lang= query param, defaulting to 'de'
+// (this site's own default before this feature existed). Read once at
+// the very top since a handful of things below (fetch URLs, static text)
+// need to know it before anything else runs. Switching languages
+// reloads the page rather than re-rendering live -- see #langToggle's
+// own markup comment for why. ----------
 function getLang(){
+  // the URL wins over a stored preference when both are present -- a
+  // link someone was actually sent (or bookmarked) should show up in
+  // that language regardless of whatever this browser last remembered,
+  // the same way any other ?param-driven page behaves.
+  try {
+    const fromUrl = new URLSearchParams(location.search).get('lang');
+    if (fromUrl === 'de' || fromUrl === 'en') return fromUrl;
+  } catch (e) { /* malformed query string -- fall through */ }
   try {
     const stored = localStorage.getItem('daturaLang');
     if (stored === 'de' || stored === 'en') return stored;
@@ -5333,9 +5367,31 @@ function getLang(){
 function setLang(lang){
   if (lang !== 'de' && lang !== 'en') return;
   try { localStorage.setItem('daturaLang', lang); } catch (e) { /* ignored -- see getLang's own try/catch */ }
-  location.reload();
+  // a real navigation (not just location.reload()) so the address bar's
+  // own ?lang= actually changes too, not just the page's content --
+  // that's what makes a copied/shared link land the next visitor in the
+  // same language, not just this browser's own remembered one.
+  const url = new URL(location.href);
+  url.searchParams.set('lang', lang);
+  location.href = url.toString();
 }
 const CURRENT_LANG = getLang();
+// keeps the address bar honest even when nothing was actually clicked --
+// a first-time visitor with no ?lang= yet (defaulting to 'de'), or one
+// arriving via a bare link but with a *different* language already
+// remembered in localStorage (see getLang's own priority above), would
+// otherwise have a URL that silently disagreed with what's actually on
+// screen. replaceState only touches the address bar, not history/reload
+// -- this is a same-page correction, not a real navigation.
+(function(){
+  try {
+    const url = new URL(location.href);
+    if (url.searchParams.get('lang') !== CURRENT_LANG){
+      url.searchParams.set('lang', CURRENT_LANG);
+      history.replaceState(history.state, '', url.toString());
+    }
+  } catch (e) { /* ignored -- worst case the URL just doesn't reflect it yet */ }
+})();
 // picks CURRENT_LANG out of a {de,en} object (or one already-resolved
 // plain string, for content that hasn't been split into both languages
 // yet) -- the one place every bilingual text field is actually read
@@ -7689,11 +7745,25 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // recreate those, which would otherwise interrupt an in-progress drag
   function renderParamRows(paramsEl, params, offset){
     paramsEl.innerHTML = '';
+    // fixed to the *longest name across every page* of this param list,
+    // not just whichever ones happen to be on the page currently showing
+    // -- .control-info-param-value's own margin-left:auto pushes each
+    // value out to its row's real width, and since nothing above this
+    // gives that row a fixed width of its own (.control-info-group sizes
+    // to its own content on desktop), a name-length change between pages
+    // was resizing the row, which resized the group, which resized the
+    // whole box -- reading as the entire column wobbling wider/narrower
+    // on every single Up/Down page press instead of just the numbers
+    // changing in place. ch is exact here (not an estimate) since
+    // .control-info-param-name is set in the monospace font -- one ch
+    // really is one character's width in it.
+    const maxNameLen = params.reduce(function(max, p){ return Math.max(max, p.name.length); }, 0);
     params.slice(offset, offset + getParamPageSize()).forEach(function(param){
       const row = document.createElement('p');
       row.className = 'control-info-param';
       const nameSpan = document.createElement('span');
       nameSpan.className = 'control-info-param-name';
+      nameSpan.style.minWidth = maxNameLen + 'ch';
       nameSpan.textContent = param.name;
       const valSpan = document.createElement('span');
       valSpan.className = 'control-info-param-value';
@@ -7734,6 +7804,16 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // (e.g. every frame while dragging a poti rebuilds this whole thing),
     // keyed by synth name, so paging position survives a live value update
     const pageOffsets = container.__controlInfoPageOffsets || (container.__controlInfoPageOffsets = {});
+    // phone: this box's own grid is built for exactly 2 side-by-side
+    // groups (see .card-page-controls .control-info-box's own CSS) --
+    // a control that happened to touch a 3rd synth would otherwise wrap
+    // it onto its own row below the evenly-split pair, reading as a
+    // leftover rather than a clean 2-up layout. Desktop's sidebar has
+    // real room to just let a 3rd group sit alongside the others, so
+    // this is phone-only.
+    if (groups && groups.length > 2 && window.matchMedia('(max-width:640px)').matches){
+      groups = groups.slice(0, 2);
+    }
     container.innerHTML = '';
     if (!groups){
       const empty = document.createElement('p');
