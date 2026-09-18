@@ -12,6 +12,10 @@
     "en": "A Program is either a Synthesizer (creates its own sound) or an Effect (transforms whatever comes in)."
   },
   {
+    "de": "Dieser kurze Text beschreibt, wie dieses Program konkret klingt oder wirkt.",
+    "en": "This short text describes what this specific Program actually sounds or does."
+  },
+  {
     "de": "Jedes Program hat sein eigenes simuliertes Pedal: echte Regler und Schalter.",
     "en": "Every Program has its own simulated pedal: real knobs and switches."
   },
@@ -38,5 +42,9 @@
   {
     "de": "Diese nummerierten Kreise zeigen jedes Program, an dem diese Künstlerin oder dieser Künstler mitgewirkt hat. Ein Klick springt direkt dorthin.",
     "en": "These numbered circles show every program this artist has worked on. Click one to jump straight to it."
+  },
+  {
+    "de": "Ein Klick auf das Foto zeigt Kontaktmöglichkeiten und Links dieser Künstlerin oder dieses Künstlers.",
+    "en": "Click the photo to see this artist's contact details and links."
   }
 ]

@@ -10524,6 +10524,12 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       { selector: '.spotlight-side-box', open: false, captionLeftOfPrimary: true },
       { selector: '.program-bar', open: true },
       { selector: '.program-type-title', open: true, page: 'info' },
+      // the program's own one-line description ("White/Pink Noise wall
+      // with Feedback and filters and more fx...") -- easy to skip past
+      // on the way to the pedal diagram below it, even though it's the
+      // one place that actually says what this specific Program sounds
+      // like/does.
+      { selector: '.program-desc', open: true, page: 'info' },
       { selector: '.pedal-diagram-panel', open: true, page: 'controls' },
       // this one step now illustrates all four control->destination
       // relationships at once: poti1's own curved pointer (see
@@ -10569,7 +10575,15 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // in either layout -- on desktop the two rects already overlap
       // (the circles sit inside this same row), so the union is just
       // this row again, no visible change there.
-      { selector: '.collab-divider', open: true, page: 'artist', secondarySelector: '.collab-buttons' }
+      { selector: '.collab-divider', open: true, page: 'artist', secondarySelector: '.collab-buttons' },
+      // the artist's own photo -- easy to miss as a real button rather
+      // than just a portrait, since nothing about it visually screams
+      // "clickable" the way the pedal's own controls or the collab
+      // circles above do (see openCredentials, wired to .artist-circle-
+      // wrap's own click listener in mountEdition). Last on purpose --
+      // right before the tour ends, "and one more thing" style, now that
+      // everything else on this card has already been introduced.
+      { selector: '.artist-circle-wrap', open: true, page: 'artist' }
     ];
 
     let stepTexts = null;
