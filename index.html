@@ -9375,11 +9375,31 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         // whenever that's not available (autoplay blocked, no matching
         // .wav, or it's paused/ended already) -- movement without sound
         // beats no movement at all.
+        //
+        // The fallback clock is kept continuously calibrated to the last
+        // audio.currentTime reading (lastSyncedElapsed/lastSyncedWall)
+        // rather than measured from a single fixed playStart. Right near
+        // the very end of a clip, currentTime can stall for its last
+        // couple of render frames and then the element flips to
+        // paused/ended -- at that exact moment this switches from the
+        // audio clock to the wall clock. A wall clock timed from a fixed
+        // playStart drifts apart from currentTime over the course of
+        // even a few seconds of playback, so that switch used to produce
+        // a visible discontinuity: the glide would appear to freeze
+        // while currentTime was stalled, then jump once the far-ahead
+        // fixed-origin wall clock took over and every remaining pending
+        // event resolved at once. Recalibrating on every audio-clock
+        // reading keeps the two clocks glued together, so the handoff is
+        // seamless.
+        let lastSyncedElapsed = 0;
+        let lastSyncedWall = playStart;
         function elapsedMs(){
           if (audioEl && !audioEl.paused && !audioEl.ended && !isNaN(audioEl.currentTime)){
-            return audioEl.currentTime * 1000;
+            lastSyncedElapsed = audioEl.currentTime * 1000;
+            lastSyncedWall = performance.now();
+            return lastSyncedElapsed;
           }
-          return performance.now() - playStart;
+          return lastSyncedElapsed + (performance.now() - lastSyncedWall);
         }
         function cancelGlide(index){
           for (let i = active.length - 1; i >= 0; i--){
