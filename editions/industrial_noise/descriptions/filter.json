@@ -3,7 +3,7 @@
   "artist": "Grodock",
   "type": "fx",
   "text": {
-    "de": "Filtert 4 Frequenzbänder...",
-    "en": "Filters 4 frequency bands..."
+    "de": "Teilt das eingehende Signal in vier Frequenzbänder auf, die sich jeweils einzeln steuern lassen. Jedes Band kann vollständig stummgeschaltet oder umgekehrt so stark angehoben werden, dass es zu verzerren beginnt, wodurch ein einzelner Bereich des Klangspektrums die Oberhand gewinnt oder ganz verschwindet.",
+    "en": "Splits the incoming sound into four frequency bands, each one controlled on its own. Every band can be shut down completely, or pushed the other way and boosted until it starts to distort, letting a single part of the spectrum take over or drop out entirely."
   }
 }
