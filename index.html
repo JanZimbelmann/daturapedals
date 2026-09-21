@@ -3653,6 +3653,24 @@
     .card-page-info .spotlight-desc-block{
       flex:0 0 auto;
     }
+    /* .program-desc-row's desktop flex:1 1 0 (see its own CSS comment)
+       exists to grow into the extra height .spotlight-desc-block gets
+       stretched to by sitting in a *row* next to the taller pedal
+       diagram -- .spotlight-top-row switches to flex-direction:column
+       here (see above), and .spotlight-desc-block itself just went back
+       to flex:0 0 auto right above, so there's no stretched height left
+       to grow into at all. flex-basis:0 with nothing to grow into
+       collapsed it to ~0 height, hiding the text entirely and leaving
+       the slider (sized to match) with almost no track to move along.
+       Same fix as the desktop version originally had before that
+       stretch-matching trick: a plain fixed height. */
+    .program-desc-row{
+      flex:0 0 auto;
+    }
+    .program-desc-clip{
+      flex:none;
+      height:7rem;
+    }
     /* Overview specifically reads better pinned to the top, right under
        the tabs, rather than centered in the leftover space like the
        general .card-page.active rule above does for every page -- Controls
