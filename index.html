@@ -2307,11 +2307,18 @@
      description used to grow .spotlight-top-row itself, so the divider
      and everything below it (.collab-divider, .spotlight-bottom-row)
      shifted down by a different amount depending on which program was
-     selected. Reuses .bio-text-nav/-nav-btn/-slider/-slider-thumb
-     directly for the up/down buttons + drag slider (identical look and
-     behavior, just pointed at this box's own scrollTop instead of the
-     bio's -- see initProgramDescScroll), only the row/clip containers
-     get their own classes since their sizing differs from the bio's.
+     selected. The up/down buttons share .bio-text-nav-btn directly (no
+     JS ever queries by that class alone, so nothing to collide with),
+     but .program-desc-nav/-slider/-slider-thumb are their *own* classes
+     rather than also wearing .bio-text-nav/-slider/-slider-thumb --
+     those get the same look via the shared selectors below instead. A
+     wrap only ever has one real .bio-text-clip, so the bio's own JS
+     (initBioScroll) queries it and its nav/slider/thumb by those bare
+     classes with no ancestor scoping at all; putting the same classes on
+     a second element here made whichever one sits first in the DOM (this
+     one, since .spotlight-top-row comes before .spotlight-bottom-row)
+     win that query instead of the bio's own, which is what caused
+     scrolling one to visibly move the other's slider thumb.
      Unlike the bio's own fixed height:10rem, this one isn't a guessed
      constant -- .spotlight-top-row (align-items:stretch, its own default)
      already stretches .spotlight-desc-block to match whatever height the
@@ -2354,15 +2361,17 @@
   .program-desc-clip::-webkit-scrollbar{
     display:none;
   }
-  .bio-text-nav{
+  .bio-text-nav,
+  .program-desc-nav{
     display:flex;
     flex-direction:column;
     align-items:center;
     gap:0.4rem;
     flex-shrink:0;
   }
-  .bio-text-nav.bio-text-nav-hidden{
-    display:none; /* bio fits without scrolling -- nothing to page through */
+  .bio-text-nav.bio-text-nav-hidden,
+  .program-desc-nav.bio-text-nav-hidden{
+    display:none; /* text fits without scrolling -- nothing to page through */
   }
   .bio-text-nav-btn{
     display:flex;
@@ -2394,7 +2403,8 @@
   /* same look as .control-info-page-slider/-thumb (params paging), kept
      as its own set of classes rather than reused directly since this one
      isn't tied to the Mod 0/Mod 1 rose-color scoping those are */
-  .bio-text-slider{
+  .bio-text-slider,
+  .program-desc-slider{
     position:relative;
     flex:1;
     min-height:1.4rem;
@@ -2403,7 +2413,8 @@
     border-radius:0.15rem;
     cursor:pointer;
   }
-  .bio-text-slider-thumb{
+  .bio-text-slider-thumb,
+  .program-desc-slider-thumb{
     position:absolute;
     left:50%;
     top:0;
@@ -5109,10 +5120,10 @@
           <span class="pedal-type-tooltip"></span>
         </p>
         <div class="program-desc-row">
-          <div class="bio-text-nav program-desc-nav">
+          <div class="program-desc-nav">
             <button type="button" class="bio-text-nav-btn program-desc-nav-up" data-i18n-aria="common.scrollUp" aria-label="Nach oben scrollen">▲</button>
-            <div class="bio-text-slider program-desc-slider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
-              <div class="bio-text-slider-thumb program-desc-slider-thumb"></div>
+            <div class="program-desc-slider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+              <div class="program-desc-slider-thumb"></div>
             </div>
             <button type="button" class="bio-text-nav-btn program-desc-nav-down" data-i18n-aria="common.scrollDown" aria-label="Nach unten scrollen">▼</button>
           </div>
