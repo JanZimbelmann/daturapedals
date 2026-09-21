@@ -2302,6 +2302,58 @@
   .bio-text-clip::-webkit-scrollbar{
     display:none; /* Chrome/Safari equivalent of scrollbar-width:none above */
   }
+  /* program description: same scrollbar-instead-of-growing treatment as
+     the artist bio above (see .bio-text-clip's own comment) -- a longer
+     description used to grow .spotlight-top-row itself, so the divider
+     and everything below it (.collab-divider, .spotlight-bottom-row)
+     shifted down by a different amount depending on which program was
+     selected. Reuses .bio-text-nav/-nav-btn/-slider/-slider-thumb
+     directly for the up/down buttons + drag slider (identical look and
+     behavior, just pointed at this box's own scrollTop instead of the
+     bio's -- see initProgramDescScroll), only the row/clip containers
+     get their own classes since their sizing differs from the bio's.
+     Unlike the bio's own fixed height:10rem, this one isn't a guessed
+     constant -- .spotlight-top-row (align-items:stretch, its own default)
+     already stretches .spotlight-desc-block to match whatever height the
+     pedal diagram next to it naturally needs, which varies by viewport
+     width (the diagram itself just scales with the column). flex:1 1 0
+     here (0 basis, not auto) is what lets that stretched height actually
+     reach all the way down to the clip -- with the usual content-based
+     auto basis, this row's own text would inflate .spotlight-desc-block's
+     *hypothetical* (pre-stretch) height instead of just consuming
+     whatever extra height stretching it later hands back, which would
+     have fed back into the very diagram-height comparison driving that
+     stretch in the first place. min-height:0 on both this and the clip
+     below is the standard flex companion to that -- without it a flex
+     item never shrinks below its own content's natural size, which is
+     exactly the "just grow the box instead of scrolling" behavior this
+     whole thing exists to avoid. */
+  .program-desc-row{
+    display:flex;
+    align-items:stretch;
+    gap:0.5rem;
+    flex:1 1 0;
+    min-height:0;
+    /* .spotlight-center-play sits centered on the *whole card* (left:50%),
+       which lands it right on top of this block's own right edge -- with
+       the nav column over on the left (see the markup comment there),
+       nothing else was holding the text back from that same edge anymore.
+       Same reservation idea as .bio-text-row's own margin-right, just
+       sized to actually clear the button (58px wide, so ~29px past the
+       50% line) rather than the Mod boxes it was written for. */
+    margin-right:2.2rem;
+  }
+  .program-desc-clip{
+    flex:1;
+    min-width:0;
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain; /* see .bio-text-clip's identical comment */
+    scrollbar-width:none;
+  }
+  .program-desc-clip::-webkit-scrollbar{
+    display:none;
+  }
   .bio-text-nav{
     display:flex;
     flex-direction:column;
@@ -2709,12 +2761,14 @@
     text-align:left;
     margin:0;
   }
-  /* the artist bio specifically (not the program description above, which
-     stays left-aligned) -- justified so every full line stretches edge to
-     edge instead of ragging short on the right, now that .bio-panel-bio
-     reserves real room on that edge for the Mod boxes to actually wrap
-     against */
-  .artist-bio{
+  /* justified so every full line stretches edge to edge instead of
+     ragging short on the right -- same reasoning for both: the artist
+     bio has .bio-panel-bio reserving real room on that edge for the Mod
+     boxes to actually wrap against, and the program description now sits
+     in its own fixed-width clipped column (see .program-desc-clip) where
+     a ragged right edge would be just as noticeable. */
+  .artist-bio,
+  .program-desc{
     text-align:justify;
   }
   .spotlight-fallback{
@@ -5054,7 +5108,18 @@
           <span class="program-type-label">Synthesizer Pedal:</span>
           <span class="pedal-type-tooltip"></span>
         </p>
-        <p class="spotlight-desc-text program-desc">Lädt…</p>
+        <div class="program-desc-row">
+          <div class="bio-text-nav program-desc-nav">
+            <button type="button" class="bio-text-nav-btn program-desc-nav-up" data-i18n-aria="common.scrollUp" aria-label="Nach oben scrollen">▲</button>
+            <div class="bio-text-slider program-desc-slider" role="slider" data-i18n-aria="common.scrollPosition" aria-label="Scrollposition" aria-valuemin="0" aria-valuemax="100">
+              <div class="bio-text-slider-thumb program-desc-slider-thumb"></div>
+            </div>
+            <button type="button" class="bio-text-nav-btn program-desc-nav-down" data-i18n-aria="common.scrollDown" aria-label="Nach unten scrollen">▼</button>
+          </div>
+          <div class="program-desc-clip">
+            <p class="spotlight-desc-text program-desc">Lädt…</p>
+          </div>
+        </div>
       </div>
       <div class="spotlight-diagram-block">
         <div class="pedal-diagram-panel">
@@ -9575,6 +9640,55 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         startBioSliderDrag(evt.touches[0]);
       }, { passive:false });
     }
+    // program description: same fixed-height/scrollbar box as the bio
+    // above (see .program-desc-clip's own CSS comment) -- a self-
+    // contained copy of the exact same up/down+slider wiring rather than
+    // a shared helper, matching how the bio block itself is written.
+    const programDescClip = wrap.querySelector('.program-desc-clip');
+    const programDescNav = wrap.querySelector('.program-desc-nav');
+    const programDescUpBtn = wrap.querySelector('.program-desc-nav-up');
+    const programDescDownBtn = wrap.querySelector('.program-desc-nav-down');
+    const programDescSlider = wrap.querySelector('.program-desc-slider');
+    const programDescSliderThumb = wrap.querySelector('.program-desc-slider-thumb');
+    let refreshProgramDescScroll = function(){};
+    if (programDescClip && programDescNav && programDescUpBtn && programDescDownBtn && programDescSlider && programDescSliderThumb){
+      const PROGRAM_DESC_SCROLL_STEP = 40;
+      function programDescScrollMax(){
+        return Math.max(0, programDescClip.scrollHeight - programDescClip.clientHeight);
+      }
+      function refreshProgramDescThumb(){
+        const max = programDescScrollMax();
+        const frac = max > 0 ? Math.max(0, Math.min(1, programDescClip.scrollTop / max)) : 0;
+        programDescSliderThumb.style.top = 'calc(0.3rem + ' + frac.toFixed(4) + ' * (100% - 0.6rem))';
+        programDescUpBtn.disabled = programDescClip.scrollTop <= 0;
+        programDescDownBtn.disabled = programDescClip.scrollTop >= max;
+        programDescSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
+      }
+      refreshProgramDescScroll = function(){
+        programDescClip.scrollTop = 0;
+        programDescNav.classList.toggle('bio-text-nav-hidden', programDescScrollMax() <= 0);
+        refreshProgramDescThumb();
+      };
+      programDescClip.addEventListener('scroll', refreshProgramDescThumb);
+      function suppressProgramDescFocusScroll(evt){ evt.preventDefault(); }
+      programDescUpBtn.addEventListener('mousedown', suppressProgramDescFocusScroll);
+      programDescDownBtn.addEventListener('mousedown', suppressProgramDescFocusScroll);
+      programDescUpBtn.addEventListener('click', function(){ programDescClip.scrollTop -= PROGRAM_DESC_SCROLL_STEP; });
+      programDescDownBtn.addEventListener('click', function(){ programDescClip.scrollTop += PROGRAM_DESC_SCROLL_STEP; });
+      function applyProgramDescFrac(frac){
+        programDescClip.scrollTop = frac * programDescScrollMax();
+      }
+      function startProgramDescSliderDrag(evt){
+        applyProgramDescFrac(sliderFracFromEvent(programDescSlider, evt));
+        sliderDrag = { track: programDescSlider, applyFrac: applyProgramDescFrac };
+      }
+      programDescSlider.addEventListener('mousedown', function(evt){ evt.preventDefault(); startProgramDescSliderDrag(evt); });
+      programDescSlider.addEventListener('touchstart', function(evt){
+        if (!evt.touches[0]) return;
+        evt.preventDefault();
+        startProgramDescSliderDrag(evt.touches[0]);
+      }, { passive:false });
+    }
     const programDesc = wrap.querySelector('.program-desc');
     const programTypeTitle = wrap.querySelector('.program-type-title');
     const programTypeLabel = wrap.querySelector('.program-type-label');
@@ -9956,6 +10070,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // the editions bootstrap fetch), so entry.text here is already a
       // plain resolved string, not a {de,en} pair
       programDesc.textContent = entry.text || t({ de: 'Beschreibung nicht gefunden', en: 'Description not found' });
+      refreshProgramDescScroll(); // fixed-height box now, see .program-desc-clip -- a longer text scrolls inside it instead of growing the card
 
       // per-control info: stores/<programSlug>/0.json + 1.json, if that
       // folder exists at all -- most programs don't have one yet, so a
@@ -12188,6 +12303,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // native overflow-y:auto scrolling in there, so this just has to get
     // out of its way rather than hijacking the wheel into a page-jump
     if (e.target.closest && e.target.closest('.bio-text-clip')) return;
+    // same for the program description box (see .program-desc-clip)
+    if (e.target.closest && e.target.closest('.program-desc-clip')) return;
     // and the "Warum das Ganze?" text box (see .why-text), same reasoning
     if (e.target.closest && e.target.closest('.why-text')) return;
     // and the video/script panel's own script text (see .video-script-text)
@@ -12269,7 +12386,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // rest of the page does.
   const TOUCH_SWIPE_EXEMPT_SELECTOR =
     '.control-info-params, .control-info-page-nav, .blog-item-content, ' +
-    '.why-text, .bio-text-clip, .video-script-text, .object-info-inner, .control-info-scroll-nav, ' +
+    '.why-text, .bio-text-clip, .program-desc-clip, .video-script-text, .object-info-inner, .control-info-scroll-nav, ' +
     '.card-page-controls-scroll, ' +
     '.pedal-poti, .pedal-switch, .pedal-button, .particle-slider, .program-bar, ' +
     '.logo-box, #pedalsLabel, #sloganMain, #summeText, .why-mobile-tab, .card-page-btn';
@@ -12304,7 +12421,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // block of prose. It's still real native-scroll (see the exempt list
   // above), it just never counts as a page-swipe attempt at all now, the
   // same as a poti/switch/button's own drag never does.
-  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .video-script-text, .blog-item-content';
+  const TOUCH_SCROLL_BOUNDARY_SELECTOR = '.why-text, .bio-text-clip, .program-desc-clip, .video-script-text, .blog-item-content';
   // the subset of the exempt selector above that's *only* a plain tap
   // target -- no drag gesture of its own at all (unlike .pedal-poti/
   // .particle-slider/etc, which have real touchmove handling elsewhere
