@@ -8853,6 +8853,17 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           refreshBioNavState();
         }, 500);
       }
+      // same reasoning as the Artist branch above, just for the
+      // description clip instead of the bio -- see
+      // updateProgramDescHeightForPhone's own comment.
+      if (pageName === 'info'){
+        updateProgramDescHeightForPhone();
+        refreshProgramDescNavState();
+        setTimeout(function(){
+          updateProgramDescHeightForPhone();
+          refreshProgramDescNavState();
+        }, 500);
+      }
       // same reasoning -- .controls-vine-anchor (what the vine/button now
       // hang off on phone, see positionVineReveal) also measures a zero
       // rect until this tab is actually the visible one
@@ -9691,8 +9702,29 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     const programDescSlider = wrap.querySelector('.program-desc-slider');
     const programDescSliderThumb = wrap.querySelector('.program-desc-slider-thumb');
     let refreshProgramDescScroll = function(){};
+    // phone: Overview is its own full-screen tab too (see card-page-info),
+    // top-aligned rather than centered (see .card-page-info.active's own
+    // comment) -- with usually nothing else on that page but the title,
+    // a static height left most of the page empty below it. Same "measure
+    // what's really left, cap to that" approach as updateBioTextHeightForPhone,
+    // just measured from this clip instead of the bio's.
+    let updateProgramDescHeightForPhone = function(){};
+    let refreshProgramDescNavState = function(){};
     if (programDescClip && programDescNav && programDescUpBtn && programDescDownBtn && programDescSlider && programDescSliderThumb){
       const PROGRAM_DESC_SCROLL_STEP = 40;
+      updateProgramDescHeightForPhone = function(){
+        if (!window.matchMedia('(max-width:640px)').matches) return;
+        const sectionEl = programDescClip.closest('.spotlight');
+        if (!sectionEl) return;
+        // collapse first -- same reasoning as updateBioTextHeightForPhone's
+        // own comment: measuring against this clip's still-unbounded prior
+        // height would be self-referential once .card-page-info.active's
+        // own centering/stretch math feeds back into it.
+        programDescClip.style.height = '0px';
+        const rowTop = programDescClip.getBoundingClientRect().top - sectionEl.getBoundingClientRect().top;
+        const padBottom = parseFloat(getComputedStyle(sectionEl).paddingBottom) || 0;
+        programDescClip.style.height = Math.max(80, window.innerHeight - rowTop - padBottom) + 'px';
+      };
       function programDescScrollMax(){
         return Math.max(0, programDescClip.scrollHeight - programDescClip.clientHeight);
       }
@@ -9704,10 +9736,14 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         programDescDownBtn.disabled = programDescClip.scrollTop >= max;
         programDescSlider.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
       }
-      refreshProgramDescScroll = function(){
-        programDescClip.scrollTop = 0;
+      refreshProgramDescNavState = function(){
         programDescNav.classList.toggle('bio-text-nav-hidden', programDescScrollMax() <= 0);
         refreshProgramDescThumb();
+      };
+      refreshProgramDescScroll = function(){
+        updateProgramDescHeightForPhone();
+        programDescClip.scrollTop = 0;
+        refreshProgramDescNavState();
       };
       programDescClip.addEventListener('scroll', refreshProgramDescThumb);
       function suppressProgramDescFocusScroll(evt){ evt.preventDefault(); }
