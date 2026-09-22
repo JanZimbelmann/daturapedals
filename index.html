@@ -3663,12 +3663,23 @@
        collapsed it to ~0 height, hiding the text entirely and leaving
        the slider (sized to match) with almost no track to move along.
        Same fix as the desktop version originally had before that
-       stretch-matching trick: a plain fixed height. */
+       stretch-matching trick: a plain fixed height on the clip. This
+       row's own flex:0 0 auto just sizes it back to that fixed height
+       (its only remaining height source) instead of the ~0 it collapsed
+       to above. */
     .program-desc-row{
       flex:0 0 auto;
     }
+    /* height only -- .program-desc-clip's base rule already carries its
+       own flex:1 (grow to fill the *width* left over next to the nav
+       column, a completely separate row/horizontal concern from the
+       column/vertical height fix above). Overriding that to flex:none
+       here also zeroed its flex-shrink, which let the box size itself to
+       its own single-line max-content width instead of the row's actual
+       available width -- with nothing left to force a wrap, the text
+       just ran off to the right in one line instead of filling the box
+       and scrolling vertically. */
     .program-desc-clip{
-      flex:none;
       height:7rem;
     }
     /* Overview specifically reads better pinned to the top, right under
