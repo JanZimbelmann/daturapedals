@@ -66,5 +66,8 @@
     "next": { "de": "Zum nächsten Abschnitt", "en": "Go to the next section" },
     "jumpTop": { "de": "Zum Seitenanfang springen", "en": "Jump to the top of the page" },
     "jumpBottom": { "de": "Zum Seitenende springen", "en": "Jump to the bottom of the page" }
+  },
+  "wipBanner": {
+    "text": { "de": "Diese Website ist noch im Aufbau. Am 1. November ziehen wir zu daturapedals.com um.", "en": "This website is still under construction. On November 1st we are moving to daturapedals.com." }
   }
 }

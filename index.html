@@ -35,6 +35,54 @@
     overflow-y:auto;
   }
 
+  /* plain static bar, not position:fixed -- .stage right below is built
+     to exactly fill the viewport (100dvh) and a lot of the hero's own
+     animation math (door/scatter/blowup effects further down) measures
+     real screen geometry against that assumption. Sitting in normal flow
+     just pushes .stage down by this bar's own height instead of
+     overlaying it, so none of that math needs to know this exists. */
+  .wip-banner{
+    position:relative;
+    width:100%;
+    background:var(--grey-1);
+    color:var(--white);
+    /* animated open via grid-template-rows 0fr -> 1fr (not height, which
+       needs a hardcoded target px value -- this animates to the row's
+       real content height, whatever that ends up being at any viewport
+       width/font state) -- .wip-banner-inner is this row's one grid item,
+       with overflow:hidden so its text is genuinely clipped away while
+       still collapsed rather than just sitting there unclipped. Setting
+       language reloads the whole page (see setLang), so this plays fresh
+       every time -- turning what used to be an abrupt "text just already
+       there" flash on reload into a deliberate opening motion instead. */
+    display:grid;
+    grid-template-rows:0fr;
+    animation:wipBannerGrow 0.6s ease-out both;
+  }
+  @keyframes wipBannerGrow{
+    to{ grid-template-rows:1fr; }
+  }
+  .wip-banner-inner{
+    overflow:hidden;
+    min-height:0; /* grid items default to min-height:auto (content size), which would refuse to collapse below that even with grid-template-rows:0fr */
+    padding:0.6rem 1rem;
+    text-align:center;
+    font-size:0.72rem;
+    line-height:1.5;
+    letter-spacing:0.01em;
+    border-bottom:1px solid var(--grey-2);
+    /* fades/settles in a little after the row starts growing, rather
+       than being fully visible (then abruptly clipped) from frame one --
+       reads as the text arriving *into* the opening bar instead of just
+       being revealed by it. */
+    opacity:0;
+    transform:translateY(-6px);
+    animation:wipBannerTextIn 0.45s ease-out 0.25s both;
+  }
+  @keyframes wipBannerTextIn{
+    to{ opacity:1; transform:translateY(0); }
+  }
+
   .stage{
     position:relative;
     width:100vw; height:100vh;
@@ -4859,6 +4907,10 @@
 </head>
 <body>
 
+<div class="wip-banner" id="wipBanner">
+  <div class="wip-banner-inner" data-i18n="wipBanner.text">Diese Website ist noch im Aufbau. Am 1. November ziehen wir zu daturapedals.com um.</div>
+</div>
+
 <svg width="0" height="0" style="position:absolute">
   <filter id="distort" x="-20%" y="-20%" width="140%" height="140%">
     <feTurbulence type="fractalNoise" baseFrequency="0.012 0.09" numOctaves="2" seed="7" result="noise"/>
@@ -5694,6 +5746,16 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 // being the main real-world case: every section tracks that live via
 // 100dvh, so a section's true position can genuinely change mid-scroll).
 function computeSnapY(target, block){
+  // #stage (section 0) is conceptually the top of the *page*, not just
+  // of itself -- .wip-banner sits in normal flow right above it (see its
+  // own CSS comment), so #stage's own rect no longer starts at document
+  // y=0. Measuring it directly would snap just *below* the banner every
+  // time something lands on "section 0" (initial load, the nav-button/
+  // jump-to-top jump, wheel/touch settling on the nearest section, the
+  // visualViewport re-snap on mobile chrome collapsing) -- hiding it
+  // until the person scrolled back up manually. Hard-coding 0 here for
+  // that one target keeps every one of those paths landing at the real top.
+  if (target === stage) return 0;
   const rect = target.getBoundingClientRect();
   const absoluteTop = rect.top + window.scrollY;
   if (block === 'center') return absoluteTop - (window.innerHeight - rect.height) / 2;
