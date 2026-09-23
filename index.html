@@ -12285,16 +12285,37 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     if (e.key === 'Escape') closeAllModals();
   });
 
-  // newsletter form: no backend wired up here, so this just confirms
-  // locally -- connect it to your actual list provider (e.g. Buttondown)
-  // to really collect addresses
+  // newsletter form: posts straight to a Google Form's own response
+  // endpoint instead of a real backend -- no server of ours to run or
+  // pay for, and every submission just lands as a new row in the Sheet
+  // linked to that form. NEWSLETTER_EMAIL_ENTRY is that form's email
+  // field id, both taken from a "pre-filled link" grabbed once from the
+  // form itself (Google Forms: the live form's own ⋮ menu -> "Formular
+  // vorausfüllen"/"Get pre-filled link").
+  // mode:'no-cors' is required -- Google Forms doesn't send CORS headers
+  // allowing this origin to read the response -- which also means the
+  // response is opaque, so there's no real way to detect a rejected
+  // submission from here; this optimistically shows the thank-you note
+  // once the request itself went out, and only shows an error if the
+  // network request itself failed outright (e.g. offline).
+  const NEWSLETTER_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeuC68Pp51sN96usSzhWExfLzzUx6cTPBq2QsoisnQH4wCbsQ/formResponse';
+  const NEWSLETTER_EMAIL_ENTRY = 'entry.1005554938';
   const newsletterForm = document.getElementById('newsletterForm');
   const newsletterNote = document.getElementById('newsletterNote');
+  const newsletterEmailInput = document.getElementById('newsletterEmail');
   if (newsletterForm){
     newsletterForm.addEventListener('submit', function(e){
       e.preventDefault();
-      if (newsletterNote) newsletterNote.textContent = t({ de: 'Danke! Wir halten dich auf dem Laufenden.', en: "Thanks! We'll keep you posted." });
-      newsletterForm.reset();
+      const body = new URLSearchParams();
+      body.set(NEWSLETTER_EMAIL_ENTRY, newsletterEmailInput ? newsletterEmailInput.value : '');
+      fetch(NEWSLETTER_FORM_ACTION, { method: 'POST', mode: 'no-cors', body: body })
+        .then(function(){
+          if (newsletterNote) newsletterNote.textContent = t({ de: 'Danke! Wir halten dich auf dem Laufenden.', en: "Thanks! We'll keep you posted." });
+          newsletterForm.reset();
+        })
+        .catch(function(){
+          if (newsletterNote) newsletterNote.textContent = t({ de: 'Etwas ist schiefgelaufen. Bitte versuch es später erneut.', en: 'Something went wrong. Please try again later.' });
+        });
     });
   }
 })();
