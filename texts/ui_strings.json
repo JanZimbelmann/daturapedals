@@ -14,7 +14,8 @@
   },
   "editionsHelp": {
     "ariaLabel": { "de": "Erklären, wie Editionen und Pedale funktionieren", "en": "Explain how Editions and pedals work" },
-    "title": { "de": "Für eine Anleitung klicken", "en": "Click for a guide to what this is" }
+    "title": { "de": "Für eine Anleitung klicken", "en": "Click for a guide to what this is" },
+    "hint": { "de": "Klick hier für eine Anleitung", "en": "Click here for a guide" }
   },
   "tour": {
     "back": { "de": "Zurück", "en": "Back" },

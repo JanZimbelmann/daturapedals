@@ -649,6 +649,23 @@
   .summe-text:hover{
     color:var(--white);
   }
+  /* one-time "these are clickable" nudge across the hero's own clickable
+     text (see the IIFE right after "Mehr als die Summe"'s own click
+     handler for the JS driving this). Deliberately text-shadow only, not
+     a transform/scale pulse or a real `animation` -- every one of these
+     elements already owns its own entrance-reveal `animation:fade-in`
+     (see .settled .pedals-label etc above) tied to a *more* specific
+     selector than a plain shared class here could ever out-specificity;
+     even a temporary override would revert once removed, which
+     re-triggers that fade-in from scratch (a visible flicker) rather
+     than just leaving it alone. text-shadow is untouched by any of that,
+     so this can just add its own transition for it safely. */
+  .hero-hint-glow{
+    transition:text-shadow 0.5s ease;
+  }
+  .hero-hint-glow.hero-hint-glow-active{
+    text-shadow:0 0 16px rgba(255,255,255,0.65);
+  }
   /* DE/EN language pad -- a pill with a sliding filled thumb over
      whichever side is current (see #langToggle's own JS). Same visual
      language as the rest of the hero (thin white border, transparent
@@ -1858,6 +1875,20 @@
     opacity:0;
     pointer-events:none;
     transition:transform 0.25s ease, background 0.25s ease, opacity 0.4s ease;
+    /* no custom focus style existed here at all, so clicking/tapping it
+       (which focuses it, and it *stays* focused for as long as it keeps
+       playing -- nothing else steals focus meanwhile) left the browser's
+       own default focus ring showing the whole time: a plain white/light
+       halo round the button, on top of (and unrelated to) the edition-
+       colored pulse/fade animation -- exactly the "outline turns white
+       while playing" effect. Suppressing that raw default and drawing an
+       edition-colored one instead (see :focus-visible below) keeps
+       keyboard-focus visibility without that clash. */
+    outline:none;
+  }
+  .spotlight-center-play:focus-visible{
+    outline:2px solid var(--edition-fg, var(--white));
+    outline-offset:3px;
   }
   .spotlight-center-play.revealed{
     opacity:1;
@@ -4404,69 +4435,76 @@
   .tour-arrow-head{
     fill:var(--white);
   }
-  /* "look here" nudge on the (?) button: pulses once with two expanding
-     rings around it, no dim, nothing else on the page touched (see
-     onArriveAtEditionsGlobal/playAttentionIntro). Two strengths, both
-     sharing this same before/after-ring structure:
-     - .attention-ripple-strong: every single time a visitor actually
-       arrives at the editions section (not just once per page load
-       anymore).
-     - .attention-ripple: the original, gentler strength, replayed every
-       few seconds afterward for as long as no edition is expanded (see
-       the repeating check in the JS) -- an ongoing idle nudge, not an
-       arrival announcement, so it stays subtler.
-     The trigger site skips both entirely whenever the real tour or its
-     hover-preview already has the visitor's attention.
+  /* "look here" nudge on the (?) button -- fires once per visit to the
+     editions section, after 5s of nobody having pressed anything in it
+     (see armEditionsAttentionTimer/playAttentionIntro), never while the
+     real tour or its hover-preview already has the visitor's attention.
+     A single combined sequence: a quick wiggle, then a scale pulse plus
+     two expanding rings, with .editions-help-hint's own text bubble
+     fading in alongside the pulse to spell out what the button does
+     rather than leaving that to shape/motion alone.
      ::before/::after are the two rings, anchored via inset:0 against the
      button's own already-`position:absolute` box -- no extra positioning
-     context needed for them. */
-  .editions-help-btn.attention-ripple{
-    animation:attentionPulse 0.6s ease-in-out;
+     context needed for them. Timings: wiggle 0-0.5s, then pulse
+     0.5-1.7s, first ring 0.5-1.8s, second ring 1-2.3s -- the JS removes
+     the class at 2.4s, just past all of them. */
+  .editions-help-btn.attention-nudge{
+    animation:attentionWiggle 0.5s ease-in-out, attentionPulse 1.2s ease-in-out 0.5s;
   }
-  .editions-help-btn.attention-ripple::before,
-  .editions-help-btn.attention-ripple::after{
+  .editions-help-btn.attention-nudge::before,
+  .editions-help-btn.attention-nudge::after{
     content:'';
     position:absolute;
     inset:0;
     border-radius:50%;
     border:1px solid var(--white);
-    animation:attentionRipple 1.3s ease-out;
+    animation:attentionRipple 1.3s ease-out 0.5s;
     pointer-events:none;
   }
-  .editions-help-btn.attention-ripple::after{
-    animation-delay:0.5s;
+  .editions-help-btn.attention-nudge::after{
+    animation-delay:1s;
   }
-  .editions-help-btn.attention-ripple-strong{
-    animation:attentionPulseStrong 0.7s ease-in-out;
-  }
-  .editions-help-btn.attention-ripple-strong::before,
-  .editions-help-btn.attention-ripple-strong::after{
-    content:'';
-    position:absolute;
-    inset:0;
-    border-radius:50%;
-    border:1.5px solid var(--white);
-    animation:attentionRippleStrong 1.5s ease-out;
-    pointer-events:none;
-  }
-  .editions-help-btn.attention-ripple-strong::after{
-    animation-delay:0.55s;
+  @keyframes attentionWiggle{
+    0%, 100%{ transform:rotate(0deg); }
+    20%{ transform:rotate(-12deg); }
+    40%{ transform:rotate(10deg); }
+    60%{ transform:rotate(-8deg); }
+    80%{ transform:rotate(5deg); }
   }
   @keyframes attentionPulse{
     0%, 100%{ transform:scale(1); }
-    50%{ transform:scale(1.18); }
+    50%{ transform:scale(1.2); }
   }
   @keyframes attentionRipple{
     0%{ transform:scale(1); opacity:0.9; }
-    100%{ transform:scale(1.9); opacity:0; }
+    100%{ transform:scale(2); opacity:0; }
   }
-  @keyframes attentionPulseStrong{
-    0%, 100%{ transform:scale(1); }
-    50%{ transform:scale(1.32); }
+  /* the text bubble itself -- plain absolute box below the button (left
+     of it would risk running off narrow phone screens; below always has
+     room), invisible/inert until .visible is toggled on it alongside the
+     button's own .attention-nudge (see playAttentionIntro). */
+  .editions-help-hint{
+    position:absolute;
+    top:calc(0.625rem + 2rem + 0.6rem);
+    right:1.5rem;
+    z-index:41;
+    max-width:11rem;
+    padding:0.45rem 0.65rem;
+    background:var(--grey-1);
+    border:1px solid var(--grey-2);
+    border-radius:6px;
+    color:var(--white);
+    font-size:0.7rem;
+    line-height:1.4;
+    text-align:right;
+    pointer-events:none;
+    opacity:0;
+    transform:translateY(-4px);
+    transition:opacity 0.3s ease, transform 0.3s ease;
   }
-  @keyframes attentionRippleStrong{
-    0%{ transform:scale(1); opacity:1; }
-    100%{ transform:scale(2.4); opacity:0; }
+  .editions-help-hint.visible{
+    opacity:1;
+    transform:translateY(0);
   }
   .tour-caption{
     position:fixed;
@@ -4904,6 +4942,13 @@
       height:1.75rem;
       font-size:0.85rem;
     }
+    /* re-anchored under this smaller, repositioned button -- see its own
+       rule just above */
+    .editions-help-hint{
+      top:calc(0.5rem + 1.75rem + 0.5rem);
+      right:1rem;
+      max-width:9rem;
+    }
     /* a little clear of the true screen edge -- right at bottom:0 sat
        close enough to a real phone's own gesture bar/home indicator to
        feel cramped against it */
@@ -5056,6 +5101,12 @@
        (editionsTourOverlay below), which points at real, live pieces of
        the first edition's card rather than just describing them in prose -->
   <button type="button" class="editions-help-btn" id="editionsHelpBtn" data-i18n-aria="editionsHelp.ariaLabel" data-i18n-title="editionsHelp.title" aria-label="Erklären, wie Editionen und Pedale funktionieren" title="Click for a guide to what this is">?</button>
+  <!-- part of the (?) button's own attention nudge (see playAttentionIntro)
+       -- a short text bubble that fades in alongside the wiggle/ripple,
+       spelling out what the button actually does instead of leaving that
+       to the shape/motion alone. aria-hidden since editionsHelpBtn's own
+       aria-label already says the same thing to a screen reader. -->
+  <div class="editions-help-hint" id="editionsHelpHint" data-i18n="editionsHelp.hint" aria-hidden="true">Klick für eine Anleitung</div>
 </section>
 
 <!-- guided tour: walks through what an Edition/Program/pedal simulation
@@ -5731,14 +5782,18 @@ let refreshSectionNavButtonsGlobal = function(){};
 // the visualViewport resize handler further down for why this needs to
 // be callable from outside that IIFE's own scope
 let resyncEditionHeightsGlobal = function(){};
-// reassigned once the editions guided-tour IIFE mounts -- fired the first
-// time (per page load) `el` below is #spotlightSection itself, regardless
-// of how the visitor got there (scroll, swipe, deep link, a CTA jump) --
-// see playAttentionIntro's own comment for what it actually does
+// reassigned once the editions guided-tour IIFE mounts -- fired every
+// time #spotlightSection becomes the current section, regardless of how
+// the visitor got there (scroll, swipe, deep link, a CTA jump) -- see
+// armEditionsAttentionTimer's own comment for what it actually does.
+// onLeaveEditionsGlobal is the mirror: fired the moment the visitor
+// *leaves* #spotlightSection for anywhere else.
 let onArriveAtEditionsGlobal = function(){};
+let onLeaveEditionsGlobal = function(){};
 function syncPageIndex(el){
   const idx = pageSections.indexOf(el);
   if (idx !== -1){
+    const wasAtEditions = pageSections[currentPageIndex] === spotlightSection;
     currentPageIndex = idx;
     updateLocationHash(idx);
     // every hero CTA (openSlogan/openPedals/openSubslogan/openSumme) jumps
@@ -5749,6 +5804,7 @@ function syncPageIndex(el){
     // stuck disabled (invisible) from whatever it was at page load.
     refreshSectionNavButtonsGlobal();
     if (el === spotlightSection) onArriveAtEditionsGlobal();
+    else if (wasAtEditions) onLeaveEditionsGlobal();
   }
 }
 
@@ -6052,28 +6108,66 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
   scheduleIdleFlash();
 })();
 
-/* ---------- other hero texts: occasional random shake, phone only ----------
-   mirrors the wordmark's own periodic idle glitch above, just far less
-   frequent and lighter -- these are secondary text, not the main title,
-   so a rare moment of life is enough without competing for attention
-   anywhere near as often. Desktop already gets a hover-triggered shake
-   on each of these individually (see .slogan-main:hover etc.); this is
-   phone's own equivalent, since hover doesn't fire there at all. */
+/* ---------- other hero texts: periodic idle distortion, every viewport
+   width, each on its own independent schedule ----------
+   mirrors the wordmark's own periodic idle glitch above (scheduleIdleFlash),
+   just lighter -- these are secondary text, not the main title, so a
+   subtler burst is enough. Used to be phone-only, on one shared timer
+   that fired every 30-60s and moved all of them at once; that read as
+   a single synchronized "blink" rather than the hero feeling alive, and
+   desktop got nothing at all while idle (only a hover-triggered shake,
+   see .slogan-main:hover etc., which obviously never fires without a
+   cursor there). Each element now schedules *itself*, independently, so
+   they drift in and out of sync with each other instead of blinking
+   together -- reads as different parts of the hero randomly coming
+   alive one at a time. randomGlitchBurst handles the jitter (position/
+   rotation); the brief url(#distort-soft) filter alongside it is what
+   actually reads as "distorting" rather than just "shaking". */
 (function(){
   if (reduceMotion) return;
-  if (!window.matchMedia('(max-width:640px)').matches) return;
-  const shakeTargets = ['.pedals-label', '.slogan-main', '.slogan-sub', '.summe-text']
+  // #sloganSub (the whole "vom Anfänger bis zum Avantgardisten" phrase),
+  // not its two separate #subPartAnfang/#subPartAvant halves -- they're
+  // two different clickable targets but one single phrase, and moving
+  // each independently (their own separate schedules) read as two
+  // unrelated things twitching near each other rather than one phrase
+  // coming alive. Same reasoning the phrase's own hover shake already
+  // uses (see its "whole-phrase hover shake" comment) -- applying the
+  // burst to the shared container moves both spans together as one unit.
+  const shakeTargets = ['#pedalsLabel', '#sloganMain', '#sloganSub', '#summeText']
     .map(function(sel){ return document.querySelector(sel); })
     .filter(Boolean);
-  if (!shakeTargets.length) return;
-  function scheduleOtherTextsShake(){
-    const delay = 30000 + Math.random() * 30000; // every 30-60s
+  function scheduleShake(el){
+    const delay = 3000 + Math.random() * 6000; // ~3-9s, independent per element -- the initial call also lands in this range, so they're never all in phase even on first load
     setTimeout(function(){
-      shakeTargets.forEach(function(el){ randomGlitchBurst(el, 300, 4); });
-      scheduleOtherTextsShake();
+      randomGlitchBurst(el, 300, 4);
+      el.style.filter = 'url(#distort-soft)';
+      setTimeout(function(){ el.style.filter = ''; }, 300);
+      scheduleShake(el);
     }, delay);
   }
-  scheduleOtherTextsShake();
+  shakeTargets.forEach(scheduleShake);
+})();
+
+/* ---------- hero: a quick distortion "snap" the instant any of these is
+   pressed ----------
+   fires on pointerdown, before whatever that element's own click handler
+   goes on to do (door open, letter scatter, the cradle, the dissolve...)
+   -- makes the moment of pressing itself feel like it physically reacted,
+   instead of the only visible response starting a beat later once that
+   handler's own animation actually gets going. Purely a transient filter
+   flash that clears itself well before any of those take over, so it
+   can't fight or leak into whatever they go on to set. */
+(function(){
+  if (reduceMotion) return;
+  const snapTargets = ['.logo-box', '#pedalsLabel', '#sloganMain', '#sloganSub', '#summeText']
+    .map(function(sel){ return document.querySelector(sel); })
+    .filter(Boolean);
+  snapTargets.forEach(function(el){
+    el.addEventListener('pointerdown', function(){
+      el.style.filter = 'url(#distort-heavy)';
+      setTimeout(function(){ el.style.filter = ''; }, 90);
+    });
+  });
 })();
 
 /* ---------- pedals section: rotates through real photos in ./images/ ---------- */
@@ -7080,6 +7174,56 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     }
   });
 }
+
+/* ---------- hero: one-time "these are clickable" nudge -----------
+   a soft text-shadow glow across every clickable hero element (DATURA,
+   PEDALS, the main slogan, both sub-slogan halves, and "Mehr als die
+   Summe..."), staggered slightly and played once automatically a couple
+   seconds after load -- gone for good, on this browser, the instant the
+   visitor presses any of them for real (localStorage-gated). Unlike the
+   editions section's own nudge (see initEditionsTour further down),
+   which re-arms every single visit, this one is meant to only ever
+   teach a first-time visitor once, not repeat on every return. ---------- */
+(function(){
+  const HERO_HINT_KEY = 'daturaHeroHintSeen';
+  const HERO_HINT_DELAY = 2000; // gives the door/logo's own load-in a moment to settle first
+  const HERO_HINT_STAGGER = 120;
+  const HERO_HINT_GLOW_MS = 700;
+  const els = [
+    document.querySelector('.logo-box'),
+    document.getElementById('pedalsLabel'),
+    document.getElementById('sloganMain'),
+    document.getElementById('sloganSub'), // whole phrase, not its two separate halves -- see the idle-distortion IIFE's identical reasoning
+    document.getElementById('summeText')
+  ].filter(Boolean);
+  if (!wordmarkWrap || !els.length) return;
+  let seen = false;
+  try { seen = localStorage.getItem(HERO_HINT_KEY) === '1'; } catch (e) { /* private browsing / storage blocked -- just play it every load instead */ }
+  function markSeen(){
+    if (seen) return;
+    seen = true;
+    try { localStorage.setItem(HERO_HINT_KEY, '1'); } catch (e) { /* ignored, see above */ }
+    els.forEach(function(el){ el.classList.remove('hero-hint-glow', 'hero-hint-glow-active'); });
+  }
+  // any real press on any of them at all cancels an in-flight glow
+  // immediately and makes sure it never plays again on this browser
+  wordmarkWrap.addEventListener('click', function(evt){
+    if (evt.isTrusted) markSeen();
+  });
+  if (seen) return;
+  setTimeout(function(){
+    if (seen) return; // pressed something during the delay itself
+    els.forEach(function(el, i){
+      el.classList.add('hero-hint-glow');
+      setTimeout(function(){ if (!seen) el.classList.add('hero-hint-glow-active'); }, i * HERO_HINT_STAGGER);
+      setTimeout(function(){ el.classList.remove('hero-hint-glow-active'); }, i * HERO_HINT_STAGGER + HERO_HINT_GLOW_MS);
+    });
+    const cleanupDelay = (els.length - 1) * HERO_HINT_STAGGER + HERO_HINT_GLOW_MS + 500;
+    setTimeout(function(){
+      els.forEach(function(el){ el.classList.remove('hero-hint-glow'); });
+    }, cleanupDelay);
+  }, HERO_HINT_DELAY);
+})();
 
 /* ---------- contact section: organic particle flow field ---------- */
 (function(){
@@ -10603,6 +10747,18 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     }
     function closeCard(onDone){
       lockHeight();
+      // stop a still-playing sound example (and its paired .csv pedal
+      // movement) rather than leaving it running on under a card that's
+      // no longer even shown -- same cleanup as applyEntry's own (see its
+      // comment on why currentAudioEl is cleared directly rather than
+      // only trusting the 'pause' event), just triggered by closing the
+      // card instead of switching programs within it.
+      if (currentAudioEl){
+        currentAudioEl.pause();
+        currentAudioEl = null;
+      }
+      soundPlaying = false;
+      resetPedalControls();
       resetPedalObjectInfo();
       // measured now, while the box is still at its natural size -- a
       // fixed pixel value so the slide distance stays constant even
@@ -10771,6 +10927,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
      same machinery any other card-open does, not a parallel path. ---------- */
   (function initEditionsTour(){
     const helpBtn = document.getElementById('editionsHelpBtn');
+    const helpHint = document.getElementById('editionsHelpHint');
     const overlay = document.getElementById('editionsTourOverlay');
     const highlightEl = document.getElementById('tourHighlight');
     const notchSvgEl = document.getElementById('tourNotchSvg');
@@ -10827,7 +10984,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // on the way to the pedal diagram below it, even though it's the
       // one place that actually says what this specific Program sounds
       // like/does.
-      { selector: '.program-desc', open: true, page: 'info' },
+      { selector: '.program-desc-clip', open: true, page: 'info' },
       { selector: '.pedal-diagram-panel', open: true, page: 'controls' },
       // this one step now illustrates all four control->destination
       // relationships at once: poti1's own curved pointer (see
@@ -11927,6 +12084,13 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     // travelling from here to there, instead of a hard cut.
     let previewMode = false;
     function showHoverPreview(){
+      // the attention-nudge's own text bubble (see playAttentionIntro) has
+      // no auto-hide timer at all -- a real hover/focus on the button
+      // (which is what actually got the visitor's attention) is what
+      // dismisses it, so it doesn't just vanish on its own before that
+      // happens. Checked before the early-returns below so it clears
+      // regardless of which of them applies.
+      if (helpHint) helpHint.classList.remove('visible');
       if (active || previewMode) return; // real tour already running, or already showing
       // phone: there's no real hover gesture, only a tap -- but some
       // mobile browsers still synthesize a mouseenter right before the
@@ -11997,6 +12161,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // it, which used to measure the card's rect mid-close-animation
       // instead of its real, settled idle position.
       previewMode = false;
+      if (helpHint) helpHint.classList.remove('visible'); // see showHoverPreview's identical line -- covers a direct tap/click with no preceding hover/focus event (phone, mainly)
       if (activeInstance){ requestClose(activeInstance, start); return; }
       start();
     });
@@ -12052,41 +12217,77 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       finish();
     });
 
-    // "look here" nudge on the (?) button -- two rings rippling out plus
-    // a scale pulse, nothing else on the page touched (see the CSS's own
-    // comment for the two strengths). Own state, never touches
-    // active/previewMode itself, and skips entirely if either is already
-    // true (the real tour or its hover-preview already has the
-    // visitor's attention).
-    function playAttentionIntro(strong){
-      const cls = strong ? 'attention-ripple-strong' : 'attention-ripple';
-      helpBtn.classList.add(cls);
-      setTimeout(function(){ helpBtn.classList.remove(cls); }, strong ? 2100 : 1900);
-    }
-    // every single time a visitor actually arrives at the editions
-    // section now (not just once per page load) -- the stronger version,
-    // an arrival announcement rather than an ongoing idle nudge (see the
-    // repeating one just below)
-    onArriveAtEditionsGlobal = function(){
-      if (active || previewMode) return;
-      playAttentionIntro(true);
-    };
-    // ...and an ongoing reminder on top of that, at the original (gentler)
-    // strength -- every 2s while idle (no edition open, so the nudge can
-    // afford to be more frequent), every 5s once one is expanded (a
-    // visitor has clearly already found the button by then, this is just
-    // a slower reminder it's still there). A plain setInterval can't
-    // switch its own delay, so this reschedules itself each time instead,
-    // picking the interval fresh from the current state right before
-    // each wait rather than whatever it was when the loop started.
-    function scheduleRepeatingPulse(){
-      const delay = activeInstance ? 5000 : 2000;
+    // "look here" nudge on the (?) button: wiggle + pulse + two rippling
+    // rings (see the CSS's own comment for that sequence/timing), plus
+    // the text bubble on its own separate, slower schedule -- opens
+    // ATTENTION_HINT_DELAY after the button's own wiggle/pulse starts (so
+    // it draws the eye to the button first, then explains what it does),
+    // and then just *stays* open -- no auto-hide timer at all -- until
+    // the visitor actually hovers/focuses the button for real (see
+    // showHoverPreview below, which is what removes 'visible' from it).
+    // Fires once, ATTENTION_ARM_DELAY after arriving at the editions
+    // section, but only if nobody has pressed anything in it by then --
+    // see onArriveAtEditionsGlobal/onLeaveEditionsGlobal just below for
+    // the actual timer/interaction bookkeeping. This function itself just
+    // plays the animation; skips entirely if the real tour or its
+    // hover-preview already has the visitor's attention, or if an
+    // edition is already open (found already).
+    const ATTENTION_NUDGE_MS = 2400; // just past the CSS sequence's own longest piece (the second ring, done at 2.3s)
+    const ATTENTION_HINT_DELAY = 2000;
+    function playAttentionIntro(){
+      if (active || previewMode || activeInstance) return;
+      helpBtn.classList.add('attention-nudge');
       setTimeout(function(){
-        if (!active && !previewMode) playAttentionIntro(false);
-        scheduleRepeatingPulse();
-      }, delay);
+        helpBtn.classList.remove('attention-nudge');
+      }, ATTENTION_NUDGE_MS);
+      if (helpHint){
+        setTimeout(function(){ helpHint.classList.add('visible'); }, ATTENTION_HINT_DELAY);
+      }
     }
-    scheduleRepeatingPulse();
+    // a short beat of nobody pressing anything in the editions section
+    // before the nudge plays -- armed fresh every time the visitor
+    // arrives there (onArriveAtEditionsGlobal), cancelled outright the
+    // moment either they press something in it (the click listener
+    // below) or they leave for another section (onLeaveEditionsGlobal)
+    // before this delay is up. Deliberately *not* gated by whether this
+    // visitor (or this browser) has ever pressed something here before
+    // -- it re-arms the exact same way on every single arrival, forever,
+    // rather than a one-time-ever hint.
+    const ATTENTION_ARM_DELAY = 1200;
+    let attentionTimer = null;
+    function clearAttentionTimer(){
+      clearTimeout(attentionTimer);
+      attentionTimer = null;
+    }
+    onArriveAtEditionsGlobal = function(){
+      clearAttentionTimer();
+      attentionTimer = setTimeout(function(){
+        attentionTimer = null;
+        playAttentionIntro();
+      }, ATTENTION_ARM_DELAY);
+    };
+    onLeaveEditionsGlobal = function(){
+      clearAttentionTimer();
+      // leaving the section entirely (scrolling/paging away, not just a
+      // click outside the tour while still on it) -- close out whatever
+      // was left open rather than the visitor coming back later (or
+      // scrolling past on their way to somewhere else) to a tour overlay
+      // or an expanded card sitting there mid-state. This is deliberately
+      // *more* aggressive than finish()'s own normal click-outside
+      // behavior (see its own comment on leaving the opened edition
+      // alone) -- that one assumes the visitor is still right there on
+      // the section, just done with the tour itself; this one assumes
+      // they're on their way elsewhere entirely.
+      if (active) finish();
+      if (activeInstance) requestClose(activeInstance);
+    };
+    // any real press anywhere in the section -- an edition box, the
+    // program bar, the (?) button itself, doesn't matter which -- cancels
+    // this visit's nudge outright rather than just postponing it.
+    spotlightSection.addEventListener('click', function(evt){
+      if (!evt.isTrusted) return; // see the tour's own identical guard above
+      clearAttentionTimer();
+    });
   })();
 })();
 
