@@ -2561,13 +2561,7 @@
     background:#2a2a2a;
   }
   .bio-panel-object.expanded{
-    /* opens toward the left (right:0 stays pinned, width just grows from
-       the closed 14px) but no longer all the way to 100% -- that used to
-       cover the entire bio-slider row, including the artist bio text
-       behind it, edge to edge (reading as the control info "filling" the
-       whole card). Leaving real width uncovered on the left keeps a
-       visible strip of whatever's behind it instead. */
-    width:75%;
+    width:100%;
     right:0;
     z-index:1; /* drops behind once open, so the other box's strip can sit on top */
   }
@@ -8855,13 +8849,6 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     let pendingLabel = null; // the last real control label (null until something is actually clicked)
     let pendingStoreKey = null; // the store.json key (see computeControlGroups) for whatever's pending, if any
     let pendingVal = null; // that control's current normalized 0-1 position, refreshed live while dragging a poti
-    // phone only (see showPedalObjectInfo/wireToggle's own toggleBox,
-    // both of which clear this): the info box now auto-closes itself 3s
-    // after the most recent selection, rather than needing an explicit
-    // tap back on it -- desktop leaves this alone entirely (a visitor
-    // there can see the rest of the card isn't blocked, so there's
-    // nothing urgent about it closing on its own).
-    let mobileAutoCloseTimer = null;
     const NO_SELECTION_TEXT = 'Please select a button to obtain some information.';
     let roseModActive = false; // tracks the middle switch's global "rose mod" state
     // parsed stores/<programSlug>/0.json + 1.json, and this program's
@@ -9001,17 +8988,8 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       // a genuinely new control was just picked -- start its info
       // scrolled to the top rather than wherever the previous one was left
       refreshControlScrollNavs(true);
-      // phone: auto-close 3s after *this* selection -- restarted on every
-      // fresh pick (a still-active previous timer would otherwise close
-      // the box right out from under whatever was just picked). See
-      // mobileAutoCloseTimer's own comment for why desktop skips this.
-      clearTimeout(mobileAutoCloseTimer);
-      if (window.matchMedia('(max-width:640px)').matches){
-        mobileAutoCloseTimer = setTimeout(resetPedalObjectInfo, 3000);
-      }
     }
     function resetPedalObjectInfo(){
-      clearTimeout(mobileAutoCloseTimer);
       closeBox(bioPanelObject, true);
       closeBox(bioPanelObjectMod1, true);
       pendingLabel = null;
@@ -9334,7 +9312,6 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
           const willOpen = !box.classList.contains('expanded');
           applyMiddleSwitchState(forcedSwitchState, false);
           if (!willOpen){
-            clearTimeout(mobileAutoCloseTimer); // manually closed already -- the 3s phone auto-close (see showPedalObjectInfo) would otherwise still fire later and run a fuller reset than this manual close does
             closeBox(box, true); // going back to idle -- keep it behind while it shrinks (see .closing)
             clearHighlight();
             // run in the same tick as closeBox, not delayed -- so the
@@ -12148,7 +12125,11 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       nextBtn.disabled = false;
       nextBtn.textContent = t({ de: 'Weiter', en: 'Next' });
       captionEl.style.display = 'block';
-      positionCaptionNear(helpBtn.getBoundingClientRect());
+      // to the left of the button, not below it (positionCaptionNear) --
+      // dropping straight down from a button pinned to the section's own
+      // top-right corner put this right on top of the first idle edition
+      // box sitting below it, instead of beside it.
+      positionCaptionLeftOf(helpBtn.getBoundingClientRect());
       // fetched now (not waited on) so the real text is already cached
       // and ready the instant start() actually runs -- the preview text
       // above is a generic placeholder used only until this resolves,
