@@ -3972,19 +3972,30 @@
       flex-shrink:0;
       background:var(--grey-1);
       border-top:1px solid var(--grey-2);
-      /* fixed, constant height regardless of what's currently selected --
-         always-open on phone (see the comment above), so without an
-         explicit height the box previously resized between "no control
-         picked yet" (a couple of lines of placeholder text) and "a synth's
-         full param list" (several rows in the 2-column grid), which read
-         as the whole tab jumping every time a different control was
-         pressed. A param list taller than this scrolls internally instead
-         of growing the box any further. */
-      height:13rem;
+      /* fixed, constant height *while a control is actually selected*
+         (see .expanded below) -- without that, the box previously resized
+         between "a couple of lines of placeholder text" and "a synth's
+         full param list" (several rows in the 2-column grid) every single
+         time a different control was pressed, which read as the whole tab
+         jumping on every single tap. A param list taller than this
+         scrolls internally instead of growing the box any further.
+         Collapsed otherwise (nothing selected yet, or closed again by
+         tapping the box itself -- see wireToggle's own toggleBox, shared
+         with desktop) down to just enough room for that placeholder
+         message (it can wrap to 2 short lines on a narrow phone) -- used
+         to stay pinned at the full 13rem permanently regardless of
+         .expanded, which covered most of the page under a mostly-empty
+         box and, worse, meant tapping to close it visibly did nothing at
+         all since the height never actually changed back down. */
+      height:3.5rem;
+      transition:height 0.3s ease;
       /* the scrolling itself now happens on .object-info-inner below (so
          the nav can sit fixed on top of it, never scrolling away with the
          text) -- this box just clips at its own edges */
       overflow:hidden;
+    }
+    .card-page-controls .bio-panel-object.expanded{
+      height:13rem;
     }
     .card-page-controls .bio-panel-object .object-info-inner{
       opacity:1 !important;
