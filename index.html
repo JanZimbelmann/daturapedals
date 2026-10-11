@@ -4277,6 +4277,16 @@
     transform:translate(-50%, 50%);
     z-index:1;
   }
+  /* mirrored across both axes from .contact-btn-impressum (bottom/left ->
+     top/right, same offsets, same transform signs flipped) -- top right
+     corner instead of bottom left. */
+  .contact-btn-games{
+    position:absolute;
+    top:14%;
+    right:18%;
+    transform:translate(50%, -50%);
+    z-index:1;
+  }
   @media (max-width:640px){
     /* desktop scatters these three at percentage-based corner offsets --
        on a phone-width section those same percentages leave far less
@@ -4291,7 +4301,7 @@
        same-specificity base rules in source order and actually wins the
        cascade -- an earlier media query block doesn't beat a later plain
        rule of equal specificity just for being wrapped in @media. */
-    .contact-btn-top, .contact-btn-bottom, .contact-btn-impressum{
+    .contact-btn-top, .contact-btn-bottom, .contact-btn-impressum, .contact-btn-games{
       left:50%;
       right:auto;
       transform:translateX(-50%);
@@ -4312,6 +4322,9 @@
        position the other two keep -- left:50% -> 30% moves its own
        centered point left instead of dead-center; top raised further down */
     .contact-btn-impressum{ top:78%; bottom:auto; left:30%; }
+    /* mirrored shift from .contact-btn-impressum (left 30% -> right,
+       i.e. left 70%), stacked one further down below it */
+    .contact-btn-games{ top:94%; bottom:auto; left:70%; }
   }
 
   /* ---------- modals (Pre-Order / Kontakt / Newsletter) ---------- */
@@ -4368,6 +4381,63 @@
     line-height:1.7;
     letter-spacing:0.02em;
     padding-right:1.5rem;
+  }
+  /* Games modal: one card per entry (see texts/games.json / the "games"
+     IIFE) -- just a title, a release-status line, and a short
+     description, same look for however many games end up in that list. */
+  .modal-games-list{
+    display:flex;
+    flex-direction:column;
+    gap:1.5rem;
+    padding-right:1.5rem;
+  }
+  .modal-game-card + .modal-game-card{
+    padding-top:1.5rem;
+    border-top:1px solid var(--grey-2);
+  }
+  .modal-game-title{
+    font-family:'Bungee', sans-serif;
+    font-size:1.1rem;
+    letter-spacing:0.04em;
+    margin:0 0 0.5rem;
+  }
+  .modal-game-status{
+    font-size:0.8rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--grey-3);
+    margin:0 0 0.6rem;
+  }
+  .modal-game-desc{
+    font-size:0.95rem;
+    line-height:1.7;
+    letter-spacing:0.02em;
+    margin:0;
+  }
+  /* slim call-to-action line under the list itself -- deliberately
+     smaller/quieter than a real game entry (no title weight, muted
+     color) so it reads as a footnote, not a second card competing with
+     the actual game(s) above it. A real mailto link (see its own markup
+     comment), styled plainly like the surrounding text rather than as an
+     obvious button -- only the hover/focus color shift gives away that
+     it's clickable, same restrained treatment .summe-text's own link
+     uses elsewhere on the page. */
+  .modal-games-note{
+    display:block;
+    font-size:0.78rem;
+    line-height:1.5;
+    letter-spacing:0.02em;
+    color:var(--grey-3);
+    text-decoration:none;
+    cursor:pointer;
+    margin:1.25rem 1.5rem 0 0;
+    padding-top:1rem;
+    border-top:1px solid var(--grey-2);
+    transition:color 0.2s ease;
+  }
+  .modal-games-note:hover,
+  .modal-games-note:focus-visible{
+    color:var(--white);
   }
 
   /* guided tour (#editionsTourOverlay): overrides .modal-overlay's own
@@ -5481,11 +5551,12 @@
   <button class="preorder-btn contact-btn-top" id="contactBtnTop" data-i18n="contact.button">In Kontakt Treten</button>
   <button class="preorder-btn contact-btn-bottom" id="contactBtnBottom" data-i18n="newsletter.button">Informiert bleiben</button>
   <button class="preorder-btn contact-btn-impressum" id="contactBtnImpressum">Impressum</button>
+  <button class="preorder-btn contact-btn-games" id="contactBtnGames" data-i18n="games.button">Games</button>
 
   <!-- particle-count fader: invisible until hovered, spans the section's
-       full right edge. Exponential 10-1000 range, see the JS below -->
+       full right edge. Exponential 0-1000 range, see the JS below -->
   <div class="particle-slider" id="particleSlider" role="slider" tabindex="0"
-       data-i18n-aria="particleSlider.ariaLabel" aria-label="Anzahl der Partikel" aria-valuemin="10" aria-valuemax="1000">
+       data-i18n-aria="particleSlider.ariaLabel" aria-label="Anzahl der Partikel" aria-valuemin="0" aria-valuemax="1000">
     <div class="particle-slider-track" id="particleSliderTrack">
       <div class="particle-slider-fill" id="particleSliderFill"></div>
       <div class="particle-slider-thumb" id="particleSliderThumb"></div>
@@ -5524,6 +5595,15 @@
         <button type="button" class="bio-text-nav-btn impressum-scroll-down" data-i18n-aria="common.scrollDown" aria-label="Nach unten scrollen">▼</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Games modal: populated from texts/games.json, see the "games" IIFE -->
+<div class="modal-overlay" id="modalGames">
+  <div class="modal-box">
+    <button class="modal-close" id="modalGamesClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
+    <div class="modal-games-list" id="modalGamesList"></div>
+    <a class="modal-games-note" href="mailto:daturapedals@gmail.com?subject=Game%20Submission" data-i18n="games.note">Spiel mit Datura Pedals Sounds gemacht? Schick es uns, wir stellen es hier vor.</a>
   </div>
 </div>
 
@@ -7243,7 +7323,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   const btnTop = document.getElementById('contactBtnTop');
   const btnBottom = document.getElementById('contactBtnBottom');
   const btnImpressum = document.getElementById('contactBtnImpressum');
-  if (!canvas || !section || !btnTop || !btnBottom || !btnImpressum) return;
+  const btnGames = document.getElementById('contactBtnGames');
+  if (!canvas || !section || !btnTop || !btnBottom || !btnImpressum || !btnGames) return;
 
   const ctx = canvas.getContext('2d');
   // phone: the count slider is hover-only (see its own mobile override,
@@ -7315,12 +7396,13 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const topObs = obstacleFor(btnTop);
     const bottomObs = obstacleFor(btnBottom);
     const impressumObs = obstacleFor(btnImpressum);
+    const gamesObs = obstacleFor(btnGames);
     let x, y, tries = 0;
     do {
       x = 20 + Math.random() * (width - 40);
       y = 20 + Math.random() * (height - 40);
       tries++;
-    } while ((insideRect(x, y, topObs) || insideRect(x, y, bottomObs) || insideRect(x, y, impressumObs)) && tries < 20);
+    } while ((insideRect(x, y, topObs) || insideRect(x, y, bottomObs) || insideRect(x, y, impressumObs) || insideRect(x, y, gamesObs)) && tries < 20);
     return { x: x, y: y };
   }
 
@@ -7392,6 +7474,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
   btnBottom.addEventListener('mouseleave', function(){ burstOutward(btnBottom); hoverState = null; });
   btnImpressum.addEventListener('mouseenter', function(){ hoverState = 'impressum'; hoverBoost = 1.7; });
   btnImpressum.addEventListener('mouseleave', function(){ burstOutward(btnImpressum); hoverState = null; });
+  btnGames.addEventListener('mouseenter', function(){ hoverState = 'games'; hoverBoost = 1.7; });
+  btnGames.addEventListener('mouseleave', function(){ burstOutward(btnGames); hoverState = null; });
 
   // mouse position, section-local -- used for the close-vicinity orbit
   let mouseX = null, mouseY = null, mouseActive = false;
@@ -7470,7 +7554,8 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const topObs = obstacleFor(btnTop);
     const bottomObs = obstacleFor(btnBottom);
     const impressumObs = obstacleFor(btnImpressum);
-    const hoverObs = hoverState === 'top' ? topObs : (hoverState === 'bottom' ? bottomObs : (hoverState === 'impressum' ? impressumObs : null));
+    const gamesObs = obstacleFor(btnGames);
+    const hoverObs = hoverState === 'top' ? topObs : (hoverState === 'bottom' ? bottomObs : (hoverState === 'impressum' ? impressumObs : (hoverState === 'games' ? gamesObs : null)));
 
     // each boost decays independently back to 0
     hoverBoost *= HOVER_BOOST_DECAY;
@@ -7538,7 +7623,7 @@ if (summeTextEl && wordmarkWrap && contactSection) {
         p.vy = (p.vy / speed) * cap;
       }
 
-      advanceParticle(p, [topObs, bottomObs, impressumObs]);
+      advanceParticle(p, [topObs, bottomObs, impressumObs, gamesObs]);
 
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -7684,16 +7769,23 @@ if (summeTextEl && wordmarkWrap && contactSection) {
     const valueLabel = document.getElementById('particleSliderValue');
     if (!slider || !track || !fill || !thumb || !valueLabel) return;
 
-    const MIN_COUNT = 10;
+    const MIN_COUNT = 0;
+    // the exponential curve itself can't start from an actual 0 (log(0)
+    // is undefined) -- LOG_MIN is the smallest *nonzero* step the curve
+    // is built from instead, with frac 0 hard-cased to a real 0 count
+    // below rather than forced through that math at all.
+    const LOG_MIN = 1;
     const MAX_COUNT = 1000;
     let dragging = false;
 
     function countToFraction(count){
-      return Math.log(count / MIN_COUNT) / Math.log(MAX_COUNT / MIN_COUNT);
+      if (count <= 0) return 0;
+      return Math.log(count / LOG_MIN) / Math.log(MAX_COUNT / LOG_MIN);
     }
     function fractionToCount(frac){
       frac = Math.max(0, Math.min(1, frac));
-      return Math.round(MIN_COUNT * Math.pow(MAX_COUNT / MIN_COUNT, frac));
+      if (frac <= 0) return 0;
+      return Math.round(LOG_MIN * Math.pow(MAX_COUNT / LOG_MIN, frac));
     }
     function render(frac){
       const pct = (Math.max(0, Math.min(1, frac)) * 100).toFixed(2) + '%';
@@ -12312,13 +12404,15 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   const contactBtnTopEl = document.getElementById('contactBtnTop');
   const contactBtnBottomEl = document.getElementById('contactBtnBottom');
   const contactBtnImpressumEl = document.getElementById('contactBtnImpressum');
+  const contactBtnGamesEl = document.getElementById('contactBtnGames');
 
   const modalPreorder = document.getElementById('modalPreorder');
   const modalContact = document.getElementById('modalContact');
   const modalNewsletter = document.getElementById('modalNewsletter');
   const modalImpressum = document.getElementById('modalImpressum');
+  const modalGames = document.getElementById('modalGames');
   const modalArtistCredentials = document.getElementById('modalArtistCredentials');
-  const allModals = [modalPreorder, modalContact, modalNewsletter, modalImpressum, modalArtistCredentials].filter(Boolean);
+  const allModals = [modalPreorder, modalContact, modalNewsletter, modalImpressum, modalGames, modalArtistCredentials].filter(Boolean);
 
   // Kontakt/Newsletter link rows: instagram + email icons (see LINK_ICONS/
   // renderLinkRow above), sourced from their own JSON files rather than
@@ -12389,6 +12483,46 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
         err.className = 'impressum-text';
         err.textContent = t({ de: 'Impressum nicht gefunden', en: 'Legal notice not found' });
         impressumScrollEl.appendChild(err);
+      });
+  }
+
+  // Games: sourced from texts/games.json, a plain array so a second game
+  // later is just another entry rather than a markup change -- same
+  // title/status/description shape rendered as one card per entry.
+  const modalGamesListEl = document.getElementById('modalGamesList');
+  if (modalGamesListEl){
+    fetch('texts/games.json')
+      .then(function(res){ if (!res.ok) throw new Error('not found'); return res.json(); })
+      .then(function(games){
+        (games || []).forEach(function(game){
+          const card = document.createElement('div');
+          card.className = 'modal-game-card';
+
+          const title = document.createElement('p');
+          title.className = 'modal-game-title';
+          title.textContent = game.title || '';
+          card.appendChild(title);
+
+          if (game.status){
+            const status = document.createElement('p');
+            status.className = 'modal-game-status';
+            status.textContent = t(game.status);
+            card.appendChild(status);
+          }
+
+          const desc = document.createElement('p');
+          desc.className = 'modal-game-desc';
+          desc.textContent = t(game.description);
+          card.appendChild(desc);
+
+          modalGamesListEl.appendChild(card);
+        });
+      })
+      .catch(function(){
+        const err = document.createElement('p');
+        err.className = 'modal-game-desc';
+        err.textContent = t({ de: 'Keine Spiele gefunden', en: 'No games found' });
+        modalGamesListEl.appendChild(err);
       });
   }
 
@@ -12478,16 +12612,19 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   if (contactBtnTopEl) contactBtnTopEl.addEventListener('click', function(){ openModal(modalContact); });
   if (contactBtnBottomEl) contactBtnBottomEl.addEventListener('click', function(){ openModal(modalNewsletter); });
   if (contactBtnImpressumEl) contactBtnImpressumEl.addEventListener('click', function(){ openModal(modalImpressum); });
+  if (contactBtnGamesEl) contactBtnGamesEl.addEventListener('click', function(){ openModal(modalGames); });
 
   const closePreorder = document.getElementById('modalPreorderClose');
   const closeContact = document.getElementById('modalContactClose');
   const closeNewsletter = document.getElementById('modalNewsletterClose');
   const closeImpressum = document.getElementById('modalImpressumClose');
+  const closeGames = document.getElementById('modalGamesClose');
   const closeArtistCredentials = document.getElementById('modalArtistCredentialsClose');
   if (closePreorder) closePreorder.addEventListener('click', function(){ closeModal(modalPreorder); });
   if (closeContact) closeContact.addEventListener('click', function(){ closeModal(modalContact); });
   if (closeNewsletter) closeNewsletter.addEventListener('click', function(){ closeModal(modalNewsletter); });
   if (closeImpressum) closeImpressum.addEventListener('click', function(){ closeModal(modalImpressum); });
+  if (closeGames) closeGames.addEventListener('click', function(){ closeModal(modalGames); });
   if (closeArtistCredentials) closeArtistCredentials.addEventListener('click', function(){ closeModal(modalArtistCredentials); });
 
   // clicking the black backdrop itself (not the box) also closes it

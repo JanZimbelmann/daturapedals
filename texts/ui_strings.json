@@ -70,5 +70,9 @@
   },
   "wipBanner": {
     "text": { "de": "Diese Website ist noch im Aufbau. Am 1. November ziehen wir zu daturapedals.com um.", "en": "This website is still under construction. On November 1st we are moving to daturapedals.com." }
+  },
+  "games": {
+    "button": { "de": "Games", "en": "Games" },
+    "note": { "de": "Spiel mit Datura Pedals Sounds gemacht? Schick es uns, wir stellen es hier vor.", "en": "Made a game with Datura Pedals sounds? Send it to us, we'll feature it here." }
   }
 }
