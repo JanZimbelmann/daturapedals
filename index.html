@@ -1723,24 +1723,46 @@
      regardless of how wide the idle tab row happens to be */
   .editions-help-btn{
     position:absolute;
-    /* centers this button's own 2rem height on .section-nav-up's 52px
-       (3.25rem) bar -- its arrow glyph sits vertically centered in that
-       whole bar (see .section-nav-btn), so matching heights here reads as
-       both sitting on the same line rather than this one floating lower.
-       Also shrunk from the previous 2.5rem: at that size, sitting this
-       high up left it close enough to (and on some viewports overlapping)
-       the idle edition tabs below, which are vertically centered in the
-       section rather than pinned to its top (see .spotlight's own
-       align-items:center) and so can start quite close to the top edge
-       on a short viewport. */
-    top:0.625rem;
-    right:1.5rem;
-    width:2rem;
-    height:2rem;
+    /* a bigger invisible hit area than the 2rem circle a visitor actually
+       sees (that's .editions-help-btn-dot, centered inside this via flex
+       below) -- a press landing just outside the small visible circle
+       used to fall through to .section-nav-up's own invisible full-width
+       bar underneath instead (z-index 40 vs this one's 41), jumping a
+       section instead of opening the tour. top/right are offset by half
+       of this box's own extra size (1rem) from the visible dot's old
+       2rem-box position below, so the dot's own on-screen center hasn't
+       moved at all -- only the padding of forgiving empty space around
+       it is new. */
+    top:0.125rem;
+    right:1rem;
+    width:3rem;
+    height:3rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     /* above .section-nav-up's own full-width, full-page-top invisible bar
        (z-index:40) -- without this its click was swallowed by that bar
        instead, jumping to the previous section rather than opening the tour */
     z-index:41;
+    background:transparent;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    user-select:none;
+    transition:opacity 0.25s ease;
+  }
+  /* the visible 2rem circle itself -- see .editions-help-btn's own
+     comment for why this is a separate inner element rather than styled
+     directly on the button. Centered on .section-nav-up's 52px (3.25rem)
+     bar -- its arrow glyph sits vertically centered in that whole bar
+     (see .section-nav-btn), so matching heights here reads as both
+     sitting on the same line rather than this one floating lower. */
+  .editions-help-btn-dot{
+    width:2rem;
+    height:2rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     border-radius:50%;
     border:1px solid var(--white);
     background:transparent;
@@ -1748,9 +1770,7 @@
     font-family:'IBM Plex Mono', monospace;
     font-size:1rem;
     line-height:1;
-    cursor:pointer;
-    user-select:none;
-    transition:transform 0.2s ease, background 0.2s ease, color 0.2s ease, opacity 0.25s ease;
+    transition:transform 0.2s ease, background 0.2s ease, color 0.2s ease;
   }
   /* hidden for the duration of the real tour (see start()/finish()) --
      it's what the tour itself was opened from, so leaving it visible
@@ -1761,7 +1781,10 @@
     opacity:0;
     pointer-events:none;
   }
-  .editions-help-btn:hover{
+  /* hovering anywhere in the bigger invisible box (not just the small
+     visible circle) still triggers the dot's own hover look -- same
+     "forgiving" reasoning as the enlarged hit area itself. */
+  .editions-help-btn:hover .editions-help-btn-dot{
     background:var(--white);
     color:var(--black);
     transform:scale(1.15);
@@ -4524,9 +4547,12 @@
      two expanding rings, with .editions-help-hint's own text bubble
      fading in alongside the pulse to spell out what the button does
      rather than leaving that to shape/motion alone.
-     ::before/::after are the two rings, anchored via inset:0 against the
-     button's own already-`position:absolute` box -- no extra positioning
-     context needed for them. Timings: wiggle 0-0.5s, then pulse
+     ::before/::after are the two rings, anchored against the button's
+     own already-`position:absolute` box -- inset:0.5rem (not 0) since
+     that box is now the bigger invisible hit area (see its own CSS
+     comment); 0.5rem is exactly the padding around the visible 2rem dot
+     inside it, so the rings still start flush with that dot's own edge
+     rather than the hit area's. Timings: wiggle 0-0.5s, then pulse
      0.5-1.7s, first ring 0.5-1.8s, second ring 1-2.3s -- the JS removes
      the class at 2.4s, just past all of them. */
   .editions-help-btn.attention-nudge{
@@ -4536,7 +4562,7 @@
   .editions-help-btn.attention-nudge::after{
     content:'';
     position:absolute;
-    inset:0;
+    inset:0.5rem;
     border-radius:50%;
     border:1px solid var(--white);
     animation:attentionRipple 1.3s ease-out 0.5s;
@@ -5017,8 +5043,16 @@
        have the least headroom below this button, so it needs to be
        smaller here than the already-shrunk desktop size, not just moved. */
     .editions-help-btn{
-      top:0.5rem;
-      right:1rem;
+      /* same "bigger hit area, unmoved visible dot center" math as the
+         desktop rule -- see its own comment. Grown less than desktop's
+         1rem (only 0.5rem total) since phone already has the least
+         headroom around this button to spare (see the comment above). */
+      top:0.25rem;
+      right:0.75rem;
+      width:2.25rem;
+      height:2.25rem;
+    }
+    .editions-help-btn-dot{
       width:1.75rem;
       height:1.75rem;
       font-size:0.85rem;
@@ -5057,7 +5091,7 @@
 <div class="page-hero-frame">
 
 <div class="wip-banner" id="wipBanner">
-  <div class="wip-banner-inner" data-i18n="wipBanner.text">Diese Website ist noch im Aufbau. Am 1. November ziehen wir zu daturapedals.com um.</div>
+  <div class="wip-banner-inner" data-i18n="wipBanner.text">Diese Website ist noch im Aufbau. Anfang November ziehen wir zu daturapedals.com um.</div>
 </div>
 
 <svg width="0" height="0" style="position:absolute">
@@ -5181,7 +5215,14 @@
        #spotlightWraps.has-active in the CSS) -- starts the guided tour
        (editionsTourOverlay below), which points at real, live pieces of
        the first edition's card rather than just describing them in prose -->
-  <button type="button" class="editions-help-btn" id="editionsHelpBtn" data-i18n-aria="editionsHelp.ariaLabel" data-i18n-title="editionsHelp.title" aria-label="Erklären, wie Editionen und Pedale funktionieren" title="Click for a guide to what this is">?</button>
+  <!-- the button itself is a larger invisible hit area (see its own CSS
+       comment) than the small circle a visitor actually sees -- that
+       visible circle is .editions-help-btn-dot, centered inside it. A
+       press landing just outside that circle but still within this
+       bigger box still opens the tour instead of falling through to
+       .section-nav-up's own invisible full-width bar underneath (z-index
+       40 vs this one's 41) and jumping a section instead. -->
+  <button type="button" class="editions-help-btn" id="editionsHelpBtn" data-i18n-aria="editionsHelp.ariaLabel" data-i18n-title="editionsHelp.title" aria-label="Erklären, wie Editionen und Pedale funktionieren" title="Click for a guide to what this is"><span class="editions-help-btn-dot">?</span></button>
   <!-- part of the (?) button's own attention nudge (see playAttentionIntro)
        -- a short text bubble that fades in alongside the wiggle/ripple,
        spelling out what the button actually does instead of leaving that
