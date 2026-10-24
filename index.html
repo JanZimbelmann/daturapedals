@@ -1450,6 +1450,17 @@
      unusually long entry can never nudge anything below it (including
      the whole above/below track split that keeps the title/arrows fixed)
      and so it's actually reachable instead of just quietly overflowing. */
+  .blog-item-link{
+    color:var(--white);
+    text-decoration:underline;
+    text-decoration-color:var(--grey-2);
+    transition:color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+  .blog-item-link:hover,
+  .blog-item-link:focus-visible{
+    color:var(--grey-3);
+    text-decoration-color:var(--white);
+  }
   .blog-item-content{
     width:100%;
     max-height:190px;
@@ -4424,18 +4435,28 @@
     letter-spacing:0.04em;
     margin:0 0 0.5rem;
   }
-  .modal-game-status{
-    font-size:0.8rem;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    color:var(--grey-3);
-    margin:0 0 0.6rem;
-  }
   .modal-game-desc{
     font-size:0.95rem;
     line-height:1.7;
     letter-spacing:0.02em;
     margin:0;
+  }
+  .modal-game-title-link{
+    color:inherit;
+    text-decoration:underline;
+    text-decoration-color:var(--grey-3);
+    transition:color 0.2s ease, text-decoration-color 0.2s ease;
+  }
+  .modal-game-title-link:hover,
+  .modal-game-title-link:focus-visible{
+    color:var(--grey-3);
+    text-decoration-color:var(--white);
+  }
+  .modal-game-title-link-arrow{
+    display:inline-block;
+    margin-left:0.4em;
+    font-size:0.75em;
+    text-decoration:none;
   }
   /* slim call-to-action line under the list itself -- deliberately
      smaller/quieter than a real game entry (no title weight, muted
@@ -12541,15 +12562,25 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
 
           const title = document.createElement('p');
           title.className = 'modal-game-title';
-          title.textContent = game.title || '';
-          card.appendChild(title);
+          if (game.link){
+            const titleLink = document.createElement('a');
+            titleLink.className = 'modal-game-title-link';
+            titleLink.href = game.link;
+            titleLink.target = '_blank';
+            titleLink.rel = 'noopener';
+            titleLink.textContent = game.title || '';
 
-          if (game.status){
-            const status = document.createElement('p');
-            status.className = 'modal-game-status';
-            status.textContent = t(game.status);
-            card.appendChild(status);
+            const arrow = document.createElement('span');
+            arrow.className = 'modal-game-title-link-arrow';
+            arrow.setAttribute('aria-hidden', 'true');
+            arrow.textContent = '↗';
+            titleLink.appendChild(arrow);
+
+            title.appendChild(titleLink);
+          } else {
+            title.textContent = game.title || '';
           }
+          card.appendChild(title);
 
           const desc = document.createElement('p');
           desc.className = 'modal-game-desc';
@@ -13262,9 +13293,39 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
     return item;
   }
 
+  // turns any bare http(s) URL inside a blog post's plain text into a real
+  // clickable link -- built as text/anchor nodes rather than innerHTML so
+  // the surrounding prose still can't be interpreted as markup.
+  const BLOG_URL_RE = /https?:\/\/[^\s<>"']+/g;
+  function renderTextWithLinks(container, text){
+    container.textContent = '';
+    let lastIndex = 0;
+    let match;
+    BLOG_URL_RE.lastIndex = 0;
+    while ((match = BLOG_URL_RE.exec(text))){
+      if (match.index > lastIndex) container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      let url = match[0];
+      let trailing = '';
+      while (url.length && ',.;:!?)]}'.indexOf(url[url.length - 1]) !== -1){
+        trailing = url[url.length - 1] + trailing;
+        url = url.slice(0, -1);
+      }
+      const a = document.createElement('a');
+      a.className = 'blog-item-link';
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = url;
+      container.appendChild(a);
+      if (trailing) container.appendChild(document.createTextNode(trailing));
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+
   function loadContentInto(entry, contentEl){
     if (loadedContent[entry.filename] !== undefined){
-      contentEl.textContent = loadedContent[entry.filename];
+      renderTextWithLinks(contentEl, loadedContent[entry.filename]);
       return;
     }
     contentEl.textContent = t({ de: 'Lädt…', en: 'Loading…' });
@@ -13276,7 +13337,7 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
       .then(function(data){
         loadedContent[entry.filename] = t(data.text).trim();
         // only apply if this is still the entry actually being shown
-        if (entries[currentIndex] === entry) contentEl.textContent = loadedContent[entry.filename];
+        if (entries[currentIndex] === entry) renderTextWithLinks(contentEl, loadedContent[entry.filename]);
       })
       .catch(function(){
         loadedContent[entry.filename] = t({ de: 'Beitrag nicht gefunden', en: 'Post not found' });

@@ -73,6 +73,6 @@
   },
   "games": {
     "button": { "de": "Games", "en": "Games" },
-    "note": { "de": "Spiel mit Datura Pedals Sounds gemacht? Schick es uns, wir stellen es hier vor.", "en": "Made a game with Datura Pedals sounds? Send it to us, we'll feature it here." }
+    "note": { "de": "Du hast ein Spiel mit Sounds von Datura Pedals gemacht? Schick es uns, wir stellen es hier vor.", "en": "Made a game using Datura Pedals sounds? Send it our way and we'll feature it here." }
   }
 }
