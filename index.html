@@ -5693,13 +5693,20 @@ function getLang(){
     if (stored === 'de' || stored === 'en') return stored;
   } catch (e) { /* private-browsing / storage blocked -- fall through to the browser-language guess below */ }
   // first-ever visit, nothing explicit to go on yet -- guess from the
-  // browser/OS's own language setting rather than defaulting straight to
-  // German. Only German (any region, e.g. "de-AT"/"de-CH") stays German;
-  // every other language falls back to English, same as the old flat
-  // default did, just a little better-aimed.
+  // browser/OS's own language setting *or* its timezone, rather than
+  // defaulting straight to German. A German-speaking visitor whose
+  // browser happens to be set to English (common) still gets caught by
+  // the timezone check -- either signal alone is enough. Every other
+  // combination falls back to English, same as the old flat default did,
+  // just a little better-aimed.
   try {
     const browserLang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
-    return browserLang.indexOf('de') === 0 ? 'de' : 'en';
+    if (browserLang.indexOf('de') === 0) return 'de';
+  } catch (e) { /* ignored -- fall through to the timezone check */ }
+  try {
+    const DACH_TIMEZONES = ['Europe/Berlin', 'Europe/Vienna', 'Europe/Zurich', 'Europe/Busingen'];
+    if (DACH_TIMEZONES.indexOf(Intl.DateTimeFormat().resolvedOptions().timeZone) !== -1) return 'de';
+    return 'en';
   } catch (e) { /* ignored -- fall through to the flat default */ }
   return 'de';
 }
