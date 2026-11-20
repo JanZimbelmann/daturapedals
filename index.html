@@ -5691,7 +5691,16 @@ function getLang(){
   try {
     const stored = localStorage.getItem('daturaLang');
     if (stored === 'de' || stored === 'en') return stored;
-  } catch (e) { /* private-browsing / storage blocked -- fall through to the default */ }
+  } catch (e) { /* private-browsing / storage blocked -- fall through to the browser-language guess below */ }
+  // first-ever visit, nothing explicit to go on yet -- guess from the
+  // browser/OS's own language setting rather than defaulting straight to
+  // German. Only German (any region, e.g. "de-AT"/"de-CH") stays German;
+  // every other language falls back to English, same as the old flat
+  // default did, just a little better-aimed.
+  try {
+    const browserLang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+    return browserLang.indexOf('de') === 0 ? 'de' : 'en';
+  } catch (e) { /* ignored -- fall through to the flat default */ }
   return 'de';
 }
 function setLang(lang){
