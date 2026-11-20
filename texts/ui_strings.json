@@ -52,7 +52,8 @@
     "ariaLabel": { "de": "Anzahl der Partikel", "en": "Number of particles" }
   },
   "preorder": {
-    "bodyText": { "de": "Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.", "en": "We aren't currently accepting pre-orders. Please get in touch with us and stay up to date." }
+    "button": { "de": "Jetzt vormerken", "en": "Get Notified" },
+    "bodyText": { "de": "Der Vorverkauf hat noch nicht begonnen. Trag dich in unsere E-Mail-Liste ein, dann sagen wir dir als Erstes Bescheid, sobald es losgeht.", "en": "Pre-orders haven't opened yet. Join our email list and we'll let you know the moment they do." }
   },
   "contact": {
     "button": { "de": "In Kontakt Treten", "en": "Get in Touch" }

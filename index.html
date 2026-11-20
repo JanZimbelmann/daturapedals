@@ -5078,7 +5078,7 @@
       <div class="door door-left" id="doorLeft" aria-hidden="true">DAT</div>
       <div class="door door-right" id="doorRight" aria-hidden="true">URA</div>
     </div>
-    <p class="pedals-label" id="pedalsLabel" data-text="PEDALS" role="button" tabindex="0" aria-label="Zur Pre-Order-Sektion scrollen">PEDALS</p>
+    <p class="pedals-label" id="pedalsLabel" data-text="PEDALS" role="button" tabindex="0" aria-label="Zur Pedals-Sektion scrollen">PEDALS</p>
     <p class="slogan-main" id="sloganMain" data-text="Unsere Szene, Unser Sound" role="button" tabindex="0" aria-label="Zur Kontakt-Sektion scrollen">Unsere Szene, Unser Sound</p>
     <div class="divider"></div>
     <p class="slogan-sub" id="sloganSub" data-text="vom Anfänger bis zum Avantgardisten">
@@ -5164,7 +5164,7 @@
     <div class="pedal-flash" id="pedalFlash"></div>
   </div>
 
-  <button class="preorder-btn" id="preorderBtn">Pre-Order Now</button>
+  <button class="preorder-btn" id="preorderBtn" data-i18n="preorder.button">Jetzt vormerken</button>
 </section>
 
 <section class="spotlight" id="spotlightSection">
@@ -5564,11 +5564,18 @@
   </div>
 </section>
 
-<!-- Pre-Order modal -->
+<!-- Pre-Order modal: explains pre-orders aren't open yet and offers the
+     same email-list signup as the newsletter modal (see .newsletter-form),
+     right here instead of sending people to a second modal for it. -->
 <div class="modal-overlay" id="modalPreorder">
   <div class="modal-box">
     <button class="modal-close" id="modalPreorderClose" data-i18n-aria="common.close" aria-label="Schließen">&times;</button>
-    <p class="modal-text" data-i18n="preorder.bodyText">Aktuell nehmen wir keine Vorbestellungen entgegen. Bitte nehmen Sie Kontakt mit uns auf und bleiben Sie auf dem Laufenden.</p>
+    <p class="modal-text" data-i18n="preorder.bodyText">Der Vorverkauf hat noch nicht begonnen. Trag dich in unsere E-Mail-Liste ein, dann sagen wir dir als Erstes Bescheid, sobald es losgeht.</p>
+    <form class="newsletter-form" id="preorderNewsletterForm">
+      <input type="email" id="preorderNewsletterEmail" data-i18n-placeholder="newsletter.emailPlaceholder" placeholder="deine@email.de" required>
+      <button type="submit" data-i18n="newsletter.submit">Zum Newsletter anmelden</button>
+    </form>
+    <p class="newsletter-note" id="preorderNewsletterNote"></p>
   </div>
 </div>
 
@@ -5753,7 +5760,7 @@ function t(value){
   }
   const logoBox = document.querySelector('.logo-box');
   if (logoBox) logoBox.setAttribute('aria-label', t({ de: 'Zu den Pedalen scrollen', en: 'Scroll to the pedals' }));
-  setAria('pedalsLabel', 'Zur Pre-Order-Sektion scrollen', 'Scroll to the pre-order section');
+  setAria('pedalsLabel', 'Zur Pedals-Sektion scrollen', 'Scroll to the pedals section');
   setAria('sloganMain', 'Zur Kontakt-Sektion scrollen', 'Scroll to the contact section');
   setText('sloganMain', 'Our Scene, Our Sound');
 
@@ -12657,24 +12664,30 @@ function renderLinkRow(container, emptyEl, links, mailSubject){
   // network request itself failed outright (e.g. offline).
   const NEWSLETTER_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSeuC68Pp51sN96usSzhWExfLzzUx6cTPBq2QsoisnQH4wCbsQ/formResponse';
   const NEWSLETTER_EMAIL_ENTRY = 'entry.1005554938';
-  const newsletterForm = document.getElementById('newsletterForm');
-  const newsletterNote = document.getElementById('newsletterNote');
-  const newsletterEmailInput = document.getElementById('newsletterEmail');
-  if (newsletterForm){
-    newsletterForm.addEventListener('submit', function(e){
+  // shared by both signup forms on the page (the newsletter modal's own,
+  // and the pre-order modal's -- see that modal's markup comment) since
+  // both post to the exact same Google Form.
+  function wireNewsletterForm(formId, emailId, noteId){
+    const form = document.getElementById(formId);
+    const note = document.getElementById(noteId);
+    const emailInput = document.getElementById(emailId);
+    if (!form) return;
+    form.addEventListener('submit', function(e){
       e.preventDefault();
       const body = new URLSearchParams();
-      body.set(NEWSLETTER_EMAIL_ENTRY, newsletterEmailInput ? newsletterEmailInput.value : '');
+      body.set(NEWSLETTER_EMAIL_ENTRY, emailInput ? emailInput.value : '');
       fetch(NEWSLETTER_FORM_ACTION, { method: 'POST', mode: 'no-cors', body: body })
         .then(function(){
-          if (newsletterNote) newsletterNote.textContent = t({ de: 'Danke! Wir halten dich auf dem Laufenden.', en: "Thanks! We'll keep you posted." });
-          newsletterForm.reset();
+          if (note) note.textContent = t({ de: 'Danke! Wir halten dich auf dem Laufenden.', en: "Thanks! We'll keep you posted." });
+          form.reset();
         })
         .catch(function(){
-          if (newsletterNote) newsletterNote.textContent = t({ de: 'Etwas ist schiefgelaufen. Bitte versuch es später erneut.', en: 'Something went wrong. Please try again later.' });
+          if (note) note.textContent = t({ de: 'Etwas ist schiefgelaufen. Bitte versuch es später erneut.', en: 'Something went wrong. Please try again later.' });
         });
     });
   }
+  wireNewsletterForm('newsletterForm', 'newsletterEmail', 'newsletterNote');
+  wireNewsletterForm('preorderNewsletterForm', 'preorderNewsletterEmail', 'preorderNewsletterNote');
 })();
 
 /* ---------- section paging: each section is treated as its own "room".
